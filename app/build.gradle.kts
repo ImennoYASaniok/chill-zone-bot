@@ -1,0 +1,21 @@
+plugins {
+    kotlin("jvm") version "1.9.22"
+    application
+}
+
+dependencies {
+    implementation(project(":core"))
+    implementation(project(":data"))
+    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
+    implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.2.0")
+
+    testImplementation(kotlin("test"))
+}
+
+application {
+    mainClass.set("AppKt")
+}
+
+kotlin {
+    jvmToolchain(17)
+}

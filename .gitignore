@@ -1,0 +1,50 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Kotlin / Java build directories
+/out/
+build/
+target/
+
+# Gradle
+.gradle/
+**/build/
+gradle-app.setting
+
+# Local environment config
+*.local.properties
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+
+# Maven
+.mvn/timing.properties
+.settings/
+
+# Kotlin/Java specific caches
+*.class
+*.jar
+*.war
+*.ear
+
+# Ktor local development
+ktor-build/
+logs/
+
+# Kotlin script files output
+.kts~
+
+# Environment files
+.env
