@@ -1,16 +1,25 @@
 package org.example
+import io.github.cdimascio.dotenv.dotenv
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+
+
+
+
+//fun loadFetch(path: String) : AnyFrame {
+//    val rows = mutableListOf<AnyRow>()
+//    var pagePath = path
+//
+//    do {
+//        val row = load(pagePath)
+//        rows.add(row)
+//
+//        val next = row.getValueOrNull<String>("nextPageToken")
+//
+//        pagePath = path+"&pageToken="
+//    } while (next != )
+//}
 fun main() {
-    val name = "Kotlin"
-    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
-    println("Hello, " + name + "!")
-
-    for (i in 1..5) {
-        //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-        // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-        println("i = $i")
-    }
+    val dotenv = dotenv()
+    val apiKey = dotenv["KINO_API_TOKEN"]
+    println(load())
 }
