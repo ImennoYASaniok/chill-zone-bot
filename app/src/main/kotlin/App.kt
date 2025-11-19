@@ -16,24 +16,23 @@ fun main() {
         token = dotenv["BOT_TOKEN"]
 
         dispatch {
+            callbackQuery("callback1") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                bot.sendMessage(chatId, "Callback1!")
+            }
+            callbackQuery("callback2") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                bot.sendMessage(chatId, "Callback2!")
+            }
+            callbackQuery("callback3") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                bot.sendMessage(chatId, "Callback3!")
+            }
             text {
 
                 val chatId = message?.chat?.id
-
-                callbackQuery("callback1") {
-                    val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-                    bot.sendMessage(chatId, "Callback1!")
-                }
-                callbackQuery("callback2") {
-                    val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-                    bot.sendMessage(chatId, "Callback2!")
-                }
-                callbackQuery("callback3") {
-                    val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-                    bot.sendMessage(chatId, "Callback3!")
-                }
-
                 if (chatId != null) {
+
                     when (text) {
                         // ReplyKeyboard
                         "Option 1" -> bot.sendMessage(ChatId.fromId(message.chat.id), text = "You chose Option 1!")
