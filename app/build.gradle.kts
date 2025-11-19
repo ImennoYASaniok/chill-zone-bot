@@ -7,7 +7,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":data"))
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
-    implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.2.0")
+    implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
 
     testImplementation(kotlin("test"))
 }
