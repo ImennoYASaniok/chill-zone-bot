@@ -8,6 +8,10 @@ import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import io.github.cdimascio.dotenv.dotenv
+import ChillZoneBot.core.src.main.kotlin.Buttons.*
+
+
+
 
 fun main() {
     val dotenv = dotenv()
@@ -56,15 +60,16 @@ fun main() {
                                 listOf(KeyboardButton("Option 1"), KeyboardButton("Option 2")),
                                 listOf(KeyboardButton("Option 3"))
                             )
-                            val replyKeyboardMarkup = KeyboardReplyMarkup(
-                                keyboard = keyboard,
-                                resizeKeyboard = true,
-                                oneTimeKeyboard = true
+                            val replyKeyboardMarkup = replyMarkup(
+                                mutableListOf(
+                                    mutableListOf(Button("Option 1"), ChooseButton("name: ", listOf("name1", "name2", "name3"), 2)),
+                                    mutableListOf(BoolButton("Option 2"))
+                                )
                             )
                             bot.sendMessage(
                                 chatId = ChatId.fromId(chatId),
                                 text = text,
-                                replyMarkup = replyKeyboardMarkup
+                                replyMarkup = replyKeyboardMarkup.replyKeyboardMarkup
                             )
                         }
                         // end
