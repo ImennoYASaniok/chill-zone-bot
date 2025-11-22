@@ -11,8 +11,6 @@ import io.github.cdimascio.dotenv.dotenv
 import ChillZoneBot.core.src.main.kotlin.Buttons.*
 
 
-
-
 fun main() {
     val dotenv = dotenv()
     val bot = bot {

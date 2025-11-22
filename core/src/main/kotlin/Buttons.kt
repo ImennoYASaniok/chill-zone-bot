@@ -4,7 +4,10 @@ import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 
 open class Button(var name: String) {
-    val button = KeyboardButton(name)
+    var button = KeyboardButton(name)
+    open fun updateButton() {
+        button = KeyboardButton(name)
+    }
     open fun get_text(): String {
         return name
     }
@@ -31,6 +34,7 @@ class ChooseButton(name: String, var list: List<String>, startIndex: Int = 0) : 
 
     fun changeName() {
         name = get_text()
+        updateButton()
         currentIndex++
     }
 
