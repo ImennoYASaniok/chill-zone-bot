@@ -11,6 +11,9 @@ open class Button(var name: String) {
     open fun get_text(): String {
         return name
     }
+    open fun changeName() {
+
+    }
 }
 
 class BoolButton(name: String, var flag: Boolean = true) : Button(name) {
@@ -18,9 +21,10 @@ class BoolButton(name: String, var flag: Boolean = true) : Button(name) {
         return name + " $flag"
     }
 
-    fun changeFlag() {
+    override fun changeName() {
         flag = !flag
         name = get_text()
+        updateButton()
     }
 
 
@@ -32,10 +36,11 @@ class ChooseButton(name: String, var list: List<String>, startIndex: Int = 0) : 
         return list[currentIndex]
     }
 
-    fun changeName() {
+    override fun changeName() {
         name = get_text()
         updateButton()
         currentIndex++
+        currentIndex %= list.size
     }
 
     init {
@@ -56,7 +61,7 @@ class replyMarkup(var old_keyboard: MutableList<MutableList<Button>>) {
     fun update() {
         keyboard.clear()
         for (i in old_keyboard) {
-            var currentRow = mutableListOf<KeyboardButton>()
+            val currentRow = mutableListOf<KeyboardButton>()
             for (j in i) {
                 currentRow.add(j.button)
             }
