@@ -18,7 +18,7 @@ open class Button(var name: String) {
 
 class BoolButton(name: String, var flag: Boolean = true) : Button(name) {
     override fun get_text(): String {
-        return name + " $flag"
+        return "$flag"
     }
 
     override fun changeName() {

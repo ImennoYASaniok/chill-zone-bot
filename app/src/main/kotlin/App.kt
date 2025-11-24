@@ -19,6 +19,15 @@ fun main() {
         token = dotenv["BOT_TOKEN"]
 
         dispatch {
+            val b1 = Button("Option 1")
+            val b2 = ChooseButton("name: ", listOf("name1", "name2", "name3"), 0)
+            val b3 = BoolButton("Option 2")
+            val replyKeyboardMarkup = replyMarkup(
+                mutableListOf(
+                    mutableListOf(b1, b2),
+                    mutableListOf(b3)
+                )
+            )
             callbackQuery("callback1") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 bot.sendMessage(chatId, "Callback1!")
@@ -51,22 +60,14 @@ fun main() {
                         bot.sendMessage(ChatId.fromId(message.chat.id), text = "...", replyMarkup = inlinemarkup)
                     }
                     else -> {
-                        val b1 = Button("Option 1")
-                        val b2 = ChooseButton("name: ", listOf("name1", "name2", "name3"), 0)
-                        val b3 = BoolButton("Option 2")
-                        val replyKeyboardMarkup = replyMarkup(
-                            mutableListOf(
-                                mutableListOf(b1, b2),
-                                mutableListOf(b3)
-                            )
-                        )
+
 //                        bot.sendMessage(
 //                            chatId = ChatId.fromId(chatId),
 //                            text = text,
 //                            replyMarkup = replyKeyboardMarkup.replyKeyboardMarkup
 //                        )
                         if (text=="Option 1") bot.sendMessage(ChatId.fromId(message.chat.id), text = "You chose Option 1!")
-                        if (text.contains("Option 2")) {
+                        if ((text=="false") or (text == "true")) {
 
                             replyKeyboardMarkup.old_keyboard[1][0].changeName()
                             replyKeyboardMarkup.update()
