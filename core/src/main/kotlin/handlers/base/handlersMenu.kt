@@ -5,3 +5,7 @@ package ChillZoneBot.core.src.main.kotlin.handlers.base.handlersMenu
 fun detectFalse(): String {
     return "выбрано false в BoolButton"
 }
+
+fun openMemes(): String {
+    return "Открываю мемы..."
+}

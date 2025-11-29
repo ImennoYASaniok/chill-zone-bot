@@ -27,8 +27,13 @@ fun getKeyboardMenu(): MutableList<MutableList<Button>> {
         flag = false,
     )
 
+    val memeButton = Button(
+        name = "Мемы"
+    )
+
     return mutableListOf(
         mutableListOf(button1, button2),
-        mutableListOf(button3)
+        mutableListOf(button3),
+        mutableListOf(memeButton)
     )
 }
