@@ -1,5 +1,4 @@
-import ChillZoneBot.core.src.main.kotlin.menu.keyboards.KeyboardMenu.getKeyboardMenu
-
+import ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu.getKeyboardMenu
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
 
 import com.github.kotlintelegrambot.bot
@@ -7,8 +6,6 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.text
 import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
-import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 
 import io.github.cdimascio.dotenv.dotenv
 

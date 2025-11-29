@@ -1,8 +1,11 @@
-package ChillZoneBot.core.src.main.kotlin.menu.keyboards.KeyboardMenu
+package ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu
 
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.BoolButton
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ChooseButton
+
+import ChillZoneBot.core.src.main.kotlin.handlers.base.handlersMenu.detectFalse
+
 import kotlin.collections.mutableListOf
 
 fun getKeyboardMenu(): MutableList<MutableList<Button>> {
@@ -20,6 +23,7 @@ fun getKeyboardMenu(): MutableList<MutableList<Button>> {
     )
     val button3 = BoolButton(
         name = "BoolButton",
+        funcFalse = ::detectFalse,
         flag = false,
     )
 
