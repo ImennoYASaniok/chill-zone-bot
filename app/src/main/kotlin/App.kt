@@ -1,5 +1,7 @@
-import ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu.getKeyboardMenu
+import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineClass
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
+import ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu.getInlineKeyboardMenu
+import ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu.getKeyboardMenu
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
@@ -19,6 +21,12 @@ fun main() {
                 keyboard = getKeyboardMenu(),
                 startCommand = "/start",
                 textMessage = "replyMenu"
+            )
+
+            val inlineMenu = InlineClass(
+                keyboard = getInlineKeyboardMenu(),
+                startCommand = "/start1",
+                textMessage = "inlineMenu"
             )
 
             callbackQuery("callback1") {
@@ -49,7 +57,11 @@ fun main() {
 //                bot.sendMessage(chatId, text = "...", replyMarkup = inlinemarkup)
 //            }
                 val chatId = ChatId.fromId(message.chat.id)
-                replyMenu.main(text, bot = bot, chatId = chatId)
+                if (text=="/start") {
+                    replyMenu.main(text, bot = bot, chatId = chatId)
+                } else if (text == "/start1") {
+                    inlineMenu.main(text, bot= bot, chatId = chatId)
+                }
             }
         }
     }
