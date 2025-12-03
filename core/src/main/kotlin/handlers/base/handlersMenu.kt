@@ -1,4 +1,4 @@
-package ChillZoneBot.core.src.main.kotlin.handlers.base.handlersMenu
+package handlers.base
 
 // Если handler возвращает String, то это строка сообщения, если не возвращает, то создавать новое сообщение не нужно
 

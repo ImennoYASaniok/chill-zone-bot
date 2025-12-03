@@ -1,4 +1,4 @@
-package ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu
+package keyboards.base
 
 import ChillZoneBot.core.src.main.kotlin.InlineClass.BoolInlineButton
 import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineButton
@@ -7,7 +7,7 @@ import ChillZoneBot.core.src.main.kotlin.ReplyClass.BoolButton
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ChooseButton
 
-import ChillZoneBot.core.src.main.kotlin.handlers.base.handlersMenu.detectFalse
+import handlers.base.detectFalse
 
 import kotlin.collections.mutableListOf
 

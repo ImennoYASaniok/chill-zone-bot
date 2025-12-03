@@ -1,7 +1,10 @@
+package ChillZoneBot.app.src.main.kotlin.App
+
 import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineClass
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
-import ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu.getInlineKeyboardMenu
-import ChillZoneBot.core.src.main.kotlin.keyboards.base.KeyboardMenu.getKeyboardMenu
+import keyboards.base.getKeyboardMenu
+import keyboards.base.getInlineKeyboardMenu
+
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
