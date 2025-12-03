@@ -37,53 +37,94 @@ fun parseDetailedMovieJson(jjsonString: String) {
         val databasePassword = dotenv()["DATABASE_PASSWORD"]
         try {
             for (i in movieListResponse.docs) {
-                val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+                if (i.isSeries ?: false) {
+                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
 
-                // insert into movies table
+                    // insert into movies table
 
-                var insertMovieQuery = "INSERT INTO Movies (kId, name , year, description, movieLength, kpRating, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                var preparedStatement = connection.prepareStatement(insertMovieQuery)
+                    var insertMovieQuery =
+                        "INSERT INTO Movies (kId, name , year, description, movieLength, kpRating, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    var preparedStatement = connection.prepareStatement(insertMovieQuery)
 
-                preparedStatement.setInt(1, i.id)
-                preparedStatement.setString(2, i.name)
-                i.year?.let { preparedStatement.setInt(3, i.year) }
-                preparedStatement.setString(4, i.description)
-                i.movieLength?.let { preparedStatement.setInt(5, i.movieLength) }
-                i.rating?.let {
-                    i.rating.kp?.let {
-                        preparedStatement.setDouble(6, i.rating.kp)
+                    preparedStatement.setInt(1, i.id)
+                    preparedStatement.setString(2, i.name)
+                    i.year?.let { preparedStatement.setInt(3, i.year) }
+                    preparedStatement.setString(4, i.description)
+                    i.movieLength?.let { preparedStatement.setInt(5, i.movieLength) }
+                    i.rating?.let {
+                        i.rating.kp?.let {
+                            preparedStatement.setDouble(6, i.rating.kp)
+                        }
+                        i.rating.imdb?.let {
+                            preparedStatement.setDouble(7, i.rating.imdb)
+                        }
                     }
-                    i.rating.imdb?.let {
-                        preparedStatement.setDouble(7, i.rating.imdb)
+
+                    var rowsAffected = preparedStatement.executeUpdate()
+                    println("Rows affected: $rowsAffected")
+
+                    //insert into genres table
+
+                    i.genres?.let {
+                        for (genre in i.genres) {
+                            insertMovieQuery = "INSERT INTO Genres (idMovie, name) VALUES (?, ?)"
+                            preparedStatement = connection.prepareStatement(insertMovieQuery)
+                            preparedStatement.setInt(1, i.id)
+                            preparedStatement.setString(2, genre.name)
+                            rowsAffected = preparedStatement.executeUpdate()
+                            println("Rows affected: $rowsAffected")
+                        }
                     }
-                }
 
-                var rowsAffected = preparedStatement.executeUpdate()
-                println("Rows affected: $rowsAffected")
+                    // insert into similarMovies table
 
-                //insert into genres table
-
-                i.genres?.let {
-                    for (genre in i.genres) {
-                        insertMovieQuery = "INSERT INTO Genres (idMovie, name) VALUES (?, ?)"
-                        preparedStatement = connection.prepareStatement(insertMovieQuery)
-                        preparedStatement.setInt(1, i.id)
-                        preparedStatement.setString(2, genre.name)
-                        rowsAffected = preparedStatement.executeUpdate()
-                        println("Rows affected: $rowsAffected")
+                    i.similarMovies?.let {
+                        for (similarMovie in i.similarMovies) {
+                            insertMovieQuery = "INSERT INTO Movies (idMovie, idSimilarMovie) VALUES (?, ?)"
+                            preparedStatement = connection.prepareStatement(insertMovieQuery)
+                            preparedStatement.setInt(1, i.id)
+                            preparedStatement.setInt(2, similarMovie.id)
+                            rowsAffected = preparedStatement.executeUpdate()
+                            println("Rows affected: $rowsAffected")
+                        }
                     }
-                }
+                } else {
+                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
 
-                // insert into similarMovies table
+                    // insert into series table
 
-                i.similarMovies?.let {
-                    for (similarMovie in i.similarMovies) {
-                        insertMovieQuery = "INSERT INTO Movies (idMovie, idSimilarMovie) VALUES (?, ?)"
-                        preparedStatement = connection.prepareStatement(insertMovieQuery)
-                        preparedStatement.setInt(1, i.id)
-                        preparedStatement.setInt(2, similarMovie.id)
-                        rowsAffected = preparedStatement.executeUpdate()
-                        println("Rows affected: $rowsAffected")
+                    var insertMovieQuery =
+                        "INSERT INTO Series (kId, name , year, description, seriesAmount, kpRating, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    var preparedStatement = connection.prepareStatement(insertMovieQuery)
+
+                    preparedStatement.setInt(1, i.id)
+                    preparedStatement.setString(2, i.name)
+                    i.year?.let { preparedStatement.setInt(3, i.year) }
+                    preparedStatement.setString(4, i.description)
+                    i.totalSeriesLength?.let { preparedStatement.setInt(5, i.totalSeriesLength) }
+                    i.rating?.let {
+                        i.rating.kp?.let {
+                            preparedStatement.setDouble(6, i.rating.kp)
+                        }
+                        i.rating.imdb?.let {
+                            preparedStatement.setDouble(7, i.rating.imdb)
+                        }
+                    }
+
+                    var rowsAffected = preparedStatement.executeUpdate()
+                    println("Rows affected: $rowsAffected")
+
+                    //insert into genres table
+
+                    i.genres?.let {
+                        for (genre in i.genres) {
+                            insertMovieQuery = "INSERT INTO Genres (idMovie, name) VALUES (?, ?)"
+                            preparedStatement = connection.prepareStatement(insertMovieQuery)
+                            preparedStatement.setInt(1, i.id)
+                            preparedStatement.setString(2, genre.name)
+                            rowsAffected = preparedStatement.executeUpdate()
+                            println("Rows affected: $rowsAffected")
+                        }
                     }
                 }
             }
