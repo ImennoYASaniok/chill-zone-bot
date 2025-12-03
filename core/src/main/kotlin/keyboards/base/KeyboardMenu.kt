@@ -6,71 +6,30 @@ import ChillZoneBot.core.src.main.kotlin.InlineClass.ChooseInlineButton
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.BoolButton
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ChooseButton
-
-import handlers.base.detectFalse
-
-import kotlin.collections.mutableListOf
-
-fun getKeyboardMenu(): MutableList<MutableList<Button>> {
-    val button1 = Button(
-        name = "Button"
-    )
-    val button2 = ChooseButton(
-        name = "ChooseButton",
-        list = mapOf(
-            "name1" to null,
-            "name2" to null,
-            "name3" to null
-        ),
-        startIndex = 0
-    )
-    val button3 = BoolButton(
-        name = "BoolButton",
-        funcFalse = ::detectFalse,
-        flag = false,
-    )
-
-    val memeButton = Button(
-        name = "Мемы"
-    )
+fun getPredictionKeyboard(): MutableList<MutableList<Button>> {
+    val nextButton = Button("Следующее предсказание")
+    val addButton = Button("Добавить предсказание")
+    val myButton = Button("Мои предсказания")
+    val backButton = Button("Назад")
 
     return mutableListOf(
-        mutableListOf(button1, button2),
-        mutableListOf(button3),
-        mutableListOf(memeButton)
+        mutableListOf(nextButton),
+        mutableListOf(addButton),
+        mutableListOf(myButton),
+        mutableListOf(backButton)
     )
 }
 
-fun getInlineKeyboardMenu(): MutableList<MutableList<InlineButton>> {
-    val button1 = InlineButton(
-        name = "Button",
-        callback = "callback1"
-    )
-    val button2 = ChooseInlineButton(
-        name = "ChooseButton",
-        list = mapOf(
-            "name1" to null,
-            "name2" to null,
-            "name3" to null
-        ),
-        startIndex = 0,
-        callback = "callback2"
-    )
-    val button3 = BoolInlineButton(
-        name = "BoolButton",
-        funcFalse = ::detectFalse,
-        flag = false,
-        callback = "callback3"
-    )
-
-    val memeButton = InlineButton(
-        name = "Мемы",
-        callback = "callback4"
-    )
+fun getRarityKeyboard(): MutableList<MutableList<Button>> {
+    val commonButton = Button("Обычное")
+    val rareButton = Button("Редкое")
+    val epicButton = Button("Эпическое")
+    val legendaryButton = Button("Легендарное")
+    val backButton = Button("Назад")
 
     return mutableListOf(
-        mutableListOf(button1, button2),
-        mutableListOf(button3),
-        mutableListOf(memeButton)
+        mutableListOf(commonButton, rareButton),
+        mutableListOf(epicButton, legendaryButton),
+        mutableListOf(backButton)
     )
 }
