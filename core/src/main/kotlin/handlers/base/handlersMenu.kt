@@ -43,6 +43,27 @@ object MemeStorage {
     }
 
     fun getById(id: Int): Meme? = memes.find { it.id == id }
+
+    fun getAll(): List<Meme> = memes.toList()
+}
+
+object UserMemeHistory {
+    private val seenByChat = mutableMapOf<Long, MutableSet<Int>>()
+
+    fun getNextRandomUnseen(chatId: Long): Meme? {
+        val allMemes = MemeStorage.getAll()
+        if (allMemes.isEmpty()) return null
+        val seenSet = seenByChat.getOrPut(chatId) { mutableSetOf() }
+        val unseen = allMemes.filter { it.id !in seenSet }
+        if (unseen.isEmpty()) return null
+        val meme = unseen.random()
+        seenSet.add(meme.id)
+        return meme
+    }
+
+    fun reset(chatId: Long) {
+        seenByChat.remove(chatId)
+    }
 }
 
 object MemeState {

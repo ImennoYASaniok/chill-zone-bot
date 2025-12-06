@@ -1,8 +1,8 @@
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
 import ChillZoneBot.core.src.main.kotlin.handlers.base.MemeAddState
-import ChillZoneBot.core.src.main.kotlin.handlers.base.MemeState
 import ChillZoneBot.core.src.main.kotlin.handlers.base.MemeStorage
 import ChillZoneBot.core.src.main.kotlin.handlers.base.ReplyMenuHolder
+import ChillZoneBot.core.src.main.kotlin.handlers.base.UserMemeHistory
 import ChillZoneBot.core.src.main.kotlin.keyboards.base.getKeyboardMenu
 import ChillZoneBot.core.src.main.kotlin.handlers.memes.getMemeKeyboard
 
@@ -46,7 +46,8 @@ fun main() {
 
             message {
                 val msg = message
-                val chatId = ChatId.fromId(msg.chat.id)
+                val chatIdLong = msg.chat.id
+                val chatId = ChatId.fromId(chatIdLong)
 
                 val photo = msg.photo?.lastOrNull()
                 if (photo != null) {
@@ -71,16 +72,23 @@ fun main() {
                     replyMenu.keyboard = getMemeKeyboard()
                     replyMenu.update()
 
-                    if (MemeStorage.size() == 0) {
-                        bot.sendMessage(
-                            chatId,
-                            "Здесь пока нет мемов. Нажми «Добавить мем», чтобы загрузить первый.",
-                            replyMarkup = replyMenu.getKeyboardReplyMarkup()
-                        )
+                    val meme = UserMemeHistory.getNextRandomUnseen(chatIdLong)
+                    if (meme == null) {
+                        if (MemeStorage.size() == 0) {
+                            bot.sendMessage(
+                                chatId,
+                                "Здесь пока нет мемов. Нажми «Добавить мем», чтобы загрузить первый.",
+                                replyMarkup = replyMenu.getKeyboardReplyMarkup()
+                            )
+                        } else {
+                            bot.sendMessage(
+                                chatId,
+                                "Ты уже посмотрел все мемы. Добавь новый мем или подожди, пока его добавит кто-то другой.",
+                                replyMarkup = replyMenu.getKeyboardReplyMarkup()
+                            )
+                        }
                     } else {
-                        MemeState.reset()
-                        val meme = MemeState.getCurrentMeme()
-                        val fileId = meme?.fileId
+                        val fileId = meme.fileId
                         if (fileId != null) {
                             bot.sendPhoto(chatId, fileId)
                         }
@@ -94,13 +102,23 @@ fun main() {
                 }
 
                 if (t == "Следующий мем") {
-                    if (MemeStorage.size() == 0) {
-                        bot.sendMessage(chatId, "Здесь пока нет мемов. Нажми «Добавить мем», чтобы загрузить первый.")
+                    val meme = UserMemeHistory.getNextRandomUnseen(chatIdLong)
+                    if (meme == null) {
+                        if (MemeStorage.size() == 0) {
+                            bot.sendMessage(
+                                chatId,
+                                "Здесь пока нет мемов. Нажми «Добавить мем», чтобы загрузить первый."
+                            )
+                        } else {
+                            bot.sendMessage(
+                                chatId,
+                                "Ты уже посмотрел все мемы. Добавь новый мем или подожди, пока его добавит кто-то другой."
+                            )
+                        }
                         return@message
                     }
 
-                    val meme = MemeState.nextMeme()
-                    val fileId = meme?.fileId
+                    val fileId = meme.fileId
                     if (fileId != null) {
                         bot.sendPhoto(chatId, fileId)
                     } else {
