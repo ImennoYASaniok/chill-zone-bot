@@ -1,6 +1,6 @@
 package Collect
 
-import ParseApiJson.*
+import KinoPart.*
 
 
 fun main() {

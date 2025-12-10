@@ -1,17 +1,16 @@
-package ParseApiJson
+package BooksPart
 
+import Model.MovieListResponse
+import io.github.cdimascio.dotenv.dotenv
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
-
-import io.github.cdimascio.dotenv.dotenv
 import java.sql.DriverManager
 import java.sql.SQLException
 
-import Model.*
 
 fun updateDatabase(movieListResponse: MovieListResponse?) {
     movieListResponse?.let {
@@ -143,9 +142,9 @@ fun parseJson(jjsonString: String) : MovieListResponse? {
 }
 
 
-fun getFromApi(amount: Int = 1, page: Int = 1): String {
-    val apiUrl = "https://api.poiskkino.dev/v1.4/movie?page=$page&limit=$amount&sortField=rating.kp&sortType=-1" //API endpoint
+fun getFromApi(): String { //amount: Int = 1, page: Int = 1
     val apiKey = dotenv()["KINO_API_TOKEN"]
+    val apiUrl = "https://www.googleapis.com/books/v1/volumes?key=$apiKey" //API endpoint
     try {
         val url : URL = URI.create(apiUrl).toURL()
         val connection : HttpURLConnection = url.openConnection() as HttpURLConnection
