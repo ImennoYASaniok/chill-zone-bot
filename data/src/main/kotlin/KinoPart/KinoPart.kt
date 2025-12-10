@@ -11,7 +11,7 @@ import io.github.cdimascio.dotenv.dotenv
 import java.sql.DriverManager
 import java.sql.SQLException
 
-import Model.*
+import Models.FilmsModel.*
 
 fun updateDatabase(movieListResponse: MovieListResponse?) {
     movieListResponse?.let {

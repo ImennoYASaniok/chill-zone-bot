@@ -1,4 +1,4 @@
-package Model
+package Models.FilmsModel
 import kotlinx.serialization.Serializable
 
 @Serializable
