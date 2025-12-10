@@ -13,25 +13,8 @@ import java.sql.SQLException
 
 import Model.*
 
-
-
-
-// ----- Функция парсинга -----
-
-fun parseDetailedMovieJson(jjsonString: String) {
-    try {
-        val jsonString = jjsonString.trimIndent()
-        val json = Json {
-            prettyPrint = true
-            ignoreUnknownKeys = true // Игнорировать неизвестные ключи
-            coerceInputValues = true // Позволяет обрабатывать null значения для полей, которые могут быть null
-        }
-
-        val movieListResponse: MovieListResponse = json.decodeFromString(jsonString)
-
-        println("Получено фильмов: ${movieListResponse.docs.size}")
-        println("Общее количество: ${movieListResponse.total}")
-        println("Текущая страница: ${movieListResponse.page}")
+fun updateDatabase(movieListResponse: MovieListResponse?) {
+    movieListResponse?.let {
         val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
         val databaseUser = dotenv()["DATABASE_USER"]
         val databasePassword = dotenv()["DATABASE_PASSWORD"]
@@ -132,11 +115,30 @@ fun parseDetailedMovieJson(jjsonString: String) {
         } catch (e: SQLException) {
             e.printStackTrace()
         }
+    }
+}
 
+
+
+fun parseJson(jjsonString: String) : MovieListResponse? {
+    try {
+        val jsonString = jjsonString.trimIndent()
+        val json = Json {
+            prettyPrint = true
+            ignoreUnknownKeys = true // Игнорировать неизвестные ключи
+            coerceInputValues = true // Позволяет обрабатывать null значения для полей, которые могут быть null
+        }
+
+        val movieListResponse: MovieListResponse = json.decodeFromString(jsonString)
+
+        return movieListResponse
 
     } catch (e: Exception) {
+
         println("Ошибка при парсинге JSON: ${e.message}")
         e.printStackTrace()
+
+        return null
     }
 }
 

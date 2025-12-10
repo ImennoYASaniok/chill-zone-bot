@@ -5,7 +5,9 @@ import ParseApiJson.*
 
 fun main() {
     for (i in 1..80) {
-        parseDetailedMovieJson(getFromApi(250,i))
+        val rawJson = getFromApi(250,i)
+        val parsedJson = parseJson(rawJson)
+        updateDatabase(parsedJson)
         Thread.sleep(600)
     }
 }
