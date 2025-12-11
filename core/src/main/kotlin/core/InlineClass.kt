@@ -1,10 +1,9 @@
-package ChillZoneBot.core.src.main.kotlin.InlineClass
+package core
 
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
-import kotlin.String
 
 open class InlineButton(var name: String, val callback: String, val func: (() -> String?)? = null) {
     open fun getInlineButton(): InlineKeyboardButton {
