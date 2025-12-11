@@ -48,3 +48,6 @@ logs/
 
 # Environment files
 .env
+
+# Docs
+.$*.bkp

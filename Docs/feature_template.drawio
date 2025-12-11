@@ -1,0 +1,583 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" version="28.2.8">
+  <diagram name="Страница — 1" id="gQV3bBOGGXuAOoUh3hvI">
+    <mxGraphModel dx="1796" dy="1211" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-48" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Сервис предсказаний&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="280" y="10" width="860" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-147" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-98" target="jg5QH8RGZlHhSrdQyCiC-141">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-281" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-98" target="jg5QH8RGZlHhSrdQyCiC-256">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="280" y="185" />
+              <mxPoint x="280" y="450" />
+              <mxPoint x="570" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-303" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-98">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-98" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Меню сервиса&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="10" y="120" width="260" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-99" value="reply клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-98">
+          <mxGeometry x="10" y="30" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-100" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-99">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-101" value="получить предсказание" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-100">
+          <mxGeometry width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-102" value="мои предсказания" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-100">
+          <mxGeometry x="80" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-103" value="предложить предсказание" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-100">
+          <mxGeometry x="160" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-168" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-99">
+          <mxGeometry y="60" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-169" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-168">
+          <mxGeometry width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-170" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-168">
+          <mxGeometry x="80" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-171" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-168">
+          <mxGeometry x="160" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-113" value="В сообщение описывается сервис предсказаний, и типы предсказаний (обычное, редкое, эпическое, легендарное), описание этих типов и процент их выпадения, а также скажи что одно предсказания можно добавить в профиль" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-98">
+          <mxGeometry x="10" y="140" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-182" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-114" target="jg5QH8RGZlHhSrdQyCiC-131">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="550" y="85" />
+              <mxPoint x="550" y="127" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-114" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Получить предсказание&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="290" y="40" width="260" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-115" value="reply клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-114">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-116" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-115">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-117" value="получить предсказание" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-116">
+          <mxGeometry width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-118" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-116">
+          <mxGeometry x="120" width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-120" value="В этом сообщение опиши, что предсказания можно выбивать сколько угодно, упомени ещё раз про вероятность выпадения предсказания, каждый раз выпадает новое сообщение с предсказанием" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-114">
+          <mxGeometry x="10" y="100" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-126" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-122" target="jg5QH8RGZlHhSrdQyCiC-98">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-122" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Главное меню&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="10" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-130" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=-0.004;entryY=0.085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-98" target="jg5QH8RGZlHhSrdQyCiC-114">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-131" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Получить предсказание&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="570" y="40" width="260" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-132" value="inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-131">
+          <mxGeometry x="10" y="30" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-133" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-132">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-134" value="сохранить / сохранить дубликат" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-133">
+          <mxGeometry width="240" height="20" as="geometry">
+            <mxRectangle width="240" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-136" value="В этом сообщение будут выпадать сами предсказания. Сообщения должны отличаться по редкости. Например обычное анписано обычным шрифтом, редкое другим шрифтом, а легендарное например красивым шрифтом со смайлами. Также inline кнопка должна меняться по стилю (если это предсказание уже есть то должен быть текст кнопки &quot;добавить дубликат&quot;)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-131">
+          <mxGeometry x="10" y="80" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-138" value="Стиль сообщения" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-131">
+          <mxGeometry x="10" y="240" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-139" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-138">
+          <mxGeometry y="20" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-140" value="текст предсказания&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;тип: грустное/весёлое/злое...&lt;/div&gt;&lt;div&gt;редкость: обычное/редкое/эпическое/легендарное&lt;br&gt;&lt;/div&gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-139">
+          <mxGeometry width="240" height="80" as="geometry">
+            <mxRectangle width="240" height="80" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-141" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Мои предсказания&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="10" y="400" width="260" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-142" value="reply клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-141">
+          <mxGeometry x="10" y="30" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-143" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-142">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-144" value="поиск" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-143">
+          <mxGeometry width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-145" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-143">
+          <mxGeometry x="120" width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-146" value="Отправляется только одно сообщение текущего предсказания, у которого есть inline клава. Стиль сообщения такой же как в блоке &quot;Получить предсказание&quot;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-141">
+          <mxGeometry x="10" y="80" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-148" value="inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-141">
+          <mxGeometry x="10" y="160" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-149" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-148">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-150" value="удалить" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-149">
+          <mxGeometry width="78" height="20" as="geometry">
+            <mxRectangle width="78" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-151" value="&lt;font&gt;установить в профиле&lt;/font&gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-149">
+          <mxGeometry x="78" width="162" height="20" as="geometry">
+            <mxRectangle width="162" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-152" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-148">
+          <mxGeometry y="40" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-153" value="&amp;lt;-" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-152">
+          <mxGeometry width="78" height="20" as="geometry">
+            <mxRectangle width="78" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-154" value="-&amp;gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-152">
+          <mxGeometry x="78" width="162" height="20" as="geometry">
+            <mxRectangle width="162" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-155" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Поиск предсказаний&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="300" y="250" width="260" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-156" value="inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-155">
+          <mxGeometry x="10" y="30" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-157" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-156">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-158" value="Найти" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-157">
+          <mxGeometry width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-159" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-157">
+          <mxGeometry x="120" width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-160" value="Поиск предсказаний, в строке ввода сообщения написать &quot;Поиск предсказаний:&quot;. Пока реализовать просто поиск, дальше можно добавить сортировку, фильтрацию. Поиск производится по тексту предсказания" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-155">
+          <mxGeometry x="10" y="80" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-173" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Результат поиска&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="300" y="465" width="260" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-174" value="основная inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-173">
+          <mxGeometry x="10" y="30" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-175" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-174">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-176" value="Ещё раз найти" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-175">
+          <mxGeometry width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-177" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-175">
+          <mxGeometry x="120" width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-178" value="Сначала отправляется первое сообщение о информации о поиске: текст поиска, кол-во, и т. д." style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-173">
+          <mxGeometry x="10" y="80" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-180" value="После отправляется результат поиска: одно сообщение. Логика и стиль этого сообщения и inline клава ровно такие же как в &quot;Мои предсказания&quot; (переключение между предсказаниями по стрелочкам)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-173">
+          <mxGeometry x="10" y="150" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-179" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.821;entryY=-0.011;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-48" source="jg5QH8RGZlHhSrdQyCiC-155" target="jg5QH8RGZlHhSrdQyCiC-173">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-256" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Предложить предсказание&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-48">
+          <mxGeometry x="570" y="400" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-273" value="Использовать &quot;Форма ввода блока&quot; из общиков блоков. для ввода предсказания" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-256">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-187" value="Пустые места в клавах не нужно делать, просто я хз как тут пустые места удалять в таблицах, клавы должны быть без пустых кнопок" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" vertex="1" parent="1">
+          <mxGeometry x="10" y="10" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-188" value="Если что непонятно, сразу спрашивайте" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" vertex="1" parent="1">
+          <mxGeometry x="10" y="90" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-189" value="Реализувывайте функции сервиса поочерёдно, сначала скелет MVP сервиса, а потом навешивать дополнительные функции" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" vertex="1" parent="1">
+          <mxGeometry x="10" y="130" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-197" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;Лента мемов&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;strokeWidth=2;startSize=23;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="10" width="860" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-322" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" source="jg5QH8RGZlHhSrdQyCiC-199">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="157.66666666666674" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-508" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" source="jg5QH8RGZlHhSrdQyCiC-199" target="jg5QH8RGZlHhSrdQyCiC-342">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-199" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Меню сервиса&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="10" y="120" width="260" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-200" value="reply клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-199">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-201" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-200">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-202" value="лента мемов" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-201">
+          <mxGeometry width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-203" value="мои мемы" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-201">
+          <mxGeometry x="80" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-204" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-201">
+          <mxGeometry x="160" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-209" value="В сообщение описывается сервис мемов, и какие здесь функции есть" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-199">
+          <mxGeometry x="10" y="100" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-210" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" target="jg5QH8RGZlHhSrdQyCiC-220">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="85" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-217" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" source="jg5QH8RGZlHhSrdQyCiC-218" target="jg5QH8RGZlHhSrdQyCiC-199">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-218" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Главное меню&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="10" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-247" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=-0.004;entryY=0.058;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" source="jg5QH8RGZlHhSrdQyCiC-228">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="298.96000000000004" y="241.01999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-255" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.821;entryY=-0.011;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" target="jg5QH8RGZlHhSrdQyCiC-248">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="495" y="420" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-296" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Лента мемов&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="290" y="40" width="510" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-297" value="reply клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-296">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-298" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-297">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-299" value="далее" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-298">
+          <mxGeometry width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-300" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-298">
+          <mxGeometry x="120" width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-302" value="Здесь скидывается картинка мема, также к сообщению будут прикреплены теги и автор мема. Каждое далее, это новое сообщение" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-296">
+          <mxGeometry x="10" y="100" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-323" value="inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-296">
+          <mxGeometry x="10" y="180" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-324" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-323">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-325" value="лайкнуть [кол-во лайков]" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-324">
+          <mxGeometry width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-326" value="дизлайкнуть [кол-во дизлайков]" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-324">
+          <mxGeometry x="120" width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-349" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-323">
+          <mxGeometry y="60" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-350" value="добавить к себе в галерею" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-349">
+          <mxGeometry width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-351" value="пожаловаться" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-349">
+          <mxGeometry x="120" width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-306" value="Стиль сообщения" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-296">
+          <mxGeometry x="260" y="30" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-307" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-306">
+          <mxGeometry y="20" width="240" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-308" value="&lt;div&gt;Картинка&lt;/div&gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-307">
+          <mxGeometry width="240" height="84" as="geometry">
+            <mxRectangle width="240" height="84" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-309" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-306">
+          <mxGeometry y="104" width="240" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-310" value="теги:&lt;div&gt;автор: @Ник&lt;/div&gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-309">
+          <mxGeometry width="240" height="46" as="geometry">
+            <mxRectangle width="240" height="46" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-511" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" source="jg5QH8RGZlHhSrdQyCiC-342">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-342" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Мои мемы&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="10" y="300" width="260" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-343" value="reply клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-342">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-344" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-343">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-345" value="добавить мем" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-344">
+          <mxGeometry width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-346" value="&amp;lt;- обратно" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-344">
+          <mxGeometry x="80" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-347" value="" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-344">
+          <mxGeometry x="160" width="80" height="40" as="geometry">
+            <mxRectangle width="80" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-348" value="Одно сообщение, переключение своих мемов черех стрелки" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-342">
+          <mxGeometry x="10" y="100" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-352" value="inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-342">
+          <mxGeometry x="10" y="150" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-353" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-352">
+          <mxGeometry y="20" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-354" value="лайкнуть [кол-во лайков]" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-353">
+          <mxGeometry width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-355" value="дизлайкнуть [кол-во дизлайков]" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-353">
+          <mxGeometry x="120" width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-356" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-352">
+          <mxGeometry y="60" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-357" value="редактировать" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-356">
+          <mxGeometry width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-358" value="удалить" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-356">
+          <mxGeometry x="120" width="120" height="40" as="geometry">
+            <mxRectangle width="120" height="40" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-359" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Добавить мем&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="290" y="350" width="260" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-497" value="Использовать &quot;Форма ввода блока&quot; из общиков блоков." style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-359">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-498" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Редактировать мем&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="290" y="460" width="260" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-499" value="Использовать &quot;Форма ввода блока&quot; из общиков блоков." style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-498">
+          <mxGeometry x="10" y="30" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-504" value="При удаление мема и, если пользователь пожаловался, то выводить сообщение о успешном выполнение действия" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-197">
+          <mxGeometry x="10" y="560" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-509" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=-0.006;entryY=0.154;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-197" source="jg5QH8RGZlHhSrdQyCiC-342" target="jg5QH8RGZlHhSrdQyCiC-359">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-406" value="Реализувывайте функции сервиса поочерёдно, сначала скелет MVP сервиса, а потом навешивать дополнительные функции" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" vertex="1" parent="1">
+          <mxGeometry x="10" y="210" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-407" value="&lt;span style=&quot;font-size: 20px;&quot;&gt;Общие блоки сообщений и классы для реализации&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="1">
+          <mxGeometry x="10" y="740" width="860" height="440" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-408" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-407" target="jg5QH8RGZlHhSrdQyCiC-440">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="205" y="380" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-409" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-407" target="jg5QH8RGZlHhSrdQyCiC-467">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="280" y="185" />
+              <mxPoint x="280" y="450" />
+              <mxPoint x="570" y="450" />
+            </Array>
+            <mxPoint x="270" y="185" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-422" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-407" target="jg5QH8RGZlHhSrdQyCiC-432">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="550" y="85" />
+              <mxPoint x="550" y="127" />
+            </Array>
+            <mxPoint x="550" y="90" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-429" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-407" target="jg5QH8RGZlHhSrdQyCiC-411">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="70" y="100" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-431" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=-0.004;entryY=0.085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-407" target="jg5QH8RGZlHhSrdQyCiC-423">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="205" y="120" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-466" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.821;entryY=-0.011;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="jg5QH8RGZlHhSrdQyCiC-407" target="jg5QH8RGZlHhSrdQyCiC-459">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="495" y="440" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-373" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Форма ввода блока&lt;/span&gt;" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-407">
+          <mxGeometry x="10" y="30" width="510" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-374" value="основная inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="10" y="30" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-375" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-374">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-376" value="далее -&amp;gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-375">
+          <mxGeometry width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-377" value="&amp;lt;- отменить" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-375">
+          <mxGeometry x="120" width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-379" value="После каждого сообщения выводите текущее состояние блока, типо так:" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="10" y="180" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-383" value="Стиль сообщения 2" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="260" y="130" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-384" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-383">
+          <mxGeometry y="20" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-385" value="&lt;div&gt;Введите [какое-то поле]&lt;/div&gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-384">
+          <mxGeometry width="240" height="30" as="geometry">
+            <mxRectangle width="240" height="30" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-386" value="Также в строке ввода сообщения написать &quot;Ввод [какое-то поле]:&quot;&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="260" y="190" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-402" value="Сообщение о том что &quot;Вводите поочерёдно параметры предсказания&quot;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="10" y="130" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-403" value="Стиль сообщения 1" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="260" y="30" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-404" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-403">
+          <mxGeometry y="20" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-405" value="&lt;div&gt;Блок:&lt;br&gt;поле 1: [данные]&lt;/div&gt;&lt;div&gt;поле 2: [не заполнено]&lt;/div&gt;&lt;div&gt;поле 3: [пустое]&lt;/div&gt;" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-404">
+          <mxGeometry width="240" height="70" as="geometry">
+            <mxRectangle width="240" height="70" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-493" value="конечная inline клава" style="shape=table;startSize=20;container=1;collapsible=0;childLayout=tableLayout;strokeColor=default;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="10" y="80" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-494" value="" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;strokeColor=inherit;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=16;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-493">
+          <mxGeometry y="20" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-495" value="сохранить" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-494">
+          <mxGeometry width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-496" value="&amp;lt;- отменить" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;strokeColor=inherit;overflow=hidden;fillColor=none;top=0;left=0;bottom=0;right=0;pointerEvents=1;fontSize=12;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-494">
+          <mxGeometry x="120" width="120" height="20" as="geometry">
+            <mxRectangle width="120" height="20" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-505" value="В конце вывести сообщение о том что всё успешно ввелось" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-373">
+          <mxGeometry x="10" y="240" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="jg5QH8RGZlHhSrdQyCiC-491" value="Общий вид для кнопок в reply и inline клаве. То есть реализовать классы Buttons, ButtonChoose, ButtonBool, Button. Чтобы могли писать свои функции для качественной архитектуры" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="jg5QH8RGZlHhSrdQyCiC-407">
+          <mxGeometry x="10" y="340" width="240" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
