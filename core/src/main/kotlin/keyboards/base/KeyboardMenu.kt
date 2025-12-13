@@ -8,11 +8,14 @@ fun getKeyboardMenu(): MutableList<MutableList<Button>> {
     val button1 = Button("Button")
     val button2 = ChooseButton(
         name = "ChooseButton",
-        list = mapOf("name1" to null, "name2" to null, "name3" to null),
+        list = mapOf(
+            "name1" to null,
+            "name2" to null,
+            "name3" to null
+        ),
         startIndex = 0
     )
     val button3 = BoolButton("BoolButton", false)
-
     val memesButton = Button("Мемы")
 
     return mutableListOf(
