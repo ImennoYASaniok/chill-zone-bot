@@ -1,25 +1,40 @@
 package ChillZoneBot.core.src.main.kotlin.handlers.base
 
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
+import io.github.cdimascio.dotenv.dotenv
 import java.io.File
+import java.sql.DriverManager
+import java.sql.SQLException
 
 data class Meme(
     val id: Int,
     val fileId: String?
 )
+/*
 
+CREATE TABLE memes(id SERIAL PRIMARY KEY, fileId TEXT); - запрос на создание таблицы мемов
+
+ */
 object MemeStorage {
     private val memes = mutableListOf<Meme>()
-    private val file = File("memes.txt").apply { if (!exists()) createNewFile() }
 
     init {
-        for (line in file.readLines()) {
-            if (line.isBlank()) continue
-            val parts = line.split("|")
-            if (parts.size < 2) continue
-            val id = parts[0].toIntOrNull() ?: continue
-            val fileId = parts[1]
-            memes.add(Meme(id, fileId))
+        try {
+            val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+            val databaseUser = dotenv()["DATABASE_USER"]
+            val databasePassword = dotenv()["DATABASE_PASSWORD"]
+
+            val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+
+            var query = "SELECT * FROM Memes"
+            var statement = connection.createStatement()
+            statement.executeQuery(query).use { resultSet ->
+                while (resultSet.next()) {
+                    memes.add(Meme(resultSet.getInt(1), resultSet.getString(2)))
+                }
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
         }
     }
 
@@ -31,7 +46,22 @@ object MemeStorage {
         val newId = if (memes.isEmpty()) 1 else memes.maxOf { it.id } + 1
         val meme = Meme(newId, fileId)
         memes.add(meme)
-        file.appendText("${meme.id}|${meme.fileId}\n")
+        try {
+            val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+            val databaseUser = dotenv()["DATABASE_USER"]
+            val databasePassword = dotenv()["DATABASE_PASSWORD"]
+            val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+            val insertMovieQuery =
+                "INSERT INTO Memes (fileId) VALUES (?)"
+            val preparedStatement = connection.prepareStatement(insertMovieQuery)
+            preparedStatement.setString(1, fileId)
+            val rowsAffected = preparedStatement.executeUpdate()
+        } catch (e: SQLException) {
+            e.printStackTrace()
+        }
+
+
+
         return meme
     }
 }
