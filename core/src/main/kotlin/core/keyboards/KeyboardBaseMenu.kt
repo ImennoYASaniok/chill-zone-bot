@@ -6,7 +6,7 @@ import core.ChooseButton
 
 import kotlin.collections.mutableListOf
 
-fun getKeyboardBaseMenu(): MutableList<MutableList<Button>> {
+fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
     val profileButton = Button(
         name = "👤 Профиль"
     )
@@ -34,12 +34,15 @@ fun getKeyboardBaseMenu(): MutableList<MutableList<Button>> {
     val feedbackButton = Button(
         name = "💬 Обратная связь"
     )
+    val aboutButton = Button(
+        name = "ℹ️ О нас"
+    )
 
     return mutableListOf(
         mutableListOf(profileButton, settingsButton),
         mutableListOf(collectionsButton, miniGamesButton),
         mutableListOf(predictionsButton, memeButton),
         mutableListOf(testsButton, pixelArtsButton),
-        mutableListOf(feedbackButton),
+        mutableListOf(feedbackButton, aboutButton),
     )
 }

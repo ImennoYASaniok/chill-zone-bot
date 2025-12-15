@@ -5,6 +5,18 @@ import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 
+
+//val photo = SendPhoto(chatId.toString(), InputFile("https://example.com/img.png"))
+//photo.caption = "Картинка + кнопка"
+//photo.replyMarkup = InlineKeyboardMarkup(
+//listOf(listOf(
+//InlineKeyboardButton("Открыть сайт").setUrl("https://google.com")
+//))
+//)
+//
+//execute(photo)
+
+
 open class InlineButton(var name: String, val callback: String, val func: (() -> String?)? = null) {
     open fun getInlineButton(): InlineKeyboardButton {
         return InlineKeyboardButton.CallbackData(getText(), callback)

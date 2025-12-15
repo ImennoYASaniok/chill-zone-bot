@@ -1,10 +1,10 @@
 package core
 
 enum class States {
-    BaseMenu,
+    GeneralMenu,
     MemeMenu,
     PredictionsMenu,
     CollectionsMenu
 }
 
-var currState: States = States.BaseMenu
+var currState: States = States.GeneralMenu
