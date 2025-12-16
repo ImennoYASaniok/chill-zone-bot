@@ -23,7 +23,7 @@ enum class Colors {
 }
 
 data class Question (
-    var content: String,
+    var content: String = "",
     var typeAnswer: AnswerType,
     var correctAnswer: Any,
     var answers: MutableList<Any>

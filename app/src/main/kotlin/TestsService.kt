@@ -1,15 +1,40 @@
 package ChillZoneBot.app.src.main.kotlin.App
 
+import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 import ChillZoneBot.core.src.main.kotlin.TestCore.*
 
+object TestsStates {
+    var creatingTest: Boolean = false
+    var waitingForName: Boolean = false
+    var waitingForQuestionsAmount: Boolean = false
+    var waitingForQuestionText: Boolean = false
+    var waitingForQuestionType: Boolean = false
+    var waitingForAnswersAmount: Boolean = false
+    var waitingForAnswers: Boolean = false
+    var waitingForCorrectAnswers: Boolean = false
+    var currentTest: Test = Test()
+    var waitingForAuthor: Boolean = false
+    var questionNomer: Int = 1
+
+    var currentQuestionText: String = ""
+    var currentAnswerType: AnswerType = AnswerType.DIGITAL
+    var currentAnswersAmount: Int = 1
+    var answerNomer: Int = 1
+    var currentAnswers: MutableList<MutableList<Button>> = mutableListOf()
+    var currentCorrectAnswer: Any = Any()
+    var currentMaxChooseOptions: Int = 1
+}
+
+
+
 class Test(
-    var name: String,
-    var author: String,
-    var questions: MutableList<Question>
+    var name: String = "",
+    var author: String = "",
+    var questions: MutableList<Question> = mutableListOf(),
+    var questionsAmount: Int = 0
     ) {
 
     fun construct() {
-        val questionsAmount = readln().toInt() // количество вопросов
 
         for (questionNumber in 1..questionsAmount) {
             val question = readln() // текст вопроса
