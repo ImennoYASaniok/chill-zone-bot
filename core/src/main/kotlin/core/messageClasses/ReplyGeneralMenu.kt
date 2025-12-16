@@ -8,7 +8,7 @@ import core.utils.Logger
 fun getReplyGeneralMenu(): ReplyClass {
     val replyClass = ReplyClass(
         keyboard = getKeyboardGeneralMenu(),
-        startCommand = "/start",
+        globalCommand = "/start",
         startFunc = ::handlerMenu,
         urls = mutableListOf("generalMenu/GeneralMenu.png")
     )

@@ -51,3 +51,7 @@ logs/
 
 # Docs
 .$*.bkp
+
+# Videos
+.mp4
+.mov

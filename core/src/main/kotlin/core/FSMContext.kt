@@ -2,6 +2,7 @@ package core
 
 enum class States {
     GeneralMenu,
+    Settings,
     MemeMenu,
     PredictionsMenu,
     CollectionsMenu

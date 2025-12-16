@@ -7,9 +7,12 @@ import com.github.kotlintelegrambot.entities.ChatId
 
 import io.github.cdimascio.dotenv.dotenv
 
-import core.messageClasses.getReplyGeneralMenu
 import core.States
+import core.currState
 import core.utils.Logger
+import core.messageClasses.ReplyList
+import core.messageClasses.getReplyGeneralMenu
+import core.messageClasses.getReplySettings
 
 fun main() {
     val dotenv = dotenv()
@@ -18,14 +21,12 @@ fun main() {
         token = dotenv["BOT_TOKEN"]
         Logger.info("env", "Получен токен")
 
-
         dispatch {
-            val replyGeneralMenu = getReplyGeneralMenu()
-
             text {
                 val chatId = ChatId.fromId(message.chat.id)
 
-                replyGeneralMenu.main(text, bot = bot, chatId = chatId, state = States.GeneralMenu)
+                ReplyList.replyGeneralMenu.main(text, bot = bot, chatId = chatId, state = States.GeneralMenu)
+                ReplyList.replySettings.main(text, bot = bot, chatId = chatId, state = States.Settings)
             }
         }
     }

@@ -14,7 +14,11 @@ import core.utils.Url
 import java.io.File
 import java.io.FileNotFoundException
 
-open class Button(var name: String, val func: (() -> String?)? = null) {
+open class Button(
+    var name: String,
+    val func: (() -> String?)? = null,
+    val isTransitional: Boolean = false
+) {
     override fun toString(): String {
         return "Button(name='$name')"
     }
@@ -84,6 +88,7 @@ class ChooseButton(
         if (currentFunc != null) message = currentFunc()
         currentIndex++
         currentIndex %= list.size
+
         return message
     }
 }
@@ -91,8 +96,9 @@ class ChooseButton(
 
 class ReplyClass(
     var keyboard: MutableList<MutableList<Button>>,
-    val startCommand: String,
+    val globalCommand: String,
     val startFunc: (() -> String),
+    val command: String? = null,
     var urls: MutableList<String> = mutableListOf(),
     useFormat: Boolean = true,
     thresholdCountButtons: Int = 6
@@ -142,7 +148,7 @@ class ReplyClass(
     }
 
     override fun toString(): String {
-        return "ReplyClass(startCommand='$startCommand')"
+        return "ReplyClass(globalCommand='$globalCommand', command='$command')"
     }
 
     fun formatKeyboard() {
@@ -235,26 +241,12 @@ class ReplyClass(
             val rowReplyKeyboard = mutableListOf<KeyboardButton>()
             for (buttonKeyboard in rowKeyboard) {
                 rowReplyKeyboard.add(buttonKeyboard.getButton())
-                // println(buttonKeyboard.getText())
             }
             replyKeyboard.add(rowReplyKeyboard)
         }
-        // println()
     }
 
-    fun detect(text: String): String? {
-        for (indRow in keyboard.indices) {
-            for (indCol in keyboard[indRow].indices) {
-                if (keyboard[indRow][indCol].getText() == text) {
-                    val message = keyboard[indRow][indCol].detect()
-                    return message
-                }
-            }
-        }
-        return null
-    }
-
-    fun isNameButton(text: String): Boolean {
+    fun textIsButtonName(text: String): Boolean {
         var checkVal = false
         for (buttons in keyboard) {
             for (button in buttons) {
@@ -314,9 +306,9 @@ class ReplyClass(
     fun sendAnimationMessage(message: String, bot: Bot, chatId: ChatId, url: String) {
         if (typeImgUrl == "path") {
             val file = File(url)
-            println("File exists: ${file.exists()}")
-            println("File path: ${file.absolutePath}")
-            println("File size: ${file.length()} bytes")
+//            println("File exists: ${file.exists()}")
+//            println("File path: ${file.absolutePath}")
+//            println("File size: ${file.length()} bytes")
             if (!file.exists()) {
                 Logger.error("Miss file", "Файла по пути ${file.absolutePath} не существует")
                 return
@@ -367,69 +359,85 @@ class ReplyClass(
         sendDefaultMessage(message, bot, chatId)
     }
 
-    fun main(text: String, bot: Bot, chatId: ChatId, state: States) {
-        if (currState == state) {
-            val conditionIsNameButton: Boolean = isNameButton(text)
-            var message: String? = null
-
-            if (conditionIsNameButton) {
-                message = detect(text)
-            }
-            if (text == message || conditionIsNameButton) {
-                update()
-            }
-
-            if (text == startCommand || text == message || conditionIsNameButton) {
-                if (message == null) {
-                    message = startFunc()
-                    if (urls.size == 1) {
-                        if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
-                            sendImgMessage(message, bot, chatId, urls[0])
-                        }
-                        else if (Url.determineTypeFile(urls[0]) == Url.TYPE_ANIMATION) {
-                            sendAnimationMessage(message, bot, chatId, urls[0])
-                        }
-                        else if (Url.determineTypeFile(urls[0]) in Url.TYPE_VIDEOS) {
-                            sendVideoMessage(message, bot, chatId, urls[0])
-                        }
-                        else if (Url.determineTypeFile(urls[0]) in Url.TYPE_AUDIO) {
-                            sendAudioMessage(message, bot, chatId, urls[0])
-                        }
-                        else {
-                            sendFileMessage(message, bot, chatId, urls[0])
-                        }
-                    }
-                    else if (urls.size > 1) {
-                        if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
-                            sendImgsMessage(message, bot, chatId, urls)
-                        }
-                        else {
-                            for (imgUrl in urls) {
-                                if (Url.determineTypeFile(imgUrl) == Url.TYPE_ANIMATION) {
-                                    sendAnimationMessage(message, bot, chatId, imgUrl)
-                                }
-                                else if (Url.determineTypeFile(imgUrl) in Url.TYPE_VIDEOS) {
-                                    sendVideoMessage(message, bot, chatId, imgUrl)
-                                }
-                                else if (Url.determineTypeFile(imgUrl) in Url.TYPE_AUDIO) {
-                                    sendAudioMessage(message, bot, chatId, imgUrl)
-                                }
-                                else {
-                                    sendFileMessage(message, bot, chatId, imgUrl)
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        sendDefaultMessage(message, bot, chatId)
-                        Logger.info("bot", "Отправлено дефолт сообщение по команде '$text'")
-                    }
+    fun sendMessage(inpMessage: String?, text: String, bot: Bot, chatId: ChatId) {
+        var message = inpMessage
+        if (message == null) {
+            message = startFunc()
+            if (urls.size == 1) {
+                if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
+                    sendImgMessage(message, bot, chatId, urls[0])
+                    Logger.info("$this", "Отправлено сообщение c картинкой по команде '$text'")
+                }
+                else if (Url.determineTypeFile(urls[0]) == Url.TYPE_ANIMATION) {
+                    sendAnimationMessage(message, bot, chatId, urls[0])
+                }
+                else if (Url.determineTypeFile(urls[0]) in Url.TYPE_VIDEOS) {
+                    sendVideoMessage(message, bot, chatId, urls[0])
+                }
+                else if (Url.determineTypeFile(urls[0]) in Url.TYPE_AUDIO) {
+                    sendAudioMessage(message, bot, chatId, urls[0])
                 }
                 else {
-                    sendDefaultMessage(message, bot, chatId)
-                    Logger.info("bot", "Отправлено дефолт сообщение по команде $text")
+                    sendFileMessage(message, bot, chatId, urls[0])
                 }
             }
+            else if (urls.size > 1) {
+                if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
+                    sendImgsMessage(message, bot, chatId, urls)
+                }
+                else {
+                    for (imgUrl in urls) {
+                        if (Url.determineTypeFile(imgUrl) == Url.TYPE_ANIMATION) {
+                            sendAnimationMessage(message, bot, chatId, imgUrl)
+                        }
+                        else if (Url.determineTypeFile(imgUrl) in Url.TYPE_VIDEOS) {
+                            sendVideoMessage(message, bot, chatId, imgUrl)
+                        }
+                        else if (Url.determineTypeFile(imgUrl) in Url.TYPE_AUDIO) {
+                            sendAudioMessage(message, bot, chatId, imgUrl)
+                        }
+                        else {
+                            sendFileMessage(message, bot, chatId, imgUrl)
+                        }
+                    }
+                }
+            }
+            else {
+                sendDefaultMessage(message, bot, chatId)
+                Logger.info("$this", "Отправлено дефолт сообщение по команде '$text'")
+            }
+        }
+        else {
+            sendDefaultMessage(message, bot, chatId)
+            Logger.info("$this", "Отправлено дефолт сообщение по команде '$text'")
+        }
+    }
+
+    fun main(text: String, bot: Bot, chatId: ChatId, state: States) {
+        if ((currState == state && textIsButtonName(text)) || (currState != state && text == command) || text == globalCommand) {
+            if (currState != state) {
+                currState = state
+            }
+
+            var message: String? = null
+            var buttonIsTransition = false
+
+            println("ДО $this $currState")
+            for (indRow in keyboard.indices) {
+                for (indCol in keyboard[indRow].indices) {
+                    if (keyboard[indRow][indCol].getText() == text) {
+                        message = keyboard[indRow][indCol].detect()
+                        buttonIsTransition = keyboard[indRow][indCol].isTransitional
+                    }
+                }
+            }
+            println("ПОСЛЕ $this $currState $buttonIsTransition")
+
+            if ((currState == state && !buttonIsTransition) || text == globalCommand) {
+                update()
+                sendMessage(message, text, bot, chatId)
+            }
+
         }
     }
 }
