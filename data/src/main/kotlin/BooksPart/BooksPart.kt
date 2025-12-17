@@ -76,3 +76,21 @@ fun collectResponse(query: String): List<BookResponse>? {
     println(getFromApi(query))
     return parseJson(getFromApi(query))
 }
+
+fun getInfo(query: String): MutableList<String> {
+    val responses = mutableListOf<String>()
+    val collected = collectResponse(query)
+    if (collected == null) {
+        return mutableListOf()
+    } else {
+        for (i in collected) {
+            val book = i.volumeInfo
+            val response =
+                "Название: ${book.title}\n\nАвтор(ы): ${book.authors}\nКоличество страниц: ${book.pageCount}\n\nОписание: ${book.description}"
+
+            responses.add(response)
+
+        }
+        return responses
+    }
+}
