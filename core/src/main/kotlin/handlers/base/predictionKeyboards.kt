@@ -1,7 +1,9 @@
 package ChillZoneBot.core.src.main.kotlin.handlers.predictions
 
+
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 
+// Клавиатура главного меню
 fun getMainKeyboard(): MutableList<MutableList<Button>> {
     val getPrediction = Button("Получить предсказание")
     val myPredictions = Button("Мои предсказания")
@@ -16,6 +18,7 @@ fun getMainKeyboard(): MutableList<MutableList<Button>> {
     )
 }
 
+// Клавиатура выбора редкости при добавлении предсказания
 fun getRarityKeyboard(): MutableList<MutableList<Button>> {
     val common = Button("Обычное")
     val rare = Button("Редкое")

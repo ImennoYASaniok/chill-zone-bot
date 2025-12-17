@@ -1,6 +1,10 @@
 package ChillZoneBot.core.src.main.kotlin.handlers.predictions
 
+
+import java.util.concurrent.atomic.AtomicInteger
 import java.io.File
+// Класс предсказания
+
 
 data class Prediction(
     val id: Int,
@@ -10,9 +14,12 @@ data class Prediction(
 
 object PredictionStorage {
     private val predictions = mutableListOf<Prediction>()
-    private val file = File("predictions.txt").apply { if (!exists()) createNewFile() }
+    private val file = File("predictions.txt").apply {
+        if (!exists()) createNewFile()
+    }
 
     init {
+        // Загружаем уже существующие предсказания из файла
         file.readLines().forEach { line ->
             if (line.isBlank()) return@forEach
             val parts = line.split("|")
@@ -28,28 +35,25 @@ object PredictionStorage {
         val newId = if (predictions.isEmpty()) 1 else predictions.maxOf { it.id } + 1
         val pred = Prediction(newId, text, rarity)
         predictions.add(pred)
-        file.appendText("${pred.id}|${pred.text}|${pred.rarity}\n")
+        file.appendText("${pred.id}|${pred.text}|${pred.rarity}\n") // сохраняем в файл
         return pred
     }
 
     fun getAll(): List<Prediction> = predictions.toList()
-    fun size(): Int = predictions.size
-    fun getByIndex(index: Int): Prediction? {
-        if (predictions.isEmpty()) return null
-        val i = index % predictions.size
-        return predictions[i]
-    }
-}
 
+    fun size(): Int = predictions.size
+}
+// История предсказаний пользователя
 object UserPredictionHistory {
     private val userPredictions = mutableMapOf<Long, MutableList<Prediction>>()
 
-    fun addToUser(chatId: Long, pred: Prediction) {
-        val list = userPredictions.getOrPut(chatId) { mutableListOf() }
-        list.add(pred)
+    fun addToUser(userId: Long, prediction: Prediction) {
+        val list = userPredictions.getOrPut(userId) { mutableListOf() }
+        list.add(prediction)
     }
 
-    fun getUserPredictions(chatId: Long): List<Prediction> {
-        return userPredictions[chatId]?.toList() ?: emptyList()
+    fun getUserPredictions(userId: Long): List<Prediction> {
+        return userPredictions[userId]?.toList() ?: emptyList()
     }
 }
+
