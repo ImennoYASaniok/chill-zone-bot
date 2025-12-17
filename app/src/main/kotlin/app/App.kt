@@ -25,8 +25,11 @@ fun main() {
             text {
                 val chatId = ChatId.fromId(message.chat.id)
 
-                ReplyList.replyGeneralMenu.main(text, bot = bot, chatId = chatId, state = States.GeneralMenu)
-                ReplyList.replySettings.main(text, bot = bot, chatId = chatId, state = States.Settings)
+                val pairGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
+                val pairSettings = ReplyList.replySettings.processing(text)
+
+                ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = pairGeneralMenu)
+                ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = pairSettings)
             }
         }
     }

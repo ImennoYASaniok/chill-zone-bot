@@ -14,10 +14,12 @@ import core.utils.Url
 import java.io.File
 import java.io.FileNotFoundException
 
+import kotlin.reflect.full.memberProperties
+
 open class Button(
     var name: String,
     val func: (() -> String?)? = null,
-    val isTransitional: Boolean = false
+    val stateChange: States? = null
 ) {
     override fun toString(): String {
         return "Button(name='$name')"
@@ -34,6 +36,7 @@ open class Button(
     open fun detect(): String? {
         var message: String? = null
         if (func != null) message = func.invoke()
+        if (stateChange != null) currState = stateChange
         return message
     }
 }
@@ -42,7 +45,8 @@ class BoolButton(
     name: String,
     var flag: Boolean = true,
     val funcTrue: (() -> String?)? = null,
-    val funcFalse: (() -> String?)? = null
+    val funcFalse: (() -> String?)? = null,
+    // isTransitional: Boolean = false
 ) : Button(name) {
     val nameTrue = "✅"
     val nameFalse = "❌"
@@ -70,7 +74,8 @@ class BoolButton(
 class ChooseButton(
     name: String,
     val list: Map<String, (() -> String?)?>,
-    startIndex: Int = 0
+    startIndex: Int = 0,
+    // isTransitional: Boolean = false
 ) : Button(name) {
     var currentIndex: Int = startIndex
 
@@ -93,12 +98,13 @@ class ChooseButton(
     }
 }
 
-
 class ReplyClass(
     var keyboard: MutableList<MutableList<Button>>,
     val globalCommand: String,
-    val startFunc: (() -> String),
     val command: String? = null,
+    val state: States,
+    val stateBack: States? = null,
+    val startFunc: (() -> String),
     var urls: MutableList<String> = mutableListOf(),
     useFormat: Boolean = true,
     thresholdCountButtons: Int = 6
@@ -118,15 +124,14 @@ class ReplyClass(
 
     init {
         if (keyboard == mutableListOf<MutableList<Button>>() || keyboard == mutableListOf<MutableList<Button>>(mutableListOf<Button>())) {
-            throw IndexOutOfBoundsException("У $this reply клавиатура без кнопок ")
+            throw IndexOutOfBoundsException("У $this reply клавиатура без кнопок")
         }
-        if (useFormat) {
-            if (keyboard.sumOf { buttons -> buttons.size } > thresholdCountButtons) {
-                formatKeyboard()
-            }
-            else {
-                groupKeyboards.add(keyboard)
-            }
+        if (useFormat && keyboard.sumOf { buttons -> buttons.size } > thresholdCountButtons) {
+            formatKeyboard()
+        }
+        else {
+            keyboard.add(mutableListOf(getBackButton()))
+            groupKeyboards.add(keyboard)
         }
         maxCountKeyboard = groupKeyboards.size
 
@@ -145,6 +150,8 @@ class ReplyClass(
                 Url.formatUrl(url)
             }.toMutableList()
         }
+
+        update()
     }
 
     override fun toString(): String {
@@ -156,30 +163,16 @@ class ReplyClass(
         var indCol = 0
         val maxCountCol = 2
         var indRow = 0
-        val maxCountRow = 3
-        var indButton = 0
+        var maxCountRow = 3
 
-        val countAllButtons = keyboard.sumOf { buttons -> buttons.size }
+        maxCountRow -= 1
+
         val preformattedButtons = mutableListOf<Button>()
         for (buttons in keyboard) {
             for (button in buttons) {
                 preformattedButtons.add(button)
-
-                if (ind >= countAllButtons - 1 && indButton <= maxCountCol * maxCountRow - 1 - 1) {
-                    preformattedButtons.add(getBackButton())
-                }
-                else if (indButton == maxCountCol * maxCountRow - 1 - 1) {
-                    preformattedButtons.add(getNextButton())
-                }
-
-                indButton++
-                ind++
-
-                indButton %= maxCountCol * maxCountRow
             }
         }
-        ind = 0
-        indButton = 0
 
         val tempKeyboard = mutableListOf<MutableList<Button>>()
         val tempRow = mutableListOf<Button>()
@@ -190,6 +183,11 @@ class ReplyClass(
                 tempKeyboard.add(tempRow.toMutableList())
                 tempRow.clear()
                 if (indRow == maxCountRow - 1 || ind >= preformattedButtons.size - 1) {
+                    if (stateBack != null) {
+                        tempKeyboard.add(mutableListOf(getBackButton(), getNextButton()))
+                    } else {
+                        tempKeyboard.add(mutableListOf(getNextButton()))
+                    }
                     groupKeyboards.add(tempKeyboard.toMutableList())
                     tempKeyboard.clear()
                 }
@@ -210,13 +208,20 @@ class ReplyClass(
     }
 
     fun getBackButton(): Button {
-        return Button(name = nameBackButton, func = ::incrementCurrIndKeyboard)
+        return Button(name = nameBackButton, func = ::returnBackState, stateChange = stateBack)
     }
 
     fun incrementCurrIndKeyboard(): Nothing? {
         currIndKeyboard++
         currIndKeyboard %= maxCountKeyboard
         setCurrKeyboard()
+        return null
+    }
+
+    fun returnBackState(): Nothing? {
+        if (stateBack != null) {
+            currState = stateBack
+        }
         return null
     }
 
@@ -232,9 +237,6 @@ class ReplyClass(
         )
     }
 
-    init {
-        update()
-    }
     fun update() {
         replyKeyboard.clear()
         for (rowKeyboard in keyboard) {
@@ -413,31 +415,57 @@ class ReplyClass(
         }
     }
 
-    fun main(text: String, bot: Bot, chatId: ChatId, state: States) {
-        if ((currState == state && textIsButtonName(text)) || (currState != state && text == command) || text == globalCommand) {
-            if (currState != state) {
-                currState = state
-            }
+    fun processing(text: String): Pair<String?, Boolean>? {
 
+        if (currState == state && textIsButtonName(text)) {
             var message: String? = null
-            var buttonIsTransition = false
+            var findButton = false
 
-            println("ДО $this $currState")
+            // println("ДО $this $currState")
             for (indRow in keyboard.indices) {
                 for (indCol in keyboard[indRow].indices) {
                     if (keyboard[indRow][indCol].getText() == text) {
                         message = keyboard[indRow][indCol].detect()
-                        buttonIsTransition = keyboard[indRow][indCol].isTransitional
+                        findButton = true
+                        break
                     }
                 }
+                if (findButton) {
+                    break
+                }
             }
-            println("ПОСЛЕ $this $currState $buttonIsTransition")
+            // println("ПОСЛЕ $this $currState $buttonIsTransition")
 
-            if ((currState == state && !buttonIsTransition) || text == globalCommand) {
-                update()
-                sendMessage(message, text, bot, chatId)
+            return Pair(message, true)
+        }
+        else if (text == globalCommand) {
+            if (currState != state) {
+                currState = state
             }
+            return null
+        }
+        else if (currState == state && text == command) {
+            return null
+        }
+        return null
+    }
 
+    fun main(text: String, bot: Bot, chatId: ChatId, message: String? = null, isButton: Boolean = false) {
+        println("$currState $state")
+        println("$text $nameBackButton")
+        if (currState == state && (isButton || text == command || text == globalCommand || text == nameBackButton)) {
+            update()
+            sendMessage(message, text, bot, chatId)
+            println("$this $currState $state")
+        }
+    }
+
+    fun callMain(text: String, bot: Bot, chatId: ChatId, pair: Pair<String?, Boolean>?) {
+        if (pair != null) {
+            main(text, bot = bot, chatId = chatId, message = pair.first, isButton = pair.second)
+        }
+        else {
+            main(text, bot = bot, chatId = chatId)
         }
     }
 }

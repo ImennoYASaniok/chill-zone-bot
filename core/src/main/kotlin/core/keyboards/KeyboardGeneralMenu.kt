@@ -11,7 +11,7 @@ fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
 
     val settingsButton = Button(
         name = "⚙️ Настройки",
-        isTransitional = true,
+        stateChange = States.Settings,
     )
     KeyboardNames.generalMenu["settings"] = settingsButton.getText()
 
