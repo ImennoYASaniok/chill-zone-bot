@@ -4,6 +4,7 @@ import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.text
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.User
 
 import io.github.cdimascio.dotenv.dotenv
 
@@ -13,6 +14,10 @@ import core.utils.Logger
 import core.messageClasses.ReplyList
 import core.messageClasses.getReplyGeneralMenu
 import core.messageClasses.getReplySettings
+
+fun getUsername(user: User?): String {
+    return user?.username ?: "Не указан"
+}
 
 fun main() {
     val dotenv = dotenv()
@@ -25,11 +30,13 @@ fun main() {
             text {
                 val chatId = ChatId.fromId(message.chat.id)
 
-                val pairGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
-                val pairSettings = ReplyList.replySettings.processing(text)
+                val argsGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
+                val argsSettings = ReplyList.replySettings.processing(text)
+                val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to getUsername(message.from)))
 
-                ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = pairGeneralMenu)
-                ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = pairSettings)
+                ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = argsGeneralMenu)
+                ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = argsSettings)
+                ReplyList.replyAccount.callMain(text, bot = bot, chatId = chatId, pair = argsAccount)
             }
         }
     }

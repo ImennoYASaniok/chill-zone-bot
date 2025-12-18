@@ -14,8 +14,6 @@ import core.utils.Url
 import java.io.File
 import java.io.FileNotFoundException
 
-import kotlin.reflect.full.memberProperties
-
 open class Button(
     var name: String,
     val func: (() -> String?)? = null,
@@ -104,7 +102,7 @@ class ReplyClass(
     val command: String? = null,
     val state: States,
     val stateBack: States? = null,
-    val startFunc: (() -> String),
+    val startFunc: ((Map<String, Any>?) -> String),
     var urls: MutableList<String> = mutableListOf(),
     useFormat: Boolean = true,
     thresholdCountButtons: Int = 6
@@ -123,9 +121,6 @@ class ReplyClass(
     val PARSE_MODE = ParseMode.HTML
 
     init {
-        if (keyboard == mutableListOf<MutableList<Button>>() || keyboard == mutableListOf<MutableList<Button>>(mutableListOf<Button>())) {
-            throw IndexOutOfBoundsException("У $this reply клавиатура без кнопок")
-        }
         if (useFormat && keyboard.sumOf { buttons -> buttons.size } > thresholdCountButtons) {
             formatKeyboard()
         }
@@ -361,52 +356,44 @@ class ReplyClass(
         sendDefaultMessage(message, bot, chatId)
     }
 
-    fun sendMessage(inpMessage: String?, text: String, bot: Bot, chatId: ChatId) {
-        var message = inpMessage
-        if (message == null) {
-            message = startFunc()
-            if (urls.size == 1) {
-                if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
-                    sendImgMessage(message, bot, chatId, urls[0])
-                    Logger.info("$this", "Отправлено сообщение c картинкой по команде '$text'")
-                }
-                else if (Url.determineTypeFile(urls[0]) == Url.TYPE_ANIMATION) {
-                    sendAnimationMessage(message, bot, chatId, urls[0])
-                }
-                else if (Url.determineTypeFile(urls[0]) in Url.TYPE_VIDEOS) {
-                    sendVideoMessage(message, bot, chatId, urls[0])
-                }
-                else if (Url.determineTypeFile(urls[0]) in Url.TYPE_AUDIO) {
-                    sendAudioMessage(message, bot, chatId, urls[0])
-                }
-                else {
-                    sendFileMessage(message, bot, chatId, urls[0])
-                }
+    fun sendMessage(message: String, text: String, bot: Bot, chatId: ChatId) {
+        if (urls.size == 1) {
+            if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
+                sendImgMessage(message, bot, chatId, urls[0])
+                Logger.info("$this", "Отправлено сообщение c картинкой по команде '$text'")
             }
-            else if (urls.size > 1) {
-                if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
-                    sendImgsMessage(message, bot, chatId, urls)
-                }
-                else {
-                    for (imgUrl in urls) {
-                        if (Url.determineTypeFile(imgUrl) == Url.TYPE_ANIMATION) {
-                            sendAnimationMessage(message, bot, chatId, imgUrl)
-                        }
-                        else if (Url.determineTypeFile(imgUrl) in Url.TYPE_VIDEOS) {
-                            sendVideoMessage(message, bot, chatId, imgUrl)
-                        }
-                        else if (Url.determineTypeFile(imgUrl) in Url.TYPE_AUDIO) {
-                            sendAudioMessage(message, bot, chatId, imgUrl)
-                        }
-                        else {
-                            sendFileMessage(message, bot, chatId, imgUrl)
-                        }
-                    }
-                }
+            else if (Url.determineTypeFile(urls[0]) == Url.TYPE_ANIMATION) {
+                sendAnimationMessage(message, bot, chatId, urls[0])
+            }
+            else if (Url.determineTypeFile(urls[0]) in Url.TYPE_VIDEOS) {
+                sendVideoMessage(message, bot, chatId, urls[0])
+            }
+            else if (Url.determineTypeFile(urls[0]) in Url.TYPE_AUDIO) {
+                sendAudioMessage(message, bot, chatId, urls[0])
             }
             else {
-                sendDefaultMessage(message, bot, chatId)
-                Logger.info("$this", "Отправлено дефолт сообщение по команде '$text'")
+                sendFileMessage(message, bot, chatId, urls[0])
+            }
+        }
+        else if (urls.size > 1) {
+            if (Url.determineTypeFile(urls[0]) in Url.TYPE_IMGS) {
+                sendImgsMessage(message, bot, chatId, urls)
+            }
+            else {
+                for (imgUrl in urls) {
+                    if (Url.determineTypeFile(imgUrl) == Url.TYPE_ANIMATION) {
+                        sendAnimationMessage(message, bot, chatId, imgUrl)
+                    }
+                    else if (Url.determineTypeFile(imgUrl) in Url.TYPE_VIDEOS) {
+                        sendVideoMessage(message, bot, chatId, imgUrl)
+                    }
+                    else if (Url.determineTypeFile(imgUrl) in Url.TYPE_AUDIO) {
+                        sendAudioMessage(message, bot, chatId, imgUrl)
+                    }
+                    else {
+                        sendFileMessage(message, bot, chatId, imgUrl)
+                    }
+                }
             }
         }
         else {
@@ -415,10 +402,10 @@ class ReplyClass(
         }
     }
 
-    fun processing(text: String): Pair<String?, Boolean>? {
-
+    fun processing(text: String, funcKwargs: Map<String, Any>? = null): Pair<String, Boolean> {
+        var message: String? = null
+        var IsButton: Boolean = false
         if (currState == state && textIsButtonName(text)) {
-            var message: String? = null
             var findButton = false
 
             // println("ДО $this $currState")
@@ -435,22 +422,22 @@ class ReplyClass(
                 }
             }
             // println("ПОСЛЕ $this $currState $buttonIsTransition")
-
-            return Pair(message, true)
+            IsButton = true
         }
         else if (text == globalCommand) {
             if (currState != state) {
                 currState = state
             }
-            return null
         }
-        else if (currState == state && text == command) {
-            return null
+//        else if (currState == state && text == command) {
+//        }
+        if (message == null) {
+            message = startFunc(funcKwargs)
         }
-        return null
+        return Pair(message, IsButton)
     }
 
-    fun main(text: String, bot: Bot, chatId: ChatId, message: String? = null, isButton: Boolean = false) {
+    fun main(text: String, bot: Bot, chatId: ChatId, message: String, isButton: Boolean = false) {
         println("$currState $state")
         println("$text $nameBackButton")
         if (currState == state && (isButton || text == command || text == globalCommand || text == nameBackButton)) {
@@ -460,12 +447,7 @@ class ReplyClass(
         }
     }
 
-    fun callMain(text: String, bot: Bot, chatId: ChatId, pair: Pair<String?, Boolean>?) {
-        if (pair != null) {
-            main(text, bot = bot, chatId = chatId, message = pair.first, isButton = pair.second)
-        }
-        else {
-            main(text, bot = bot, chatId = chatId)
-        }
+    fun callMain(text: String, bot: Bot, chatId: ChatId, pair: Pair<String, Boolean>) {
+        main(text, bot = bot, chatId = chatId, message = pair.first, isButton = pair.second)
     }
 }

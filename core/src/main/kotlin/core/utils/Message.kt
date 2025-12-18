@@ -165,9 +165,25 @@ object Message {
             .replace("\\", "\\\\")
     }
 
-    fun getMessage(path: String): String {
+    fun setPlaceHolders(text: String, placeholder: Map<String, Any>? = null): String {
+        var resText = text
+        if (placeholder != null) {
+            placeholder.forEach { (key, value) ->
+                if (value is String) {
+                    resText = resText.replace("$$key", value)
+                }
+            }
+        }
+
+        return resText
+    }
+
+    fun getMessage(path: String, kwargs: Map<String, Any>? = null): String {
         var text = File("core/messageAssets/$path").readText()
+
         text = formatTextMessage(text)
+        text = setPlaceHolders(text, kwargs)
+
         return text
     }
 }

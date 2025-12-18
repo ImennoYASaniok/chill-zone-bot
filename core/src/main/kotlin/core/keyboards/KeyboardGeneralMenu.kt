@@ -4,10 +4,11 @@ import core.Button
 import core.States
 
 fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
-    val profileButton = Button(
-        name = "👤 Профиль"
+    val accountButton = Button(
+        name = "👤 Профиль",
+        stateChange = States.Account,
     )
-    KeyboardNames.generalMenu["profile"] = profileButton.getText()
+    KeyboardNames.generalMenu["account"] = accountButton.getText()
 
     val settingsButton = Button(
         name = "⚙️ Настройки",
@@ -28,7 +29,7 @@ fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
     val predictionsButton = Button(
         name = "🔮 Предсказания"
     )
-    KeyboardNames.generalMenu["predictions"] = profileButton.getText()
+    KeyboardNames.generalMenu["predictions"] = predictionsButton.getText()
 
     val memesButton = Button(
         name = "😂 Мемы"
@@ -56,7 +57,7 @@ fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
     KeyboardNames.generalMenu["about"] = aboutButton.getText()
 
     return mutableListOf(
-        mutableListOf(profileButton, settingsButton),
+        mutableListOf(accountButton, settingsButton),
         mutableListOf(collectionsButton, miniGamesButton),
         mutableListOf(predictionsButton, memesButton),
         mutableListOf(testsButton, pixelArtsButton),
