@@ -9,6 +9,12 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 
+object BooksStates {
+    var waitingForKeyWord: Boolean = true
+    var bookResponseIndex: Int = 0
+    var searchResult: MutableList<String> = mutableListOf()
+}
+
 
 fun parseJson(jjsonString: String) : List<BookResponse>? {
     try {

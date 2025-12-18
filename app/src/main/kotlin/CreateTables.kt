@@ -1,6 +1,5 @@
 package ChillZoneBot.app.src.main.kotlin.App
 
-import Models.FilmsModel.Genre
 import io.github.cdimascio.dotenv.dotenv
 import java.sql.DriverManager
 import java.sql.SQLException
@@ -13,24 +12,26 @@ fun main() {
         val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
         val neededGenres: ArrayList<String> = arrayListOf()
         var createTablesQuery =
-            "SELECT m.* " +
-                    "FROM Movies m" +
-                    "WHERE m.id IN (" +
-                    "    SELECT idMovie" +
-                    "    FROM Genres" +
-                    "    WHERE name = Any(?)" +
-                    "    GROUP BY idMovie" +
-                    "    HAVING COUNT(DISTINCT name) = ?);"
+            "INSERT INTO correctTextAnswers(questionId, ans) VALUES(1, 'да');"
+        println("ВАЖНО")
 
-        var preparedStatement = connection.prepareStatement(createTablesQuery)
-        val sqlArray = connection.createArrayOf("VARCHAR", neededGenres.toArray())
-        preparedStatement.setArray(1, sqlArray)
-        preparedStatement.setInt(2, neededGenres.size)
-        preparedStatement.executeQuery().use { resultSet ->
-            while(resultSet.next()) {
-                TODO()
-            }
-        }
+        connection.prepareStatement(createTablesQuery).execute()
+//        connection.createStatement().executeQuery(createTablesQuery).use { resultSet ->
+//            while(resultSet.next()) {
+//
+//                println(resultSet.getInt(1))
+//            }
+//        }
+
+//        var preparedStatement = connection.prepareStatement(createTablesQuery)
+//        val sqlArray = connection.createArrayOf("VARCHAR", neededGenres.toArray())
+//        preparedStatement.setArray(1, sqlArray)
+//        preparedStatement.setInt(2, neededGenres.size)
+//        preparedStatement.executeQuery().use { resultSet ->
+//            while(resultSet.next()) {
+//                println
+//            }
+//        }
 
     } catch (e: SQLException) {
         e.printStackTrace()

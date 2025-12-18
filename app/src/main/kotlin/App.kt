@@ -1,17 +1,19 @@
 package ChillZoneBot.app.src.main.kotlin.App
 
+
+import BooksPart.BooksStates
+import BooksPart.getInfo
+
 import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineButton
 import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineClass
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
 import ChillZoneBot.core.src.main.kotlin.TestCore.AnswerType
 import ChillZoneBot.core.src.main.kotlin.TestCore.Question
+
 import KinoPart.KinoStates
 import KinoPart.searchMoviesDB
 import KinoPart.searchSeriesDB
-import keyboards.base.getKeyboardMenu
-import keyboards.base.getInlineKeyboardMenu
-
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
@@ -20,8 +22,14 @@ import com.github.kotlintelegrambot.dispatcher.text
 import com.github.kotlintelegrambot.entities.ChatId
 
 import io.github.cdimascio.dotenv.dotenv
+
+import keyboards.base.getInlineKeyboardMenu
+import keyboards.base.getKeyboardMenu
+
 import java.sql.DriverManager
 import java.sql.SQLException
+
+import kotlin.math.min
 
 fun main() {
     val dotenv = dotenv()
@@ -41,13 +49,15 @@ fun main() {
                 textMessage = "inlineMenu"
             )
 
-            callbackQuery ("UNLIKEitSERIES") {
+
+
+            callbackQuery("UNLIKEitSERIES") {
 
             }
             callbackQuery("LIKEDitSERIES") {
 
             }
-            callbackQuery ("UNLIKEitMOVIES") {
+            callbackQuery("UNLIKEitMOVIES") {
 
             }
             callbackQuery("LIKEDitMOVIES") {
@@ -60,7 +70,10 @@ fun main() {
 
                 KinoStates.filmIndex++
                 if (KinoStates.filmIndex >= KinoStates.foundFilms.size) {
-                    bot.sendMessage(chatId, "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню.")
+                    bot.sendMessage(
+                        chatId,
+                        "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
+                    )
                     TODO("Вернуть в главное меню")
                 } else {
 
@@ -78,8 +91,6 @@ fun main() {
                     bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 }
             }
-
-
             callbackQuery("endChoosingGenresMovies") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -87,13 +98,16 @@ fun main() {
 
                 searchMoviesDB()
 
-                if (KinoStates.filmIndex== KinoStates.foundFilms.size) {
-                    bot.sendMessage(chatId, "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню.")
+                if (KinoStates.filmIndex == KinoStates.foundFilms.size) {
+                    bot.sendMessage(
+                        chatId,
+                        "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
+                    )
                     TODO("Вернуть в главное меню")
-                }
-                else {
+                } else {
 
-                    val desc = KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
+                    val desc =
+                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
                             InlineButton("Нравится", "LIKEDitMOVIES"), InlineButton("Не нравится", "UNLIKEitMOVIES")
@@ -106,14 +120,15 @@ fun main() {
                 }
             }
 
-
-
             callbackQuery("dislikeITseries") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
                 KinoStates.filmIndex++
                 if (KinoStates.filmIndex >= KinoStates.foundFilms.size) {
-                    bot.sendMessage(chatId, "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню.")
+                    bot.sendMessage(
+                        chatId,
+                        "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
+                    )
                     TODO("Вернуть в главное меню")
                 } else {
 
@@ -131,8 +146,6 @@ fun main() {
                     bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 }
             }
-
-
             callbackQuery("endChoosingGenresSeries") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -140,13 +153,16 @@ fun main() {
 
                 searchSeriesDB()
 
-                if (KinoStates.filmIndex== KinoStates.foundFilms.size) {
-                    bot.sendMessage(chatId, "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню.")
+                if (KinoStates.filmIndex == KinoStates.foundFilms.size) {
+                    bot.sendMessage(
+                        chatId,
+                        "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
+                    )
                     TODO("Вернуть в главное меню")
-                }
-                else {
+                } else {
 
-                    val desc = KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
+                    val desc =
+                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
                             InlineButton("Нравится", "LIKEDitSERIES"), InlineButton("Не нравится", "UNLIKEitSERIES")
@@ -158,8 +174,6 @@ fun main() {
                     bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 }
             }
-
-
 
             callbackQuery("биография") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -177,8 +191,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("биография")
             }
-
-
 
 
             callbackQuery("музыка") {
@@ -199,8 +211,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("триллер") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -217,8 +227,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("триллер")
             }
-
-
 
 
             callbackQuery("ток-шоу") {
@@ -239,8 +247,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("вестерн") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -257,8 +263,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("вестерн")
             }
-
-
 
 
             callbackQuery("приключения") {
@@ -279,8 +283,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("военный") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -297,8 +299,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("военный")
             }
-
-
 
 
             callbackQuery("игра") {
@@ -319,8 +319,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("семейный") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -337,8 +335,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("семейный")
             }
-
-
 
 
             callbackQuery("ужасы") {
@@ -359,8 +355,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("фэнтези") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -377,8 +371,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("фэнтези")
             }
-
-
 
 
             callbackQuery("аниме") {
@@ -399,8 +391,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("для взрослых") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -417,8 +407,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("для взрослых")
             }
-
-
 
 
             callbackQuery("короткометражка") {
@@ -439,8 +427,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("комедия") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -457,8 +443,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("комедия")
             }
-
-
 
 
             callbackQuery("фильм-нуар") {
@@ -479,8 +463,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("церемония") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -497,8 +479,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("церемония")
             }
-
-
 
 
             callbackQuery("боевик") {
@@ -519,8 +499,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("детектив") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -537,8 +515,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("детектив")
             }
-
-
 
 
             callbackQuery("новости") {
@@ -559,8 +535,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("мелодрама") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -577,8 +551,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("мелодрама")
             }
-
-
 
 
             callbackQuery("мюзикл") {
@@ -599,8 +571,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("фантастика") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -617,8 +587,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("фантастика")
             }
-
-
 
 
             callbackQuery("реальное ТВ") {
@@ -639,8 +607,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("криминал") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -657,8 +623,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("криминал")
             }
-
-
 
 
             callbackQuery("мультфильм") {
@@ -679,8 +643,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("детский") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -697,8 +659,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("детский")
             }
-
-
 
 
             callbackQuery("спорт") {
@@ -719,8 +679,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("концерт") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -739,8 +697,6 @@ fun main() {
             }
 
 
-
-
             callbackQuery("история") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -757,8 +713,6 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("история")
             }
-
-
 
 
             callbackQuery("документальный") {
@@ -780,8 +734,6 @@ fun main() {
 
 
 
-
-
             callbackQuery("драма") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
@@ -798,39 +750,154 @@ fun main() {
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 KinoStates.chosenGenres.remove("драма")
             }
-            callbackQuery("callback2") {
+
+
+            callbackQuery("endSearchingBooks") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                println(chatId)
+                TODO() // вернуться в main menu
+            }
+            callbackQuery("checkNextBook") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
-                bot.sendMessage(chatId, "Callback2!")
-                //update.message.replyMarkup
+                bot.sendMessage(chatId, "Вот что мне удалось найти:")
+                val maxIndex = min(BooksStates.searchResult.size, BooksStates.bookResponseIndex + 5) - 1
+                if (BooksStates.bookResponseIndex == maxIndex) {
+                    bot.sendMessage(chatId, "К сожалению это всё что я сумел найти. Возвращаю вас в главное меню.")
+                } else {
+                    for (outputIndex in BooksStates.bookResponseIndex..maxIndex) {
+                        bot.sendMessage(chatId, BooksStates.searchResult[outputIndex])
+                    }
+                    inlineMenu.keyboard = mutableListOf(
+                        mutableListOf(
+                            InlineButton("Далее", "checkNextBook")
+                        ),
+                        mutableListOf(
+                            InlineButton("Завершить", "endSearchingBooks")
+                        )
+                    )
+                    BooksStates.bookResponseIndex = maxIndex
+                    inlineMenu.update()
+                    bot.sendMessage(
+                        chatId,
+                        "Выберите, искать книгу по заданному запросу далее или завершить поиск:",
+                        replyMarkup = inlineMenu.getKeyboardInlineMarkup()
+                    )
+                }
             }
-            callbackQuery("callback3") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
-                bot.sendMessage(chatId, "Callback3!")
-            }
+
+
+
+
+
             text {
-//                "Message" -> {
-//                val inlinemarkup = InlineKeyboardMarkup.create(
-//                    listOf(
-//                        listOf(
-//                            InlineKeyboardButton.CallbackData("Bt1", "callback1")
-//                        ),
-//                        listOf(
-//                            InlineKeyboardButton.CallbackData("Bt2", "callback2"),
-//                            InlineKeyboardButton.CallbackData("Bt3", "callback3")),
-//                    )
-//                )
-//                bot.sendMessage(chatId, text = "...", replyMarkup = inlinemarkup)
-//            }
                 val chatId = ChatId.fromId(message.chat.id)
-                if (text=="/start") {
+                if (text == "/start") {
                     replyMenu.main(text, bot = bot, chatId = chatId)
                 } else if (text == "/start1") {
-                    inlineMenu.main(text, bot= bot, chatId = chatId)
+                    inlineMenu.main(text, bot = bot, chatId = chatId)
                 }
 
-                if (text == "Найти фильм для просмотра") {
+                if (text == "Пройти тест") {
+                    bot.sendMessage(chatId, "Хорошая идея, вот список тестов, которые вы можете пройти:")
+                    val query = "SELECT id, title, author, questionsAmount FROM tests ORDER BY id;"
+
+                    val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+                    val databaseUser = dotenv()["DATABASE_USER"]
+                    val databasePassword = dotenv()["DATABASE_PASSWORD"]
+                    try {
+                        val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+                        val preparedStatement = connection.prepareStatement(query)
+
+                        // Очищаем предыдущие данные
+                        GoingThroughTests.testsId.clear()
+                        GoingThroughTests.testsTitles.clear()
+                        GoingThroughTests.testsAuthor.clear()
+                        GoingThroughTests.testsQAmount.clear()
+
+                        preparedStatement.executeQuery().use { resultSet ->
+                            while (resultSet.next()) {
+                                GoingThroughTests.testsId.add(resultSet.getInt("id"))
+                                GoingThroughTests.testsTitles.add(resultSet.getString("title"))
+                                GoingThroughTests.testsAuthor.add(resultSet.getString("author"))
+                                GoingThroughTests.testsQAmount.add(resultSet.getInt("questionsAmount"))
+                            }
+                        }
+
+                        preparedStatement.close()
+                        connection.close()
+
+                    } catch (e: SQLException) {
+                        e.printStackTrace()
+                    }
+
+                    if (GoingThroughTests.testsId.isEmpty()) {
+                        bot.sendMessage(chatId, "К сожалению у меня нет тестов, которые вы могли бы пройти.")
+                    } else {
+                        GoingThroughTests.currentIndex = 0
+                        val maxIndex = min(GoingThroughTests.testsId.size, 5) - 1
+
+                        for (outputIndex in 0..maxIndex) {
+                            inlineMenu.keyboard = mutableListOf(
+                                mutableListOf(
+                                    InlineButton("Пройти тест", "playIt_${GoingThroughTests.testsId[outputIndex]}")
+                                )
+                            )
+                            inlineMenu.update()
+
+                            bot.sendMessage(
+                                chatId,
+                                "Название теста: ${GoingThroughTests.testsTitles[outputIndex]}\n" +
+                                        "Количество вопросов: ${GoingThroughTests.testsQAmount[outputIndex]}\n" +
+                                        "Автор: ${GoingThroughTests.testsAuthor[outputIndex]}",
+                                replyMarkup = inlineMenu.getKeyboardInlineMarkup()
+                            )
+                        }
+
+                        GoingThroughTests.currentIndex = maxIndex + 1
+
+                        if (GoingThroughTests.currentIndex < GoingThroughTests.testsId.size) {
+                            inlineMenu.keyboard = mutableListOf(
+                                mutableListOf(InlineButton("Далее", "sledTest"))
+                            )
+                            inlineMenu.update()
+                            bot.sendMessage(
+                                chatId,
+                                "Смотреть еще тесты:",
+                                replyMarkup = inlineMenu.getKeyboardInlineMarkup()
+                            )
+                        }
+                    }
+
+                } else if (text == "Найти книгу") {
+                    bot.sendMessage(chatId, "Хороший выбор! Напишите ключевые слова, по которым будем искать книги:")
+                    BooksStates.waitingForKeyWord = true
+                } else if (BooksStates.waitingForKeyWord) {
+                    BooksStates.waitingForKeyWord = false
+                    BooksStates.searchResult = getInfo(text)
+                    if (BooksStates.searchResult.isEmpty()) {
+                        bot.sendMessage(chatId, "К сожалению по вашему запросу я не смог ничего найти.")
+                    } else {
+                        bot.sendMessage(chatId, "Вот что мне удалось найти:")
+                        val maxIndex = min(BooksStates.searchResult.size, BooksStates.bookResponseIndex + 5) - 1
+                        for (outputIndex in BooksStates.bookResponseIndex..maxIndex) {
+                            bot.sendMessage(chatId, BooksStates.searchResult[outputIndex])
+                        }
+                        BooksStates.bookResponseIndex = maxIndex
+                        inlineMenu.keyboard = mutableListOf(
+                            mutableListOf(
+                                InlineButton("Далее", "checkNextBook")
+                            )
+                        )
+                        inlineMenu.update()
+                        bot.sendMessage(
+                            chatId,
+                            "Если здесь нету нужной вам книги, нажмите на кнопку ниже:",
+                            replyMarkup = inlineMenu.getKeyboardInlineMarkup()
+                        )
+                    }
+                } else if (text == "Найти фильм для просмотра") {
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
                             InlineButton("биография", "биография"), InlineButton("музыка", "музыка")
@@ -851,7 +918,8 @@ fun main() {
                             InlineButton("фэнтези", "фэнтези"), InlineButton("аниме", "аниме")
                         ),
                         mutableListOf(
-                            InlineButton("для взрослых", "для взрослых"), InlineButton("короткометражка", "короткометражка")
+                            InlineButton("для взрослых", "для взрослых"),
+                            InlineButton("короткометражка", "короткометражка")
                         ),
                         mutableListOf(
                             InlineButton("комедия", "комедия"), InlineButton("фильм-нуар", "фильм-нуар")
@@ -883,10 +951,12 @@ fun main() {
                         mutableListOf(InlineButton("Завершить выбор жанров", "endChoosingGenresMovies"))
                     )
                     inlineMenu.update()
-                    bot.sendMessage(chatId, "Хороший выбор! Вот список жанров, которые вы можете выбрать для просмотра:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                }
-
-                else if (text == "Найти сериал для просмотра") {
+                    bot.sendMessage(
+                        chatId,
+                        "Хороший выбор! Вот список жанров, которые вы можете выбрать для просмотра:",
+                        replyMarkup = inlineMenu.getKeyboardInlineMarkup()
+                    )
+                } else if (text == "Найти сериал для просмотра") {
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
                             InlineButton("биография", "биография"), InlineButton("музыка", "музыка")
@@ -907,7 +977,8 @@ fun main() {
                             InlineButton("фэнтези", "фэнтези"), InlineButton("аниме", "аниме")
                         ),
                         mutableListOf(
-                            InlineButton("для взрослых", "для взрослых"), InlineButton("короткометражка", "короткометражка")
+                            InlineButton("для взрослых", "для взрослых"),
+                            InlineButton("короткометражка", "короткометражка")
                         ),
                         mutableListOf(
                             InlineButton("комедия", "комедия"), InlineButton("фильм-нуар", "фильм-нуар")
@@ -939,341 +1010,11 @@ fun main() {
                         mutableListOf(InlineButton("Завершить выбор жанров", "endChoosingGenresSeries"))
                     )
                     inlineMenu.update()
-                    bot.sendMessage(chatId, "Хороший выбор! Вот список жанров, которые вы можете выбрать для просмотра:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                }
-
-                else if ((text == "Создать тест") and !TestsStates.creatingTest) {
-                    TestsStates.creatingTest = true
-
-                    bot.sendMessage(chatId, "Отлично, введите название вашего теста:")
-                    TestsStates.waitingForName = true
-                }
-
-                else if (TestsStates.waitingForName) {
-                    TestsStates.currentTest.name = text
-
-                    bot.sendMessage(chatId, "Хорошо, теперь введите псевдоним, под которым будет опубликован тест:")
-                    TestsStates.waitingForName = false
-                    TestsStates.waitingForAuthor = true
-                }
-                else if (TestsStates.waitingForAuthor) {
-                    TestsStates.currentTest.author = text
-
-                    bot.sendMessage(chatId, "Хороший псевдоним, теперь укажите количество вопросов в тесте(число от 1 до 20):")
-                    TestsStates.waitingForAuthor = false
-
-                    TestsStates.waitingForQuestionsAmount = true
-                }
-                else if (TestsStates.waitingForQuestionsAmount) {
-
-                    if (text.toIntOrNull() == null) {
-                        bot.sendMessage(chatId, "Вы ввели некорректное число, введите заново. Это должно быть число от 1 до 20.")
-                    } else {
-                        if (text.toInt() !in 1..20) {
-                            bot.sendMessage(chatId, "Вы ввели некорректное число, введите заново. Это должно быть число от 1 до 20.")
-                        } else {
-                            TestsStates.waitingForQuestionsAmount = false
-                            TestsStates.waitingForQuestionText = true
-                            TestsStates.currentTest.questionsAmount = text.toInt()
-                            bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
-                        }
-                    }
-                }
-                else if (TestsStates.waitingForQuestionText and (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1)) {
-                    TestsStates.currentQuestionText = text
-                    replyMenu.keyboard = mutableListOf(mutableListOf(Button("Цифровой"), Button("Текстовый")), mutableListOf(Button("Выбрать вариант"), Button("Соединить цвета")), mutableListOf(Button("Выбрать несколько вариантов")))
-                    replyMenu.update()
-                    bot.sendMessage(chatId, "Хорошо, теперь выберите тип ответа из следующих вариантов:", replyMarkup = replyMenu.getKeyboardReplyMarkup())
-                    TestsStates.waitingForQuestionText = false
-                    TestsStates.waitingForQuestionType = true
-                }
-                else if (TestsStates.waitingForQuestionType) when (text) {
-                    "Цифровой" -> {
-                        TestsStates.currentAnswerType = AnswerType.DIGITAL
-                        TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
-                    }
-                    "Текстовый" -> {
-                        TestsStates.currentAnswerType = AnswerType.TEXT
-                        TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
-                    }
-                    "Выбрать вариант" -> {
-                        TestsStates.currentAnswerType = AnswerType.ONE_OPTION
-                        TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
-                    }
-                    "Соединить цвета" -> {
-                        TestsStates.currentAnswerType = AnswerType.COLOR
-                        TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
-                    }
-                    "Выбрать несколько вариантов" -> {
-                        TestsStates.currentAnswerType = AnswerType.MULTIPLE_OPTIONS
-                        TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
-                    }
-                    else -> {
-                        bot.sendMessage(chatId, "Вы ввели некорректный тип ответа. Повторите попытку.")
-                    }
-                }
-                else if (TestsStates.waitingForAnswersAmount) {
-                    if (text.toIntOrNull() == null) {
-                        bot.sendMessage(chatId, "Вы ввели некорректное количество ответов. Повторите попытку.")
-                    } else {
-                        if (text.toInt() in 1..6) {
-                            TestsStates.currentAnswersAmount = text.toInt()
-                            TestsStates.waitingForAnswersAmount = false
-                            TestsStates.waitingForAnswers = true
-                            bot.sendMessage(chatId, "Хорошо, теперь введите сами ответы. Начните с ответа №1, введите его ниже:")
-                        } else {
-                            bot.sendMessage(chatId, "Вы ввели некорректное количество ответов. Это должно быть число от 1 до 6:")
-                        }
-
-                    }
-                }
-                else if (TestsStates.waitingForAnswers) {
-                    if (TestsStates.answerNomer >= TestsStates.currentAnswersAmount) {
-                        TestsStates.waitingForAnswers = false
-                        TestsStates.waitingForCorrectAnswers = true
-                        bot.sendMessage(chatId, "Замечательно, теперь введите правильный ответ:")
-                    } else {
-                        bot.sendMessage(chatId, "Хорошо, теперь введите ответ №${TestsStates.answerNomer+1}")
-                        if ((TestsStates.answerNomer-1) % 2 == 0) {
-                            TestsStates.currentAnswers.add(mutableListOf(Button(text)))
-                        } else {
-                            TestsStates.currentAnswers.last().add(Button(text))
-                        }
-                        TestsStates.answerNomer++
-                    }
-                }
-                else if (TestsStates.waitingForCorrectAnswers) {
-                    when (TestsStates.currentAnswerType) {
-                        AnswerType.COLOR -> {
-                            TestsStates.waitingForCorrectAnswers = false
-                            TestsStates.questionNomer++
-                            TestsStates.waitingForQuestionText = true
-                            if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
-
-                            TestsStates.answerNomer = 1
-                        }
-                        AnswerType.TEXT -> {
-                            TestsStates.currentCorrectAnswer = text
-                            TestsStates.waitingForCorrectAnswers = false
-                            TestsStates.questionNomer++
-                            TestsStates.waitingForQuestionText = true
-                            TestsStates.answerNomer = 1
-
-                            TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
-                                TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
-                            if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
-                            else {
-                                bot.sendMessage(chatId, "Всё готово! Ваш тест был успешно опубликован!")
-                                println("Название теста: ${TestsStates.currentTest.name}")
-                                println("Автор: ${TestsStates.currentTest.author}")
-                                println("Количество вопросов: ${TestsStates.currentTest.questionsAmount}")
-                                for (i in TestsStates.currentTest.questions) {
-                                    println(i.content)
-                                    println(i.answers)
-                                    println(i.correctAnswer)
-                                }
-                                try {
-                                    val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
-                                    val databaseUser = dotenv()["DATABASE_USER"]
-                                    val databasePassword = dotenv()["DATABASE_PASSWORD"]
-
-
-                                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
-
-                                    // insert into movies table
-                                    val getLastIdQuery = "SELECT MAX(id) FROM tests;"
-
-                                    val prepStatement = connection.createStatement()
-                                    var lastId = 0
-                                    prepStatement.executeQuery(getLastIdQuery).use { resultSet ->
-                                        while (resultSet.next()) {
-                                            lastId = resultSet.getInt(1)
-                                        }
-                                    }
-
-                                    val getLastQIdQuery = "SELECT MAX(id) FROM questions;"
-
-                                    val prep1Statement = connection.createStatement()
-                                    var lastQId = 0
-                                    prep1Statement.executeQuery(getLastQIdQuery).use { resultSet ->
-                                        while (resultSet.next()) {
-                                            lastQId = resultSet.getInt(1)
-                                        }
-                                    }
-
-                                    var insertTestQuery =
-                                        "INSERT INTO tests (title, questionsAmount, author) VALUES (?, ?, ?)"
-                                    var preparedTestStatement = connection.prepareStatement(insertTestQuery)
-
-                                    preparedTestStatement.setString(1, TestsStates.currentTest.name)
-                                    preparedTestStatement.setInt(2, TestsStates.currentTest.questionsAmount)
-                                    preparedTestStatement.setString(3, TestsStates.currentTest.author)
-
-                                    var rowsAffected = preparedTestStatement.executeUpdate()
-                                    println("Rows affected: $rowsAffected")
-
-                                    for (question in TestsStates.currentTest.questions) {
-                                        var insertQuestionsQuery =
-                                            "INSERT INTO questions (testId, title, answersAmount) VALUES (?, ?, ?)"
-                                        var preparedQuestionsStatement = connection.prepareStatement(insertQuestionsQuery)
-
-                                        preparedQuestionsStatement.setInt(1, lastId+1)
-                                        preparedQuestionsStatement.setString(2, question.content)
-                                        preparedQuestionsStatement.setInt(3, question.answers.size)
-
-                                        var rows1Affected = preparedQuestionsStatement.executeUpdate()
-                                        println("Rows affected: $rows1Affected")
-
-
-
-                                        when {
-                                            question.typeAnswer == AnswerType.DIGITAL -> {
-                                                var insertCAnsQuery =
-                                                    "INSERT INTO correctIntAnswers (questionId, ans) VALUES (?, ?)"
-
-                                                var preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
-
-                                                preparedCAnsStatement.setInt(1, lastQId+1)
-                                                preparedCAnsStatement.setInt(2, question.correctAnswer.toString().toInt())
-
-                                            }
-                                            question.typeAnswer == AnswerType.TEXT -> {
-                                                var insertCAnsQuery =
-                                                    "INSERT INTO correctTextAnswers (questionId, ans) VALUES (?, ?)"
-
-                                                var preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
-
-                                                preparedCAnsStatement.setInt(1, lastQId+1)
-                                                preparedCAnsStatement.setString(2, question.correctAnswer.toString())
-
-                                            }
-                                            question.typeAnswer in listOf(AnswerType.MULTIPLE_OPTIONS, AnswerType.ONE_OPTION) -> {
-                                                var insertCAnsQuery =
-                                                    "INSERT INTO correctChooseAnswers (questionId, ans1, ans2, ans3, ans4, ans5, ans6) VALUES (?, ?, ?, ?, ?, ?, ?)"
-
-                                                var preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
-
-                                                var insertAnswersQuery =
-                                                    "INSERT INTO chooseAnswers (questionId, ans1, ans2, ans3, ans4, ans5, ans6) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                                                var preparedAnswersStatement = connection.prepareStatement(insertAnswersQuery)
-
-
-                                                preparedCAnsStatement.setInt(1, lastQId+1)
-                                                preparedAnswersStatement.setInt(1, lastQId+1)
-
-                                                for (index in 0..<question.answers.size) {
-                                                    preparedCAnsStatement.setBoolean(
-                                                        2+index,
-                                                        question.answers[index].toString() == question.correctAnswer
-                                                    )
-                                                    preparedAnswersStatement.setString(
-                                                        2+index,
-                                                        question.answers[index].toString()
-                                                    )
-                                                }
-
-                                                for (index in question.answers.size..5) {
-                                                    preparedCAnsStatement.setNull(
-                                                        2+index,
-                                                        java.sql.Types.BOOLEAN
-                                                    )
-                                                    preparedAnswersStatement.setNull(
-                                                        2+index,
-                                                        java.sql.Types.VARCHAR
-                                                    )
-                                                }
-
-                                                var rows2Affected = preparedAnswersStatement.executeUpdate()
-                                                println("Rows affected: $rows2Affected")
-
-                                                var rows3Affected = preparedCAnsStatement.executeUpdate()
-                                                println("Rows affected: $rows3Affected")
-
-                                            }
-                                            question.typeAnswer == AnswerType.COLOR -> {
-
-                                            }
-                                        }
-
-                                        question.correctAnswer
-
-
-//                                        preparedCAnsStatement.setInt(1, lastId+1)
-//                                        preparedCAnsStatement.setString(2, question.content)
-//                                        preparedCAnsStatement.setInt(3, question.answers.size)
-
-
-
-                                        lastQId++
-                                    }
-
-
-
-
-
-
-                                } catch (e: SQLException) {
-                                    e.printStackTrace()
-                                }
-
-
-
-
-                            }
-                        }
-                        AnswerType.ONE_OPTION -> {
-                            TestsStates.currentCorrectAnswer = text
-                            TestsStates.waitingForCorrectAnswers = false
-                            TestsStates.questionNomer++
-                            TestsStates.waitingForQuestionText = true
-                            TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
-                                TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
-                            TestsStates.answerNomer = 1
-                            if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
-                        }
-                        AnswerType.MULTIPLE_OPTIONS -> {
-                            val preparedAns = text.split(",").filter { it.isNotBlank() }
-                            preparedAns.forEach { it.replace(" ", "") }
-
-                            if (preparedAns.size != TestsStates.currentMaxChooseOptions) {
-                                bot.sendMessage(chatId, "Ошибка. Вы ввели неправильное количество нужных ответов. Повторите попытку.")
-                            } else {
-                                TestsStates.currentCorrectAnswer = preparedAns
-                                TestsStates.waitingForCorrectAnswers = false
-                                TestsStates.questionNomer++
-                                TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
-                                    TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
-                                TestsStates.answerNomer = 1
-                                if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
-                            }
-                        }
-                        AnswerType.DIGITAL -> {
-                            if (text.toIntOrNull() == null) {
-                                bot.sendMessage(chatId, "Повторите попытку. Введенное число должно быть целым без всяких знаков")
-                            } else {
-                                TestsStates.currentCorrectAnswer = text.toInt()
-                                TestsStates.questionNomer++
-                                TestsStates.waitingForCorrectAnswers = false
-                                TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
-                                    TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
-                                TestsStates.waitingForQuestionText = true
-                                TestsStates.answerNomer = 1
-                                println(TestsStates.questionNomer)
-                                println(TestsStates.currentTest.questionsAmount)
-                                if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
-                            }
-                        }
-                    }
+                    bot.sendMessage(
+                        chatId,
+                        "Хороший выбор! Вот список жанров, которые вы можете выбрать для просмотра:",
+                        replyMarkup = inlineMenu.getKeyboardInlineMarkup()
+                    )
                 }
             }
         }
