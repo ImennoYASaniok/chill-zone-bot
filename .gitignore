@@ -48,3 +48,10 @@ logs/
 
 # Environment files
 .env
+
+# Docs
+.$*.bkp
+
+# Videos
+.mp4
+.mov
