@@ -27,7 +27,7 @@ fun getUserId(user: User?): Long {
     return user?.id!!
 }
 
-private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, username: String, userId: String) {
+private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, username: String, userId: Long) {
     val argsGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
     val argsSettings = ReplyList.replySettings.processing(text)
     val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to username, "userId" to userId))
