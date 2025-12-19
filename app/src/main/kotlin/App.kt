@@ -92,16 +92,19 @@ fun main() {
                         else -> "Легендарное"
                     }
 
-                    val pool = PredictionStorage.getAll().filter { it.rarity == rarity }
+                    val pool = PredictionStorage.getAll().filter { it.value.rarity == rarity }.toList()
                     val prediction = pool.random()
+
+                    println(prediction)
+
                     val userList = UserPredictionHistory.getUserPredictions(chatIdLong)
                     // добавить добавление в бд
                     val out =
-                        if (userList.any { it.id == prediction.id }) {
-                            "Вам выпало повторное предсказание:\n\n${prediction.text} (${prediction.rarity})"
+                        if (userList.any { it.id == prediction.second.id }) {
+                            "Вам выпало повторное предсказание:\n\n${prediction.second.text} (${prediction.second.rarity})"
                         } else {
-                            UserPredictionHistory.addToUser(chatIdLong, prediction)
-                            "${prediction.text} (${prediction.rarity})"
+                            UserPredictionHistory.addToUser(chatIdLong, prediction.second)
+                            "${prediction.second.text} (${prediction.second.rarity})"
                         }
                     // также сохранение повторок в дб
                     bot.sendMessage(chatId, out)
@@ -180,12 +183,12 @@ fun main() {
                 }
 
                 if (ReplyMenuHolder.searchMode) {
-                    val results = PredictionStorage.getAll().filter { it.text.contains(text, true) }
+                    val results = PredictionStorage.getAll().filter { it.value.text.contains(text, true) }.toList()
 
                     if (results.isEmpty()) {
                         bot.sendMessage(chatId, "Ничего не найдено.")
                     } else {
-                        val out = results.joinToString("\n") { "• ${it.text} (${it.rarity})" }
+                        val out = results.joinToString("\n") { "• ${it.second.text} (${it.second.rarity})" }
                         bot.sendMessage(chatId, "Результаты поиска:\n$out")
                     }
 
