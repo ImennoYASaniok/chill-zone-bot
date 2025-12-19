@@ -13,22 +13,16 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.TelegramFile
 import com.github.kotlintelegrambot.entities.User
 import core.States
 import core.currState
 import core.keyboards.getKeyboardMemes
 import core.memes.*
 import core.messageClasses.ReplyList
-import core.messageClasses.getBooksImg
-import core.messageClasses.getFilmImg
-import core.messageClasses.getPodbImg
-import core.messageClasses.getSerialImg
 import core.utils.Logger
 import io.github.cdimascio.dotenv.dotenv
 import keyboards.base.getInlineKeyboardMenu
 import keyboards.base.getKeyboardMenu
-import java.io.File
 import kotlin.math.min
 
 fun getUsername(user: User?): String {
