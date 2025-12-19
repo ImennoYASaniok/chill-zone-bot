@@ -32,7 +32,8 @@ fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
     KeyboardNames.generalMenu["predictions"] = predictionsButton.getText()
 
     val memesButton = Button(
-        name = "😂 Мемы"
+        name = "😂 Мемы",
+        stateChange = States.MemeMenu,
     )
     KeyboardNames.generalMenu["memes"] = memesButton.getText()
 
