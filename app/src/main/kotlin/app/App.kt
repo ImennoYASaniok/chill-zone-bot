@@ -23,11 +23,14 @@ import core.memes.VotesStorage
 fun getUsername(user: User?): String {
     return user?.username ?: "Не указан"
 }
+fun getUserId(user: User?): Long {
+    return user?.id!!
+}
 
-private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, username: String) {
+private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, username: String, userId: String) {
     val argsGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
     val argsSettings = ReplyList.replySettings.processing(text)
-    val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to username))
+    val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to username, "userId" to userId))
 
     ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = argsGeneralMenu)
     ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = argsSettings)
@@ -164,6 +167,7 @@ fun main() {
                 val chatIdLong = message.chat.id
                 val chatId = ChatId.fromId(chatIdLong)
                 val username = getUsername(message.from)
+                val userId = getUserId(message.from)
 
                 // 1) Photo handling (used for meme upload)
                 val photo = message.photo?.lastOrNull()
@@ -180,7 +184,6 @@ fun main() {
                 }
 
                 val t = message.text ?: return@message
-
                 // 2) Enter memes from General Menu
                 if (t == "😂 Мемы") {
                     currState = States.MemeMenu
@@ -193,7 +196,7 @@ fun main() {
                     val handled = handleMemes(t, bot, chatId, chatIdLong)
                     if (handled) {
                         if (t == "⬅️ Обратно") {
-                            openGeneralMenu("/start", bot, chatId, username)
+                            openGeneralMenu("/start", bot, chatId, username, userId)
                         }
                         return@message
                     }
@@ -203,7 +206,7 @@ fun main() {
                 }
 
                 // 4) Default flow (menus / settings / account)
-                openGeneralMenu(t, bot, chatId, username)
+                openGeneralMenu(t, bot, chatId, username, userId)
             }
         }
     }
