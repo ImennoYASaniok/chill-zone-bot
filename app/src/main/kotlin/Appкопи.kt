@@ -33,7 +33,7 @@ import kotlin.math.min
 
 fun main() {
     val dotenv = dotenv()
-    val bot = bot {
+    bot = bot {
         token = dotenv["BOT_TOKEN"]
 
         dispatch {
@@ -110,6 +110,7 @@ fun main() {
                     val testId = callbackData.substringAfter("playIt_").toIntOrNull()
                     println(testId)
                     if (testId != null) {
+                        println("паарарарараар $testId")
                         startTest(chatId, testId)
                     } else {
                         bot.sendMessage(chatId, "Ошибка: не удалось определить тест")
@@ -140,7 +141,8 @@ fun main() {
                 } catch (e: SQLException) {
                     e.printStackTrace()
                 }
-
+                println("Я ЗДЕСЬ!!!!!")
+                println("Ответ: ${getTestQuestions(chosenTest)}")
                 GoingThroughTests.currentQaA = getTestQuestions(chosenTest)
 
                 bot.sendMessage(chatId, "Вопрос №${GoingThroughTests.currentQIndex+1}:\n" +
@@ -276,8 +278,12 @@ fun main() {
                     } else {
                         GoingThroughTests.currentIndex = 0
                         val maxIndex = min(GoingThroughTests.testsId.size, 5)-1
+                        println("УУУУУ: $maxIndex")
+                        println(GoingThroughTests.testsId)
 
                         for (outputIndex in 0..maxIndex) {
+                            println("10000000000")
+
                             inlineMenu.keyboard = mutableListOf(
                                 mutableListOf(
                                     InlineButton("Пройти тест", "playIt_${GoingThroughTests.testsId[outputIndex]}")
@@ -356,14 +362,14 @@ fun main() {
                     "Цифровой" -> {
                         TestsStates.currentAnswerType = AnswerType.DIGITAL
                         TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
+                        TestsStates.waitingForCorrectAnswers = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответ на вопрос(число):")
                     }
                     "Текстовый" -> {
                         TestsStates.currentAnswerType = AnswerType.TEXT
                         TestsStates.waitingForQuestionType = false
-                        TestsStates.waitingForAnswersAmount = true
-                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
+                        TestsStates.waitingForCorrectAnswers = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите правильный ответ на вопрос(текст):")
                     }
                     "Выбрать вариант" -> {
                         TestsStates.currentAnswerType = AnswerType.ONE_OPTION
@@ -859,6 +865,8 @@ fun startTest(chatId: ChatId, testId: Int) {
     // Получаем вопросы теста
     GoingThroughTests.currentQaA = getTestQuestions(testId)
 
+
+
     if (GoingThroughTests.currentQaA.isEmpty()) {
         bot.sendMessage(chatId, "Ошибка: вопросы теста не найдены")
         return
@@ -882,6 +890,8 @@ fun sendTestQuestion(chatId: ChatId, questionIndex: Int) {
         return
     }
 
+    println("IM SURVIVOR")
+
     val question = GoingThroughTests.currentQaA[questionIndex]
     val questionNumber = questionIndex + 1
     val totalQuestions = GoingThroughTests.currentQaA.size
@@ -899,6 +909,7 @@ fun sendTestQuestion(chatId: ChatId, questionIndex: Int) {
 
             for (i in 0 until question.answersAmount) {
                 val answerText = question.chooseAnswers.getOrNull(i)?.text ?: "Вариант ${i+1}"
+                println(answerText)
                 val callbackData = "ans${i+1}_toggle"
 
                 // Проверяем, выбран ли уже этот ответ
@@ -926,10 +937,13 @@ fun sendTestQuestion(chatId: ChatId, questionIndex: Int) {
         }
 
         "INT", "TEXT" -> {
-            println("TEXT")
+            println("TEXT131312312")
             GoingThroughTests.waitingForAnswer = true
             val answerType = if (question.type == "TEXT") "текстовый" else "числовой"
-
+            println(chatId)
+            println("📝 Вопрос $questionNumber/$totalQuestions:\n\n${question.title}\n\n" +
+                    "Введите $answerType ответ:")
+            bot.sendMessage(chatId, "230194192481032рлотлаотдлуцц")
             bot.sendMessage(
                 chatId,
                 "📝 Вопрос $questionNumber/$totalQuestions:\n\n${question.title}\n\n" +

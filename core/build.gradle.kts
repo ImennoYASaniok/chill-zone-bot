@@ -3,11 +3,14 @@ plugins {
 }
 
 dependencies {
-    // тут зависимости core модуля
-    testImplementation(kotlin("test"))
     implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
+
+    testImplementation(kotlin("test"))
+    implementation(project(":data"))
+    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 }
 
 kotlin {
     jvmToolchain(17)
 }
+

@@ -16,12 +16,7 @@ fun getTestQuestions(testId: Int): List<QuestionWithAnswers> {
         val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
 
         // 1. Получаем все вопросы теста
-        val questionsQuery = """
-            SELECT id, title, answersAmount 
-            FROM questions 
-            WHERE testId = ?
-            ORDER BY id
-        """.trimIndent()
+        val questionsQuery = "SELECT id, title, answersAmount FROM questions WHERE testId = ? ORDER BY id"
 
         val questionsStmt = connection.prepareStatement(questionsQuery)
         questionsStmt.setInt(1, testId)
@@ -78,10 +73,11 @@ fun getTestQuestions(testId: Int): List<QuestionWithAnswers> {
         e.printStackTrace()
     }
 
+    println("XXX: $questionsList")
+
     return questionsList
 }
 
-// Исправленная функция для получения вариантов выбора
 fun getChooseAnswers(connection: Connection, questionId: Int): List<ChooseAnswer> {
     val answers = mutableListOf<ChooseAnswer>()
 
@@ -176,6 +172,7 @@ fun getTextAnswers(connection: Connection, questionId: Int): List<TextAnswer> {
             }
         }
     }
+    println(answers)
 
     stmt.close()
     return answers
