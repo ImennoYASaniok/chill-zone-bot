@@ -42,10 +42,12 @@ private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot,
     val argsGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
     val argsSettings = ReplyList.replySettings.processing(text)
     val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to username, "userId" to userId))
+    val argsFeedback = ReplyList.replyFeedback.processing(text)
 
     ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = argsGeneralMenu)
     ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = argsSettings)
     ReplyList.replyAccount.callMain(text, bot = bot, chatId = chatId, pair = argsAccount)
+    ReplyList.replyFeedback.callMain(text, bot, chatId, argsFeedback)
 }
 
 private fun sendMemeWithCounts(bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, memeId: Int, fileId: String?) {
@@ -1151,6 +1153,25 @@ fun main() {
                 }
 
                 // 3) Meme menu flow
+                else if (message.text == "\uD83D\uDCAC Обратная связь") {
+                    currState = States.FeedbackMenu
+                    ReplyList.replyFeedback.callMain(t, bot, chatId, ReplyList.replyFeedback.processing(t))
+                    return@message
+                }
+                else if (currState == States.FeedbackMenu) {
+                    val feedbackArgs = ReplyList.replyFeedback.processing(t)
+
+                    // Если это НЕ нажатие кнопки (isButton == false) и не команда входа
+                    if (!feedbackArgs.second && t != ReplyList.replyFeedback.command) {
+                        val response = core.handlers.FeedbackHandlers.saveFeedback(message.chat.id, username, t)
+                        bot.sendMessage(chatId, response)
+
+                        // После сохранения отправляем главное меню
+                        val mainArgs = ReplyList.replyGeneralMenu.processing("")
+                        ReplyList.replyGeneralMenu.callMain("", bot, chatId, mainArgs)
+                        return@message
+                    }
+                }
                 else if (currState == States.MemeMenu) {
                     val handled = handleMemes(t, bot, chatId, chatIdLong)
                     if (handled) {
@@ -1166,6 +1187,7 @@ fun main() {
 
                 // 4) Default flow (menus / settings / account)
                 else openGeneralMenu(t, bot, chatId, username, userId)
+                println(currState)
             }
         }
     }
