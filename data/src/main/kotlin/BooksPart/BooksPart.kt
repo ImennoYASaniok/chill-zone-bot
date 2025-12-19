@@ -1,6 +1,6 @@
 package BooksPart
 
-import Model.MovieListResponse
+import Models.BooksModel.*
 import io.github.cdimascio.dotenv.dotenv
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
@@ -8,129 +8,25 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
-import java.sql.DriverManager
-import java.sql.SQLException
 
-
-fun updateDatabase(movieListResponse: MovieListResponse?) {
-    movieListResponse?.let {
-        val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
-        val databaseUser = dotenv()["DATABASE_USER"]
-        val databasePassword = dotenv()["DATABASE_PASSWORD"]
-        try {
-            for (i in movieListResponse.docs) {
-                if (i.isSeries ?: false) {
-                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
-
-                    // insert into movies table
-
-                    var insertMovieQuery =
-                        "INSERT INTO Movies (kId, name , year, description, movieLength, kpRating, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                    var preparedStatement = connection.prepareStatement(insertMovieQuery)
-
-                    preparedStatement.setInt(1, i.id)
-                    preparedStatement.setString(2, i.name)
-                    i.year?.let { preparedStatement.setInt(3, i.year) }
-                    preparedStatement.setString(4, i.description)
-                    i.movieLength?.let { preparedStatement.setInt(5, i.movieLength) }
-                    i.rating?.let {
-                        i.rating.kp?.let {
-                            preparedStatement.setDouble(6, i.rating.kp)
-                        }
-                        i.rating.imdb?.let {
-                            preparedStatement.setDouble(7, i.rating.imdb)
-                        }
-                    }
-
-                    var rowsAffected = preparedStatement.executeUpdate()
-                    println("Rows affected: $rowsAffected")
-
-                    //insert into genres table
-
-                    i.genres?.let {
-                        for (genre in i.genres) {
-                            insertMovieQuery = "INSERT INTO Genres (idMovie, name) VALUES (?, ?)"
-                            preparedStatement = connection.prepareStatement(insertMovieQuery)
-                            preparedStatement.setInt(1, i.id)
-                            preparedStatement.setString(2, genre.name)
-                            rowsAffected = preparedStatement.executeUpdate()
-                            println("Rows affected: $rowsAffected")
-                        }
-                    }
-
-                    // insert into similarMovies table
-
-                    i.similarMovies?.let {
-                        for (similarMovie in i.similarMovies) {
-                            insertMovieQuery = "INSERT INTO Movies (idMovie, idSimilarMovie) VALUES (?, ?)"
-                            preparedStatement = connection.prepareStatement(insertMovieQuery)
-                            preparedStatement.setInt(1, i.id)
-                            preparedStatement.setInt(2, similarMovie.id)
-                            rowsAffected = preparedStatement.executeUpdate()
-                            println("Rows affected: $rowsAffected")
-                        }
-                    }
-                } else {
-                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
-
-                    // insert into series table
-
-                    var insertMovieQuery =
-                        "INSERT INTO Series (kId, name , year, description, seriesAmount, kpRating, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                    var preparedStatement = connection.prepareStatement(insertMovieQuery)
-
-                    preparedStatement.setInt(1, i.id)
-                    preparedStatement.setString(2, i.name)
-                    i.year?.let { preparedStatement.setInt(3, i.year) }
-                    preparedStatement.setString(4, i.description)
-                    i.totalSeriesLength?.let { preparedStatement.setInt(5, i.totalSeriesLength) }
-                    i.rating?.let {
-                        i.rating.kp?.let {
-                            preparedStatement.setDouble(6, i.rating.kp)
-                        }
-                        i.rating.imdb?.let {
-                            preparedStatement.setDouble(7, i.rating.imdb)
-                        }
-                    }
-
-                    var rowsAffected = preparedStatement.executeUpdate()
-                    println("Rows affected: $rowsAffected")
-
-                    //insert into genres table
-
-                    i.genres?.let {
-                        for (genre in i.genres) {
-                            insertMovieQuery = "INSERT INTO Genres (idMovie, name) VALUES (?, ?)"
-                            preparedStatement = connection.prepareStatement(insertMovieQuery)
-                            preparedStatement.setInt(1, i.id)
-                            preparedStatement.setString(2, genre.name)
-                            rowsAffected = preparedStatement.executeUpdate()
-                            println("Rows affected: $rowsAffected")
-                        }
-                    }
-                }
-            }
-
-        } catch (e: SQLException) {
-            e.printStackTrace()
-        }
-    }
+object BooksStates {
+    var waitingForKeyWord: Boolean = false
+    var bookResponseIndex: Int = 0
+    var searchResult: MutableList<String> = mutableListOf()
 }
 
 
-
-fun parseJson(jjsonString: String) : MovieListResponse? {
+fun parseJson(jjsonString: String) : List<BookResponse>? {
     try {
         val jsonString = jjsonString.trimIndent()
         val json = Json {
-            prettyPrint = true
             ignoreUnknownKeys = true // Игнорировать неизвестные ключи
-            coerceInputValues = true // Позволяет обрабатывать null значения для полей, которые могут быть null
+            //coerceInputValues = true // Позволяет обрабатывать null значения для полей, которые могут быть null
         }
 
-        val movieListResponse: MovieListResponse = json.decodeFromString(jsonString)
+        val response = json.decodeFromString<OuterResponse>(jsonString)
 
-        return movieListResponse
+        return response.items
 
     } catch (e: Exception) {
 
@@ -142,15 +38,14 @@ fun parseJson(jjsonString: String) : MovieListResponse? {
 }
 
 
-fun getFromApi(): String { //amount: Int = 1, page: Int = 1
-    val apiKey = dotenv()["KINO_API_TOKEN"]
-    val apiUrl = "https://www.googleapis.com/books/v1/volumes?key=$apiKey" //API endpoint
+fun getFromApi(baseQuery: String): String { //amount: Int = 1, page: Int = 1
+    val apiKey = dotenv()["BOOKS_API_TOKEN"]
+    val query = baseQuery.replace(' ', '+')
+    val apiUrl = "https://www.googleapis.com/books/v1/volumes?q=$query&key=$apiKey" //API endpoint
     try {
         val url : URL = URI.create(apiUrl).toURL()
         val connection : HttpURLConnection = url.openConnection() as HttpURLConnection
 
-        //Request method: GET
-        connection.setRequestProperty("X-API-KEY", apiKey)
         connection.requestMethod = "GET"
 
         // Response code
@@ -180,5 +75,28 @@ fun getFromApi(): String { //amount: Int = 1, page: Int = 1
     } catch (e: Exception) {
         e.printStackTrace()
         return ""
+    }
+}
+
+fun collectResponse(query: String): List<BookResponse>? {
+    println(getFromApi(query))
+    return parseJson(getFromApi(query))
+}
+
+fun getInfo(query: String): MutableList<String> {
+    val responses = mutableListOf<String>()
+    val collected = collectResponse(query)
+    if (collected == null) {
+        return mutableListOf()
+    } else {
+        for (i in collected) {
+            val book = i.volumeInfo
+            val response =
+                "Название: ${book.title}\n\nАвтор(ы): ${book.authors ?: "Неизвестно"}\nКоличество страниц: ${book.pageCount ?: "Неизвестно"}\n\nОписание: ${book.description ?: "Нет описания"}"
+
+            responses.add(response)
+
+        }
+        return responses
     }
 }
