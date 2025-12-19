@@ -1,87 +1,216 @@
-import ChillZoneBot.core.src.main.kotlin.Buttons.BoolButton
-import ChillZoneBot.core.src.main.kotlin.Buttons.Button
-import ChillZoneBot.core.src.main.kotlin.Buttons.ChooseButton
-import ChillZoneBot.core.src.main.kotlin.Buttons.replyMarkup
+package ChillZoneBot.app.src.main.kotlin.App
+import io.github.cdimascio.dotenv.dotenv
+import com.github.kotlintelegrambot.entities.ChatId
+import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
+import ChillZoneBot.core.src.main.kotlin.handlers.predictions.*
+import ChillZoneBot.core.src.main.kotlin.handlers.predictions.getMainKeyboard
+import ChillZoneBot.core.src.main.kotlin.handlers.predictions.getRarityKeyboard
+import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.callbackQuery
-import com.github.kotlintelegrambot.dispatcher.text
-import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
-import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
-import io.github.cdimascio.dotenv.dotenv
-
+object ReplyMenuHolder {
+    lateinit var replyMenu: ReplyClass
+    var selectedRarity: String? = null
+    var searchMode: Boolean = false
+}
 
 fun main() {
-    val dotenv = dotenv()
-    val bot = bot {
 
+    val dotenv = dotenv()
+
+    // Инициализация главного меню
+    ReplyMenuHolder.replyMenu = ReplyClass(
+        keyboard = getMainKeyboard(),
+        startCommand = "/start",
+        textMessage = "Главное меню"
+    )
+
+    val bot = bot {
         token = dotenv["BOT_TOKEN"]
 
         dispatch {
-            val b1 = Button("Option 1")
-            val b2 = ChooseButton("name: ", listOf("name1", "name2", "name3"), 0)
-            val b3 = BoolButton("Option 2")
-            val replyKeyboardMarkup = replyMarkup(
-                mutableListOf(
-                    mutableListOf(b1, b2),
-                    mutableListOf(b3)
-                )
-            )
-            callbackQuery("callback1") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-                bot.sendMessage(chatId, "Callback1!")
-            }
-            callbackQuery("callback2") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-                bot.sendMessage(chatId, "Callback2!")
-                //update.message.replyMarkup
-            }
-            callbackQuery("callback3") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-                bot.sendMessage(chatId, "Callback3!")
-            }
-            text {
+            message {
 
-                val chatId = message.chat.id
-                when (text) {
-                    // ReplyKeyboard
-                    "Message" -> {
-                        val inlinemarkup = InlineKeyboardMarkup.create(
-                            listOf(
-                                listOf(
-                                    InlineKeyboardButton.CallbackData("Bt1", "callback1")
-                                ),
-                                listOf(
-                                    InlineKeyboardButton.CallbackData("Bt2", "callback2"),
-                                    InlineKeyboardButton.CallbackData("Bt3", "callback3")),
-                            )
-                        )
-                        bot.sendMessage(ChatId.fromId(message.chat.id), text = "...", replyMarkup = inlinemarkup)
-                    }
-                    else -> {
+                val chatIdLong = message.chat.id
+                val chatId = ChatId.fromId(chatIdLong)
+                val text = message.text ?: return@message
 
-//                        bot.sendMessage(
-//                            chatId = ChatId.fromId(chatId),
-//                            text = text,
-//                            replyMarkup = replyKeyboardMarkup.replyKeyboardMarkup
-//                        )
-                        if (text=="Option 1") bot.sendMessage(ChatId.fromId(message.chat.id), text = "You chose Option 1!")
-                        if ((text=="false") or (text == "true")) {
+                // ===== /start =====
+                if (text == "/start") {
+                    ReplyMenuHolder.replyMenu.keyboard = getMainKeyboard()
+                    ReplyMenuHolder.replyMenu.update()
 
-                            replyKeyboardMarkup.old_keyboard[1][0].changeName()
-                            replyKeyboardMarkup.update()
-                            bot.sendMessage(ChatId.fromId(message.chat.id), text = "You chose Option 2!", replyMarkup = replyKeyboardMarkup.replyKeyboardMarkup)
-                        }
-                        if (text=="Option 3") {
-                            bot.sendMessage(ChatId.fromId(message.chat.id), text = "You chose Option 3!")
-                        }
-                    }
-                    // end
+                    bot.sendMessage(
+                        chatId,
+                        """
+Вас приветствует сервис с предсказаниями. Предсказание — это фраза или сообщение о том, что может произойти в будущем, и мы предоставляем возможность получить такое сообщение.
+
+Вам могут выпасть разные типы предсказаний, всего их 4: обычное, редкое, эпическое, легендарное.
+
+• Обычное (70%)
+• Редкое (24%)
+• Эпическое (5%)
+• Легендарное (1%)
+
+Выберите действие ниже.
+                        """.trimIndent(),
+                        replyMarkup = ReplyMenuHolder.replyMenu.getKeyboardReplyMarkup()
+                    )
+                    return@message
                 }
+
+                // ===== Назад =====
+                if (text == "Назад") {
+                    // Сбрасываем состояние добавления/поиска
+                    ReplyMenuHolder.selectedRarity = null
+                    ReplyMenuHolder.searchMode = false
+
+                    // Возврат к главному меню
+                    ReplyMenuHolder.replyMenu.keyboard = getMainKeyboard()
+                    ReplyMenuHolder.replyMenu.update()
+
+                    bot.sendMessage(
+                        chatId,
+                        "Главное меню",
+                        replyMarkup = ReplyMenuHolder.replyMenu.getKeyboardReplyMarkup()
+                    )
+                    return@message
+                }
+
+                // ===== Получить предсказание =====
+                if (text == "Получить предсказание") {
+                    if (PredictionStorage.getAll().isEmpty()) {
+                        bot.sendMessage(chatId, "Пока нет предсказаний.")
+                        return@message
+                    }
+
+                    val rand = (0..99).random()
+                    val rarity = when {
+                        rand < 70 -> "Обычное"
+                        rand < 94 -> "Редкое"
+                        rand < 99 -> "Эпическое"
+                        else -> "Легендарное"
+                    }
+
+                    val pool = PredictionStorage.getAll().filter { it.value.rarity == rarity }.toList()
+                    val prediction = pool.random()
+
+                    println(prediction)
+
+                    val userList = UserPredictionHistory.getUserPredictions(chatIdLong)
+                    // добавить добавление в бд
+                    val out =
+                        if (userList.any { it.id == prediction.second.id }) {
+                            "Вам выпало повторное предсказание:\n\n${prediction.second.text} (${prediction.second.rarity})"
+                        } else {
+                            UserPredictionHistory.addToUser(chatIdLong, prediction.second)
+                            "${prediction.second.text} (${prediction.second.rarity})"
+                        }
+                    // также сохранение повторок в дб
+                    bot.sendMessage(chatId, out)
+                    return@message
+                }
+
+                // ===== Мои предсказания =====
+                if (text == "Мои предсказания") {
+                    val list = UserPredictionHistory.getUserPredictions(chatIdLong)
+                    if (list.isEmpty()) {
+                        bot.sendMessage(chatId, "У вас пока нет предсказаний.")
+                    } else {
+                        val out = list.joinToString("\n") { "• ${it.text} (${it.rarity})" }
+                        bot.sendMessage(chatId, "Ваши предсказания:\n$out")
+                    }
+                    return@message
+                }
+
+                // ===== Добавить предсказание =====
+                if (text == "Добавить предсказание") {
+                    ReplyMenuHolder.replyMenu.keyboard = getRarityKeyboard()
+                    ReplyMenuHolder.replyMenu.update()
+
+                    bot.sendMessage(
+                        chatId,
+                        "Выберите редкость для нового предсказания:",
+                        replyMarkup = ReplyMenuHolder.replyMenu.getKeyboardReplyMarkup()
+                    )
+                    return@message
+                }
+
+                // ===== Выбор редкости =====
+                val rarities = listOf("Обычное", "Редкое", "Эпическое", "Легендарное")
+                if (text in rarities) {
+                    ReplyMenuHolder.selectedRarity = text
+                    bot.sendMessage(chatId, "Напишите текст предсказания:")
+                    return@message
+                }
+                if (ReplyMenuHolder.selectedRarity != null) {
+                    PredictionStorage.addPrediction(text, ReplyMenuHolder.selectedRarity!!)
+                    ReplyMenuHolder.selectedRarity = null
+
+                    ReplyMenuHolder.replyMenu.keyboard = getMainKeyboard()
+                    ReplyMenuHolder.replyMenu.update()
+
+                    bot.sendMessage(
+                        chatId,
+                        "Предсказание добавлено!",
+                        replyMarkup = ReplyMenuHolder.replyMenu.getKeyboardReplyMarkup()
+                    )
+                    return@message
+                }
+                // тут сохранение в файл переделать в бд
+                // ===== Ввод текста предсказания =====
+                if (ReplyMenuHolder.selectedRarity != null) {
+                    PredictionStorage.addPrediction(text, ReplyMenuHolder.selectedRarity!!)
+
+                    // Сброс состояния и возврат к главному меню
+                    ReplyMenuHolder.selectedRarity = null
+                    ReplyMenuHolder.replyMenu.keyboard = getMainKeyboard()
+                    ReplyMenuHolder.replyMenu.update()
+
+                    bot.sendMessage(
+                        chatId,
+                        "Предсказание добавлено!",
+                        replyMarkup = ReplyMenuHolder.replyMenu.getKeyboardReplyMarkup()
+                    )
+                    return@message
+                }
+
+                // ===== Поиск =====
+                if (text == "Поиск предсказаний") {
+                    ReplyMenuHolder.searchMode = true
+                    bot.sendMessage(chatId, "Введите текст для поиска:")
+                    return@message
+                }
+
+                if (ReplyMenuHolder.searchMode) {
+                    val results = PredictionStorage.getAll().filter { it.value.text.contains(text, true) }.toList()
+
+                    if (results.isEmpty()) {
+                        bot.sendMessage(chatId, "Ничего не найдено.")
+                    } else {
+                        val out = results.joinToString("\n") { "• ${it.second.text} (${it.second.rarity})" }
+                        bot.sendMessage(chatId, "Результаты поиска:\n$out")
+                    }
+
+                    ReplyMenuHolder.searchMode = false
+                    return@message
+                }
+
+                // ===== Главное меню по умолчанию =====
+                ReplyMenuHolder.replyMenu.main(text, bot, chatId)
             }
         }
     }
 
     bot.startPolling()
 }
+
+
+
+
+
+
+
+
+
+
