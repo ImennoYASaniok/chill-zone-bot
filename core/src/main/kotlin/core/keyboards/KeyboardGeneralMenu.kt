@@ -22,7 +22,8 @@ fun getKeyboardGeneralMenu(): MutableList<MutableList<Button>> {
     KeyboardNames.generalMenu["collections"] = collectionsButton.getText()
 
     val miniGamesButton = Button(
-        name = "🎮 Мини-игры"
+        name = "🎮 Мини-игры",
+        stateChange = States.MiniGamesMenu
     )
     KeyboardNames.generalMenu["miniGames"] = miniGamesButton.getText()
 
