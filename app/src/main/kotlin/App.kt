@@ -10,7 +10,7 @@ import ChillZoneBot.core.src.main.kotlin.handlers.base.UserMemeHistory
 import ChillZoneBot.core.src.main.kotlin.handlers.base.UserMemeSession
 import ChillZoneBot.core.src.main.kotlin.handlers.base.VotesStorage
 import ChillZoneBot.core.src.main.kotlin.handlers.memes.getMemeKeyboard
-//import ChillZoneBot.core.src.main.kotlin.keyboards.base.getKeyboardMenu
+import ChillZoneBot.core.src.main.kotlin.keyboards.base.getKeyboardMenu
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
@@ -19,27 +19,6 @@ import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatId
 
 import io.github.cdimascio.dotenv.dotenv
-
-fun getKeyboardMenu(): MutableList<MutableList<Button>> {
-    val button1 = Button("Button")
-    val button2 = ChooseButton(
-        name = "ChooseButton",
-        list = mapOf(
-            "name1" to null,
-            "name2" to null,
-            "name3" to null
-        ),
-        startIndex = 0
-    )
-    val button3 = BoolButton("BoolButton", false)
-    val memesButton = Button("Мемы")
-
-    return mutableListOf(
-        mutableListOf(button1, button2),
-        mutableListOf(button3),
-        mutableListOf(memesButton)
-    )
-}
 
 fun main() {
     val dotenv = dotenv()
