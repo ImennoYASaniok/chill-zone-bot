@@ -18,6 +18,9 @@ import core.messageClasses.getReplySettings
 fun getUsername(user: User?): String {
     return user?.username ?: "Не указан"
 }
+fun getUserId(user: User?): Long {
+    return user?.id!!
+}
 
 fun main() {
     val dotenv = dotenv()
@@ -32,7 +35,7 @@ fun main() {
 
                 val argsGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
                 val argsSettings = ReplyList.replySettings.processing(text)
-                val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to getUsername(message.from)))
+                val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to getUsername(message.from), "userId" to getUserId(message.from)))
 
                 ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = argsGeneralMenu)
                 ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = argsSettings)
