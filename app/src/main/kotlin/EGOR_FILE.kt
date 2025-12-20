@@ -11,7 +11,7 @@ fun main() {
     try {
         val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
         var createTablesQuery =
-            "CREATE TABLE IF NOT EXISTS Accounts(id SERIAL PRIMARY KEY, userId BIGINT, username TEXT);"
+            "TRUNCATE Tests CASCADE;TRUNCATE Questions CASCADE;TRUNCATE correctTextAnswers CASCADE;"
 
         connection.prepareStatement(createTablesQuery).execute()
 

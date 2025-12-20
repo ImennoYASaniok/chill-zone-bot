@@ -19,10 +19,12 @@ import BooksPart.getInfo
 
 import core.States
 import core.currState
+import core.handlers.Account
 import core.messageClasses.ReplyList
 import core.utils.Logger
 
 import core.handlers.FeedbackHandlers
+import core.handlers.handlerAccount
 
 import core.keyboards.getKeyboardMemes
 import core.keyboards.getKeyboardMiniGamesMain
@@ -213,7 +215,8 @@ private fun handleMiniGames(text: String, bot: com.github.kotlintelegrambot.Bot,
         }
         "🏆 Топ 10 игроков" -> {
             val top = GameStorage.getTop10()
-            val result = if (top.isEmpty()) "Пока пусто." else top.mapIndexed { i, u -> "${i + 1}. ${u.rating} очков" }.joinToString("\n")
+
+            val result = if (top.isEmpty()) "Пока пусто." else top.mapIndexed { i, u -> "${i + 1}. ${Account.accounts[u.userId]} ${u.rating} очков" }.joinToString("\n")
             bot.sendMessage(chatId, "🏆 Топ 10:\n$result", replyMarkup = getKeyboardMiniGamesMain())
             return true
         }
