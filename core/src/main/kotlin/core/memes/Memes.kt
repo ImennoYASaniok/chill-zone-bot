@@ -1,10 +1,6 @@
 package core.memes
 
-import io.github.cdimascio.dotenv.dotenv
 import java.io.File
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.SQLException
 import kotlin.random.Random
 
 // -------------------- Models --------------------
@@ -16,25 +12,19 @@ data class MemeVotes(val likes: Int, val dislikes: Int)
 // -------------------- Meme storage --------------------
 
 object MemeStorage {
+    private val file = File("memes.txt").apply { if (!exists()) createNewFile() }
     private val memes = mutableListOf<Meme>()
-    // ----------- База Данных -----------
-    private val databaseUrl: String = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
-    private val databaseUser: String = dotenv()["DATABASE_USER"]
-    private val databasePassword: String = dotenv()["DATABASE_PASSWORD"]
-    private val connection: Connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
 
     init {
         // Format: id|fileId
-        try {
-            var query = "SELECT * FROM Memes"
-            var statement = connection.createStatement()
-            statement.executeQuery(query).use { resultSet ->
-                while (resultSet.next()) {
-                    memes.add(Meme(resultSet.getInt(1), resultSet.getString(2)))
-                }
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
+        for (line in file.readLines()) {
+            if (line.isBlank()) continue
+            val parts = line.split("|", limit = 2)
+            if (parts.size < 2) continue
+            val id = parts[0].toIntOrNull() ?: continue
+            val fileId = parts[1].trim()
+            if (fileId.isBlank()) continue
+            memes.add(Meme(id, fileId))
         }
     }
 
@@ -45,18 +35,10 @@ object MemeStorage {
     fun getById(id: Int): Meme? = memes.find { it.id == id }
 
     fun addMeme(fileId: String): Meme {
-        val newId = if (memes.isEmpty()) 1 else memes.maxOf { it.id } + 1
+        val newId = (memes.maxOfOrNull { it.id } ?: 0) + 1
         val meme = Meme(newId, fileId)
         memes.add(meme)
-        try {
-            val insertMovieQuery =
-                "INSERT INTO Memes (fileId) VALUES (?)"
-            val preparedStatement = connection.prepareStatement(insertMovieQuery)
-            preparedStatement.setString(1, fileId)
-            val rowsAffected = preparedStatement.executeUpdate()
-        } catch (e: SQLException) {
-            e.printStackTrace()
-        }
+        file.appendText("${meme.id}|${meme.fileId}\n")
         return meme
     }
 }
@@ -68,51 +50,14 @@ object MemeAddState {
 object UserMemeHistory {
     private val seenByChat = mutableMapOf<Long, MutableSet<Int>>()
 
-    // ----------- База Данных -----------
-    private val databaseUrl: String = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
-    private val databaseUser: String = dotenv()["DATABASE_USER"]
-    private val databasePassword: String = dotenv()["DATABASE_PASSWORD"]
-    private val connection: Connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
-
-    init {
-        val statement = connection.createStatement()
-        val query = "SELECT * FROM History;"
-
-        statement.executeQuery(query).use { resultSet ->
-            while (resultSet.next()) {
-                val chatId = resultSet.getLong("userId")
-                val memeId = resultSet.getInt("memeId")
-                if (seenByChat[chatId] == null) {
-                    seenByChat[chatId] = mutableSetOf(memeId)
-                } else {
-                    seenByChat[chatId]!!.add(memeId)
-                }
-            }
-        }
-    }
-
-    fun saveAll(chatId: Long, memeId: Int) {
-        val query = "INSERT INTO History(userId, memeId) VALUES(?, ?);"
-        val statement = connection.prepareStatement(query)
-
-        statement.setLong(1, chatId)
-        statement.setInt(2, memeId)
-
-        statement.executeUpdate()
-    }
-
     fun getNextRandomUnseen(chatId: Long): Meme? {
         val all = MemeStorage.getAll()
         if (all.isEmpty()) return null
         val seen = seenByChat.getOrPut(chatId) { mutableSetOf() }
-        println(seen)
         val unseen = all.filter { it.id !in seen }
         if (unseen.isEmpty()) return null
-        val meme = unseen.random()
+        val meme = unseen[Random.nextInt(unseen.size)]
         seen.add(meme.id)
-
-        saveAll(chatId, meme.id)
-
         return meme
     }
 
@@ -134,46 +79,27 @@ object UserMemeSession {
 // -------------------- Favorites --------------------
 
 object FavoritesStorage {
+    private val file = File("favorites.txt").apply { if (!exists()) createNewFile() }
     private val favByChat = mutableMapOf<Long, MutableSet<Int>>()
 
-    private val databaseUrl: String = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
-    private val databaseUser: String = dotenv()["DATABASE_USER"]
-    private val databasePassword: String = dotenv()["DATABASE_PASSWORD"]
-    private val connection: Connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
-
     init {
-        try {
-            var query = "SELECT * FROM Favourites"
-            var statement = connection.createStatement()
-            statement.executeQuery(query).use { resultSet ->
-                while (resultSet.next()) {
-                    val chatId = resultSet.getLong("userId")
-                    val memeId = resultSet.getInt("memeId")
-                    favByChat.getOrPut(chatId) { mutableSetOf() }.add(memeId)
-                }
-            }
-            println()
-        } catch (e: SQLException) {
-            e.printStackTrace()
+        // Format: chatId|memeId
+        for (line in file.readLines()) {
+            if (line.isBlank()) continue
+            val parts = line.split("|")
+            if (parts.size < 2) continue
+            val chatId = parts[0].toLongOrNull() ?: continue
+            val memeId = parts[1].toIntOrNull() ?: continue
+            favByChat.getOrPut(chatId) { mutableSetOf() }.add(memeId)
         }
     }
 
     private fun saveAll() {
+        val sb = StringBuilder()
         for ((chatId, set) in favByChat) {
-            for (memeId in set) {
-                try {
-                    val query = "INSERT INTO Favourites(userId, memeId) VALUES(?, ?);"
-                    val statement = connection.prepareStatement(query)
-
-                    statement.setLong(1, chatId)
-                    statement.setInt(2, memeId)
-
-                    statement.executeUpdate()
-                } catch (e: SQLException) {
-                    e.printStackTrace()
-                }
-            }
+            for (memeId in set) sb.append(chatId).append("|").append(memeId).append("\n")
         }
+        file.writeText(sb.toString())
     }
 
     fun add(chatId: Long, memeId: Int): Boolean {
@@ -205,46 +131,28 @@ object VotesStorage {
     // chatId -> (memeId -> vote)
     private val votes = mutableMapOf<Long, MutableMap<Int, Int>>()
 
-    private val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
-    private val databaseUser = dotenv()["DATABASE_USER"]
-    private val databasePassword = dotenv()["DATABASE_PASSWORD"]
-    private val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
-
     init {
-        try {
-            var query = "SELECT * FROM LikesDislikes"
-            var statement = connection.createStatement()
-            statement.executeQuery(query).use { resultSet ->
-                while (resultSet.next()) {
-                    val chatId = resultSet.getLong("userId")
-                    val memeId = resultSet.getInt("memeId")
-                    val vote = resultSet.getInt("vote")
-                    votes.getOrPut(chatId) { mutableMapOf() }[memeId] = vote
-                }
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
+        // Format: chatId|memeId|vote(1/-1)
+        for (line in file.readLines()) {
+            if (line.isBlank()) continue
+            val parts = line.split("|")
+            if (parts.size < 3) continue
+            val chatId = parts[0].toLongOrNull() ?: continue
+            val memeId = parts[1].toIntOrNull() ?: continue
+            val vote = parts[2].toIntOrNull() ?: continue
+            if (vote != 1 && vote != -1) continue
+            votes.getOrPut(chatId) { mutableMapOf() }[memeId] = vote
         }
     }
 
     private fun saveAll() {
+        val sb = StringBuilder()
         for ((chatId, map) in votes) {
             for ((memeId, vote) in map) {
-                try {
-                    val query = "INSERT INTO LikesDislikes(userId, memeId, vote) VALUES(?, ?, ?);"
-                    val statement = connection.prepareStatement(query)
-
-                    statement.setLong(1, chatId)
-                    statement.setInt(2, memeId)
-                    statement.setInt(3, vote)
-
-                    statement.executeUpdate()
-
-                } catch (e: SQLException) {
-                    e.printStackTrace()
-                }
+                sb.append(chatId).append("|").append(memeId).append("|").append(vote).append("\n")
             }
         }
+        file.writeText(sb.toString())
     }
 
     fun getCounts(memeId: Int): MemeVotes {

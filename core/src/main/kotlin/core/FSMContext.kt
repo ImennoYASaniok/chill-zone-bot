@@ -7,7 +7,9 @@ enum class States {
     MemeMenu,
     PredictionsMenu,
     CollectionsMenu,
-    FeedbackMenu
+    FeedbackMenu,
+    MiniGamesMenu,
+    TestsMenu
 }
 
 var currState: States = States.GeneralMenu

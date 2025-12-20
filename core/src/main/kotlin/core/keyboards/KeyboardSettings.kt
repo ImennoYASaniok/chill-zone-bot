@@ -2,6 +2,7 @@ package core.keyboards
 
 import core.Button
 import core.ChooseButton
+import core.BoolButton
 
 import kotlin.collections.mutableListOf
 
@@ -10,20 +11,15 @@ fun getKeyboardSettings(): MutableList<MutableList<Button>> {
         name = "Оформление",
         list = mapOf(
             "тип 1" to null,
-            "тип 2" to null,
-            "тип 3" to null
+            "тип 2" to null
         )
     )
 
-    val languageButton = ChooseButton(
-        name = "Язык",
-        list = mapOf(
-            "русс" to null,
-            "англ" to null
-        )
+    val showImgButton = BoolButton(
+        name = "Показывать картинки сообщений"
     )
 
     return mutableListOf(
-        mutableListOf(decorationButton, languageButton),
+        mutableListOf(decorationButton, showImgButton),
     )
 }
