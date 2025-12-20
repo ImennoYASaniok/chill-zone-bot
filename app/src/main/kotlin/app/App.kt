@@ -308,7 +308,6 @@ private fun handlePredictions(text: String, bot: com.github.kotlintelegrambot.Bo
         return true
     }
 
-    // --- Добавление (шаг 2: ждём текст) ---
     val rarity = PredictionsFlow.getRarity(chatIdLong)
     if (rarity != null && rarity.isNotBlank() && text !in PredictionsFlow.rarities) {
         PredictionStorage.add(text, rarity)
@@ -347,14 +346,14 @@ private fun handlePredictions(text: String, bot: com.github.kotlintelegrambot.Bo
         }
     }
 
-    // --- Добавление (шаг 1: выбор редкости) ---
+
     if (text in PredictionsFlow.rarities) {
         PredictionsFlow.setRarity(chatIdLong, text)
         bot.sendMessage(chatId, "Напишите текст предсказания:")
         return true
     }
 
-    // если неизвестная команда — просто меню
+
     bot.sendMessage(chatId, "Меню предсказаний", replyMarkup = getKeyboardPredictionsMain())
     return true
 }
@@ -393,7 +392,7 @@ private fun handleTests(text: String, bot: com.github.kotlintelegrambot.Bot, cha
         return true
     }
 
-    // ждём ответы "1) ..." / "2) ..."
+
     val idx = Regex("^(\\d)").find(text)?.groupValues?.get(1)?.toIntOrNull()?.minus(1)
     if (idx == null || idx !in 0..3) {
         bot.sendMessage(chatId, "Нажми на вариант ответа кнопкой.")
@@ -1188,7 +1187,7 @@ fun main() {
                 val username = getUsername(message.from)
                 val userId = getUserId(message.from)
 
-                // 1) Photo handling (used for meme upload)
+
                 val photo = message.photo?.lastOrNull()
                 if (photo != null) {
                     val fileId = photo.fileId
@@ -1204,14 +1203,14 @@ fun main() {
 
                 val t = message.text ?: return@message
 
-                // 0) /start всегда доступен
+
                 if (t == "/start") {
                     currState = States.GeneralMenu
                     openGeneralMenu("/start", bot, chatId, username, userId)
                     return@message
                 }
 
-                // 2) Global entries from general menu
+
 
                 if (BooksStates.waitingForKeyWord) {
                     BooksStates.waitingForKeyWord = false
@@ -1390,7 +1389,7 @@ fun main() {
                     }
                     "💬 Обратная связь", "/feedback" -> {
                         currState = States.FeedbackMenu
-                        // Показываем инструкцию + клавиатуру с "Обратно"
+
                         openGeneralMenu("/feedback", bot, chatId, username, userId)
                         return@message
                     }
@@ -1420,7 +1419,7 @@ fun main() {
                 }
 
 
-                // 3) State-driven flows
+
                 when (currState) {
                     States.MemeMenu -> {
                         val handled = handleMemes(t, bot, chatId, chatIdLong)
@@ -1457,7 +1456,7 @@ fun main() {
                         return@message
                     }
                     States.FeedbackMenu -> {
-                        // ReplyClass уже обработает кнопку "⬅️ Обратно".
+
                         if (t == "⬅️ Обратно") {
                             currState = States.GeneralMenu
                             openGeneralMenu("/start", bot, chatId, username, userId)
@@ -1473,7 +1472,7 @@ fun main() {
                     }
                 }
 
-                // 4) Default flow (menus / settings / account)
+
                 openGeneralMenu(t, bot, chatId, username, userId)
             }
         }

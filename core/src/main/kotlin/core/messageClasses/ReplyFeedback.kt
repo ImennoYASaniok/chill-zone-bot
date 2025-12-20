@@ -9,8 +9,6 @@ fun getReplyFeedback(): ReplyClass {
     return ReplyClass(
         keyboard = getKeyboardFeedback(),
         globalCommand = "/feedback",
-        // важно: ReplyList инициализируется раньше, чем заполняется KeyboardNames,
-        // поэтому здесь используем текст кнопки напрямую.
         command = "💬 Обратная связь",
         state = States.FeedbackMenu,
         stateBack = States.GeneralMenu,

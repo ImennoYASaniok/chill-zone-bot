@@ -9,6 +9,9 @@ dependencies {
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
     implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
 
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("io.mockk:mockk:1.13.8")
+
     testImplementation(kotlin("test"))
 }
 

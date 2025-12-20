@@ -13,7 +13,6 @@ fun getKeyboardTestsMain(): KeyboardReplyMarkup {
 }
 
 fun getKeyboardTestsOptions(options: List<String>): KeyboardReplyMarkup {
-    // показываем 4 варианта как кнопки "1) ..."
     val rows = mutableListOf<List<KeyboardButton>>()
     options.forEachIndexed { idx, opt ->
         rows.add(listOf(KeyboardButton("${idx + 1}) $opt")))

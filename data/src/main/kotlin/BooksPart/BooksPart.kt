@@ -20,8 +20,8 @@ fun parseJson(jjsonString: String) : List<BookResponse>? {
     try {
         val jsonString = jjsonString.trimIndent()
         val json = Json {
-            ignoreUnknownKeys = true // Игнорировать неизвестные ключи
-            //coerceInputValues = true // Позволяет обрабатывать null значения для полей, которые могут быть null
+            ignoreUnknownKeys = true
+            //coerceInputValues = true
         }
 
         val response = json.decodeFromString<OuterResponse>(jsonString)

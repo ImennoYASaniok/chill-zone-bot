@@ -360,8 +360,8 @@ fun parseJson(jjsonString: String) : MovieListResponse? {
         val jsonString = jjsonString.trimIndent()
         val json = Json {
             prettyPrint = true
-            ignoreUnknownKeys = true // Игнорировать неизвестные ключи
-            coerceInputValues = true // Позволяет обрабатывать null значения для полей, которые могут быть null
+            ignoreUnknownKeys = true
+            coerceInputValues = true
         }
 
         val movieListResponse: MovieListResponse = json.decodeFromString(jsonString)
