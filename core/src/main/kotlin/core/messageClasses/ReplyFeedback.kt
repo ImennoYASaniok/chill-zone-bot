@@ -5,7 +5,7 @@ import core.States
 import core.handlers.FeedbackHandlers
 import core.keyboards.getKeyboardFeedback
 
-fun getReplyFeedback(): ReplyClass {
+fun getReplyFeedback(chatId: Long, currPage: Int): ReplyClass {
     return ReplyClass(
         keyboard = getKeyboardFeedback(),
         globalCommand = "/feedback",
@@ -14,6 +14,8 @@ fun getReplyFeedback(): ReplyClass {
         command = "💬 Обратная связь",
         state = States.FeedbackMenu,
         stateBack = States.GeneralMenu,
-        startFunc = FeedbackHandlers::startFeedbackHandler
+        startFunc = FeedbackHandlers::startFeedbackHandler,
+        chatId = chatId,
+        currPage = currPage
     )
 }

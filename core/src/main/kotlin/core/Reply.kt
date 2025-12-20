@@ -10,14 +10,18 @@ import com.github.kotlintelegrambot.entities.inputmedia.InputMediaPhoto
 import com.github.kotlintelegrambot.entities.inputmedia.MediaGroup
 import core.utils.Logger
 import core.utils.Url
+import core.globalStates
+import core.messageClasses.cI
 
 import java.io.File
 import java.io.FileNotFoundException
+import kotlin.collections.set
 
 open class Button(
     var name: String,
     val func: (() -> String?)? = null,
-    val stateChange: States? = null
+    val stateChange: States? = null,
+    val chatId: Long
 ) {
     override fun toString(): String {
         return "Button(name='$name')"
@@ -34,7 +38,7 @@ open class Button(
     open fun detect(): String? {
         var message: String? = null
         if (func != null) message = func.invoke()
-        if (stateChange != null) currState = stateChange
+        if (stateChange != null) globalStates.globalStates[chatId] = stateChange
         return message
     }
 }
@@ -44,8 +48,9 @@ class BoolButton(
     var flag: Boolean = true,
     val funcTrue: (() -> String?)? = null,
     val funcFalse: (() -> String?)? = null,
+    chatId: Long
     // isTransitional: Boolean = false
-) : Button(name) {
+) : Button(name, chatId = chatId) {
     val nameTrue = "✅"
     val nameFalse = "❌"
 
@@ -73,8 +78,9 @@ class ChooseButton(
     name: String,
     val list: Map<String, (() -> String?)?>,
     startIndex: Int = 0,
+    chatId: Long
     // isTransitional: Boolean = false
-) : Button(name) {
+) : Button(name, chatId = chatId) {
     var currentIndex: Int = startIndex
 
     override fun toString(): String {
@@ -90,6 +96,7 @@ class ChooseButton(
         val currentFunc = list.values.toList()[currentIndex]
         if (currentFunc != null) message = currentFunc()
         currentIndex++
+
         currentIndex %= list.size
 
         return message
@@ -105,15 +112,15 @@ class ReplyClass(
     val startFunc: ((Map<String, Any>?) -> String),
     var urls: MutableList<String> = mutableListOf(),
     useFormat: Boolean = true,
-    thresholdCountButtons: Int = 6
+    thresholdCountButtons: Int = 6,
+    val chatId: Long,
+    val currPage: Int
 ) {
     val groupKeyboards = mutableListOf<MutableList<MutableList<Button>>>()
     var replyKeyboard = mutableListOf<List<KeyboardButton>>()
 
     val nameNextButton = "➡️ Дальше"
     val nameBackButton = "⬅️ Обратно"
-
-    var currIndKeyboard = 0
     var maxCountKeyboard = 0
 
     var typeImgUrl = ""
@@ -121,6 +128,7 @@ class ReplyClass(
     val PARSE_MODE = ParseMode.HTML
 
     init {
+        globalStates.globalKeyboardIndex[chatId] = currPage
         if (useFormat && keyboard.sumOf { buttons -> buttons.size } > thresholdCountButtons) {
             formatKeyboard()
         }
@@ -199,29 +207,36 @@ class ReplyClass(
     }
 
     fun getNextButton(): Button {
-        return Button(name = nameNextButton, func = ::incrementCurrIndKeyboard)
+        return Button(name = nameNextButton, func = ::incrementCurrIndKeyboard, chatId = chatId)
     }
 
     fun getBackButton(): Button {
-        return Button(name = nameBackButton, func = ::returnBackState, stateChange = stateBack)
+        return Button(name = nameBackButton, func = ::returnBackState, stateChange = stateBack, chatId = chatId)
     }
 
     fun incrementCurrIndKeyboard(): Nothing? {
-        currIndKeyboard++
-        currIndKeyboard %= maxCountKeyboard
+        println("OLD INDEX: ${globalStates.globalKeyboardIndex[chatId]}")
+        println(cI.chatId)
+        globalStates.globalKeyboardIndex[chatId] = globalStates.globalKeyboardIndex[chatId]!! + 1
+        println("NDEWEWE INDEX: ${globalStates.globalKeyboardIndex[chatId]}")
+        globalStates.globalKeyboardIndex[chatId] = (globalStates.globalKeyboardIndex[chatId]!!) % maxCountKeyboard
+        println("SLASH INDEX: ${globalStates.globalKeyboardIndex[chatId]}")
+        println("MAX IDNEX: $maxCountKeyboard")
         setCurrKeyboard()
         return null
     }
 
     fun returnBackState(): Nothing? {
         if (stateBack != null) {
-            currState = stateBack
+            globalStates.globalStates[chatId] = stateBack
         }
         return null
     }
 
     fun setCurrKeyboard() {
-        keyboard = groupKeyboards[currIndKeyboard]
+        println("!!!!!: ${globalStates.globalKeyboardIndex[chatId]!!}")
+        keyboard = groupKeyboards[globalStates.globalKeyboardIndex[chatId]!!]
+        println("CURRENT INDEX: ${globalStates.globalKeyboardIndex[chatId]!!}")
     }
 
     fun getKeyboardReplyMarkup(): KeyboardReplyMarkup {
@@ -405,10 +420,10 @@ class ReplyClass(
     fun processing(text: String, funcKwargs: Map<String, Any>? = null): Pair<String, Boolean> {
         var message: String? = null
         var IsButton: Boolean = false
-        if (currState == state && textIsButtonName(text)) {
+        if (globalStates.globalStates[chatId]!! == state && textIsButtonName(text)) {
             var findButton = false
 
-            // println("ДО $this $currState")
+            // println("ДО $this $globalStates.globalStates[chatId.id]!!")
             for (indRow in keyboard.indices) {
                 for (indCol in keyboard[indRow].indices) {
                     if (keyboard[indRow][indCol].getText() == text) {
@@ -421,15 +436,15 @@ class ReplyClass(
                     break
                 }
             }
-            // println("ПОСЛЕ $this $currState $buttonIsTransition")
+            // println("ПОСЛЕ $this $globalStates.globalStates[chatId.id]!! $buttonIsTransition")
             IsButton = true
         }
         else if (text == globalCommand) {
-            if (currState != state) {
-                currState = state
+            if (globalStates.globalStates[chatId]!! != state) {
+                globalStates.globalStates[chatId] = state
             }
         }
-//        else if (currState == state && text == command) {
+//        else if (globalStates.globalStates[chatId.id]!! == state && text == command) {
 //        }
         if (message == null) {
             message = startFunc(funcKwargs)
@@ -437,17 +452,18 @@ class ReplyClass(
         return Pair(message, IsButton)
     }
 
-    fun main(text: String, bot: Bot, chatId: ChatId, message: String, isButton: Boolean = false) {
-        println("$currState $state")
+    fun main(text: String, bot: Bot, chtId: ChatId, message: String, isButton: Boolean = false) {
+        println("$globalStates.globalStates[chatId.id]!! $state")
         println("$text $nameBackButton")
-        if (currState == state && (isButton || text == command || text == globalCommand || text == nameBackButton)) {
+        if (globalStates.globalStates[chatId]!! == state && (isButton || text == command || text == globalCommand || text == nameBackButton)) {
             update()
-            sendMessage(message, text, bot, chatId)
-            println("$this $currState $state")
+            sendMessage(message, text, bot, chtId)
+            println("$this $globalStates.globalStates[chatId.id]!! $state")
         }
     }
 
-    fun callMain(text: String, bot: Bot, chatId: ChatId, pair: Pair<String, Boolean>) {
-        main(text, bot = bot, chatId = chatId, message = pair.first, isButton = pair.second)
+    fun callMain(text: String, bot: Bot, chtId: ChatId, pair: Pair<String, Boolean>) {
+        println("лсово слово $chtId")
+        main(text, bot = bot, chtId = chtId, message = pair.first, isButton = pair.second)
     }
 }

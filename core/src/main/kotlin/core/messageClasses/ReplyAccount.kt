@@ -7,7 +7,7 @@ import core.handlers.handlerAccount
 import core.keyboards.KeyboardNames
 import core.keyboards.getKeyboardEmpty
 
-fun getReplyAccount(): ReplyClass {
+fun getReplyAccount(chatId: Long, currPage: Int): ReplyClass {
     val replyClass = ReplyClass(
         keyboard = getKeyboardEmpty(),
         globalCommand = "/account",
@@ -15,7 +15,9 @@ fun getReplyAccount(): ReplyClass {
         state = States.Account,
         stateBack = States.GeneralMenu,
         startFunc = ::handlerAccount,
-        urls = mutableListOf("account/Account.png")
+        urls = mutableListOf("account/Account.png"),
+        chatId = chatId,
+        currPage = currPage
     )
     Logger.info("replyClass", "Создан ReplyClass: $replyClass")
 

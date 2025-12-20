@@ -67,5 +67,8 @@ object GameStorage {
         save()
     }
 
-    fun getTop10(): List<UserStats> = users.values.sortedByDescending { it.rating }.take(10)
+    fun getTop10(): List<UserStats> {
+        println(users)
+        return users.values.sortedByDescending { it.rating }.take(10)
+    }
 }

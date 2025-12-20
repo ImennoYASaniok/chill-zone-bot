@@ -50,21 +50,38 @@ import core.predictions.PredictionsFlow
 import core.tests.TestsFlow
 import keyboards.base.getInlineKeyboardMenu
 import keyboards.base.getKeyboardMenu
+import java.util.Objects
 import kotlin.math.min
+import core.globalStates
+import core.messageClasses.cI
+import core.messageClasses.getReplyAccount
+import core.messageClasses.getReplyFeedback
+import core.messageClasses.getReplyGeneralMenu
+import core.messageClasses.getReplySettings
+
 
 fun getUsername(user: User?): String = user?.username ?: "Не указан"
 fun getUserId(user: User?): Long = user?.id!!
 
-private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, username: String, userId: Long) {
-    val argsGeneralMenu = ReplyList.replyGeneralMenu.processing(text)
-    val argsSettings = ReplyList.replySettings.processing(text)
-    val argsAccount = ReplyList.replyAccount.processing(text, mapOf("username" to username, "userId" to userId))
-    val argsFeedback = ReplyList.replyFeedback.processing(text)
+private fun openGeneralMenu(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, username: String, userId: Long, chtId: Long, page: Int) {
 
-    ReplyList.replyGeneralMenu.callMain(text, bot = bot, chatId = chatId, pair = argsGeneralMenu)
-    ReplyList.replySettings.callMain(text, bot = bot, chatId = chatId, pair = argsSettings)
-    ReplyList.replyAccount.callMain(text, bot = bot, chatId = chatId, pair = argsAccount)
-    ReplyList.replyFeedback.callMain(text, bot = bot, chatId = chatId, pair = argsFeedback)
+    cI.chatId = userId
+    println(cI.chatId)
+
+    globalStates.globalRepliesList[chtId]!!.replyGeneralMenu = getReplyGeneralMenu(cI.chatId, page)
+    globalStates.globalRepliesList[chtId]!!.replySettings = getReplySettings(cI.chatId, page)
+    globalStates.globalRepliesList[chtId]!!.replyAccount = getReplyAccount(cI.chatId, page)
+    globalStates.globalRepliesList[chtId]!!.replyFeedback = getReplyFeedback(cI.chatId, page)
+
+    println("LLLL: ${globalStates.globalRepliesList[userId]!!.replyGeneralMenu}")
+    val argsGeneralMenu = globalStates.globalRepliesList[userId]!!.replyGeneralMenu.processing(text)
+    val argsSettings = globalStates.globalRepliesList[userId]!!.replySettings.processing(text)
+    val argsAccount = globalStates.globalRepliesList[userId]!!.replyAccount.processing(text, mapOf("username" to username, "userId" to userId))
+    val argsFeedback = globalStates.globalRepliesList[userId]!!.replyFeedback.processing(text)
+    globalStates.globalRepliesList[userId]!!.replyGeneralMenu.callMain(text, bot = bot, chtId = chatId, pair = argsGeneralMenu)
+    globalStates.globalRepliesList[userId]!!.replySettings.callMain(text, bot = bot, chtId = chatId, pair = argsSettings)
+    globalStates.globalRepliesList[userId]!!.replyAccount.callMain(text, bot = bot, chtId = chatId, pair = argsAccount)
+    globalStates.globalRepliesList[userId]!!.replyFeedback.callMain(text, bot = bot, chtId = chatId, pair = argsFeedback)
 }
 
 // ===================== MEMES =====================
@@ -175,7 +192,7 @@ private fun handleMemes(text: String, bot: com.github.kotlintelegrambot.Bot, cha
             return true
         }
         "⬅️ Обратно" -> {
-            currState = States.GeneralMenu
+            globalStates.globalStates[chatIdLong] = States.GeneralMenu
             return true
         }
     }
@@ -216,7 +233,9 @@ private fun handleMiniGames(text: String, bot: com.github.kotlintelegrambot.Bot,
         "🏆 Топ 10 игроков" -> {
             val top = GameStorage.getTop10()
 
-            val result = if (top.isEmpty()) "Пока пусто." else top.mapIndexed { i, u -> "${i + 1}. ${Account.accounts[u.userId]} ${u.rating} очков" }.joinToString("\n")
+            println(globalStates.globalAccounts)
+
+            val result = if (top.isEmpty()) "Пока пусто." else top.mapIndexed { i, u -> "${i + 1}. ${globalStates.globalAccounts[u.userId]!!.accounts[u.userId]} ${u.rating} очков" }.joinToString("\n")
             bot.sendMessage(chatId, "🏆 Топ 10:\n$result", replyMarkup = getKeyboardMiniGamesMain())
             return true
         }
@@ -265,7 +284,7 @@ private fun handleMiniGames(text: String, bot: com.github.kotlintelegrambot.Bot,
             return true
         }
         "⬅️ Обратно" -> {
-            currState = States.GeneralMenu
+            globalStates.globalStates[chatIdLong] = States.GeneralMenu
             return true
         }
     }
@@ -295,7 +314,7 @@ private fun handlePredictions(text: String, bot: com.github.kotlintelegrambot.Bo
     if (text == "⬅️ Обратно") {
         PredictionsFlow.stopAdd(chatIdLong)
         PredictionsFlow.stopSearch(chatIdLong)
-        currState = States.GeneralMenu
+        globalStates.globalStates[chatIdLong] = States.GeneralMenu
         return true
     }
 
@@ -377,7 +396,7 @@ private fun showCurrentQuestion(bot: com.github.kotlintelegrambot.Bot, chatId: C
 private fun handleTests(text: String, bot: com.github.kotlintelegrambot.Bot, chatId: ChatId, chatIdLong: Long): Boolean {
     if (text == "⬅️ Обратно") {
         TestsFlow.stop(chatIdLong)
-        currState = States.GeneralMenu
+        globalStates.globalStates[chatIdLong] = States.GeneralMenu
         return true
     }
 
@@ -422,6 +441,11 @@ private fun handleTests(text: String, bot: com.github.kotlintelegrambot.Bot, cha
 // ===================== MAIN =====================
 
 fun main() {
+
+
+
+
+
     val dotenv = dotenv()
     Logger.info("bot", "Запущен бот")
 
@@ -443,6 +467,8 @@ fun main() {
 
         dispatch {
 
+
+
             callbackQuery("UNLIKEitSERIES") {
 
             }
@@ -456,26 +482,26 @@ fun main() {
 
             }
             callbackQuery("stopScrolling") {
-                currState = States.GeneralMenu
-                openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                globalStates.globalStates[callbackQuery.message!!.chat.id] = States.GeneralMenu
+                openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!,  callbackQuery.from.id, chtId = callbackQuery.message!!.chat.id, 0)
             }
 
 
             callbackQuery("dislikeITmovies") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
-                KinoStates.filmIndex++
-                if (KinoStates.filmIndex >= KinoStates.foundFilms.size) {
+                globalStates.globalKino[chatId.id]!!.filmIndex++
+                if (globalStates.globalKino[chatId.id]!!.filmIndex >= globalStates.globalKino[chatId.id]!!.foundFilms.size) {
                     bot.sendMessage(
                         chatId,
                         "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
                     )
-                    currState = States.GeneralMenu
-                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                    globalStates.globalStates[chatId.id] = States.GeneralMenu
+                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id,chtId = callbackQuery.message!!.chat.id, 0)
                 } else {
 
                     val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
+                        globalStates.globalKino[chatId.id]!!.foundFilms[globalStates.globalKino[chatId.id]!!.filmIndex].replace("Описание: null", "Описание: отсутствует")
 
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
@@ -498,17 +524,17 @@ fun main() {
 
                 searchMoviesDB()
 
-                if (KinoStates.filmIndex == KinoStates.foundFilms.size) {
+                if (globalStates.globalKino[chatId.id]!!.filmIndex == globalStates.globalKino[chatId.id]!!.foundFilms.size) {
                     bot.sendMessage(
                         chatId,
                         "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
                     )
-                    currState = States.GeneralMenu
-                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                    globalStates.globalStates[chatId.id] = States.GeneralMenu
+                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id,chtId = callbackQuery.message!!.chat.id, 0)
                 } else {
 
                     val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
+                        globalStates.globalKino[chatId.id]!!.foundFilms[globalStates.globalKino[chatId.id]!!.filmIndex].replace("Описание: null", "Описание: отсутствует")
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
                             InlineButton("Нравится", "LIKEDitMOVIES"), InlineButton("Не нравится", "UNLIKEitMOVIES")
@@ -526,18 +552,18 @@ fun main() {
             callbackQuery("dislikeITseries") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
-                KinoStates.filmIndex++
-                if (KinoStates.filmIndex >= KinoStates.foundFilms.size) {
+                globalStates.globalKino[chatId.id]!!.filmIndex++
+                if (globalStates.globalKino[chatId.id]!!.filmIndex >= globalStates.globalKino[chatId.id]!!.foundFilms.size) {
                     bot.sendMessage(
                         chatId,
                         "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
                     )
-                    currState = States.GeneralMenu
-                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                    globalStates.globalStates[chatId.id] = States.GeneralMenu
+                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id,chtId = callbackQuery.message!!.chat.id, 0)
                 } else {
 
                     val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
+                        globalStates.globalKino[chatId.id]!!.foundFilms[globalStates.globalKino[chatId.id]!!.filmIndex].replace("Описание: null", "Описание: отсутствует")
 
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
@@ -548,8 +574,8 @@ fun main() {
                             InlineButton("Завершить", "stopScrolling")
                         )
                     )
-                    currState = States.GeneralMenu
-                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                    globalStates.globalStates[chatId.id] = States.GeneralMenu
+                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id,chtId = callbackQuery.message!!.chat.id, 0)
                     inlineMenu.update()
                     bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                 }
@@ -561,17 +587,17 @@ fun main() {
 
                 KinoPart.searchSeriesDB()
 
-                if (KinoStates.filmIndex == KinoStates.foundFilms.size) {
+                if (globalStates.globalKino[chatId.id]!!.filmIndex == globalStates.globalKino[chatId.id]!!.foundFilms.size) {
                     bot.sendMessage(
                         chatId,
                         "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
                     )
-                    currState = States.GeneralMenu
-                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                    globalStates.globalStates[chatId.id] = States.GeneralMenu
+                    openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id,chtId = callbackQuery.message!!.chat.id, 0)
                 } else {
 
                     val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
+                        globalStates.globalKino[chatId.id]!!.foundFilms[globalStates.globalKino[chatId.id]!!.filmIndex].replace("Описание: null", "Описание: отсутствует")
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
                             InlineButton("Нравится", "LIKEDitSERIES"), InlineButton("Не нравится", "UNLIKEitSERIES")
@@ -592,7 +618,7 @@ fun main() {
                 inlineMenu.keyboard[0][0] = InlineButton("✅ биография", "biografiya")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("биография")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("биография")
             }
             callbackQuery("biografiya") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -600,7 +626,7 @@ fun main() {
                 inlineMenu.keyboard[0][0] = InlineButton("биография", "биография")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("биография")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("биография")
             }
 
 
@@ -610,7 +636,7 @@ fun main() {
                 inlineMenu.keyboard[0][1] = InlineButton("✅ музыка", "muzyka")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("музыка")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("музыка")
             }
             callbackQuery("muzyka") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -618,7 +644,7 @@ fun main() {
                 inlineMenu.keyboard[0][1] = InlineButton("музыка", "музыка")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("музыка")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("музыка")
             }
 
 
@@ -628,7 +654,7 @@ fun main() {
                 inlineMenu.keyboard[1][0] = InlineButton("✅ триллер", "triller")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("триллер")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("триллер")
             }
             callbackQuery("triller") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -636,7 +662,7 @@ fun main() {
                 inlineMenu.keyboard[1][0] = InlineButton("триллер", "триллер")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("триллер")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("триллер")
             }
 
 
@@ -646,7 +672,7 @@ fun main() {
                 inlineMenu.keyboard[1][1] = InlineButton("✅ ток-шоу", "tokshou")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("ток-шоу")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("ток-шоу")
             }
             callbackQuery("tokshou") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -654,7 +680,7 @@ fun main() {
                 inlineMenu.keyboard[1][1] = InlineButton("ток-шоу", "ток-шоу")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("ток-шоу")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("ток-шоу")
             }
 
 
@@ -664,7 +690,7 @@ fun main() {
                 inlineMenu.keyboard[2][0] = InlineButton("✅ вестерн", "vestern")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("вестерн")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("вестерн")
             }
             callbackQuery("vestern") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -672,7 +698,7 @@ fun main() {
                 inlineMenu.keyboard[2][0] = InlineButton("вестерн", "вестерн")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("вестерн")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("вестерн")
             }
 
 
@@ -682,7 +708,7 @@ fun main() {
                 inlineMenu.keyboard[2][1] = InlineButton("✅ приключения", "priklyucheniya")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("приключения")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("приключения")
             }
             callbackQuery("priklyucheniya") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -690,7 +716,7 @@ fun main() {
                 inlineMenu.keyboard[2][1] = InlineButton("приключения", "приключения")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("приключения")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("приключения")
             }
 
 
@@ -700,7 +726,7 @@ fun main() {
                 inlineMenu.keyboard[3][0] = InlineButton("✅ военный", "voennyj")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("военный")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("военный")
             }
             callbackQuery("voennyj") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -708,7 +734,7 @@ fun main() {
                 inlineMenu.keyboard[3][0] = InlineButton("военный", "военный")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("военный")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("военный")
             }
 
 
@@ -718,7 +744,7 @@ fun main() {
                 inlineMenu.keyboard[3][1] = InlineButton("✅ игра", "igra")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("игра")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("игра")
             }
             callbackQuery("igra") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -726,7 +752,7 @@ fun main() {
                 inlineMenu.keyboard[3][1] = InlineButton("игра", "игра")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("игра")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("игра")
             }
 
 
@@ -736,7 +762,7 @@ fun main() {
                 inlineMenu.keyboard[4][0] = InlineButton("✅ семейный", "semejnyj")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("семейный")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("семейный")
             }
             callbackQuery("semejnyj") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -744,7 +770,7 @@ fun main() {
                 inlineMenu.keyboard[4][0] = InlineButton("семейный", "семейный")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("семейный")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("семейный")
             }
 
 
@@ -754,7 +780,7 @@ fun main() {
                 inlineMenu.keyboard[4][1] = InlineButton("✅ ужасы", "uzhasy")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("ужасы")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("ужасы")
             }
             callbackQuery("uzhasy") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -762,7 +788,7 @@ fun main() {
                 inlineMenu.keyboard[4][1] = InlineButton("ужасы", "ужасы")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("ужасы")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("ужасы")
             }
 
 
@@ -772,7 +798,7 @@ fun main() {
                 inlineMenu.keyboard[5][0] = InlineButton("✅ фэнтези", "fentezi")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("фэнтези")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("фэнтези")
             }
             callbackQuery("fentezi") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -780,7 +806,7 @@ fun main() {
                 inlineMenu.keyboard[5][0] = InlineButton("фэнтези", "фэнтези")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("фэнтези")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("фэнтези")
             }
 
 
@@ -790,7 +816,7 @@ fun main() {
                 inlineMenu.keyboard[5][1] = InlineButton("✅ аниме", "anime")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("аниме")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("аниме")
             }
             callbackQuery("anime") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -798,7 +824,7 @@ fun main() {
                 inlineMenu.keyboard[5][1] = InlineButton("аниме", "аниме")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("аниме")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("аниме")
             }
 
 
@@ -808,7 +834,7 @@ fun main() {
                 inlineMenu.keyboard[6][0] = InlineButton("✅ для взрослых", "dlya vzroslyh")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("для взрослых")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("для взрослых")
             }
             callbackQuery("dlya vzroslyh") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -816,7 +842,7 @@ fun main() {
                 inlineMenu.keyboard[6][0] = InlineButton("для взрослых", "для взрослых")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("для взрослых")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("для взрослых")
             }
 
 
@@ -826,7 +852,7 @@ fun main() {
                 inlineMenu.keyboard[6][1] = InlineButton("✅ короткометражка", "korotkometrazhka")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("короткометражка")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("короткометражка")
             }
             callbackQuery("korotkometrazhka") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -834,7 +860,7 @@ fun main() {
                 inlineMenu.keyboard[6][1] = InlineButton("короткометражка", "короткометражка")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("короткометражка")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("короткометражка")
             }
 
 
@@ -844,7 +870,7 @@ fun main() {
                 inlineMenu.keyboard[7][0] = InlineButton("✅ комедия", "komediya")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("комедия")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("комедия")
             }
             callbackQuery("komediya") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -852,7 +878,7 @@ fun main() {
                 inlineMenu.keyboard[7][0] = InlineButton("комедия", "комедия")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("комедия")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("комедия")
             }
 
 
@@ -862,7 +888,7 @@ fun main() {
                 inlineMenu.keyboard[7][1] = InlineButton("✅ фильм-нуар", "filmnuar")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("фильм-нуар")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("фильм-нуар")
             }
             callbackQuery("filmnuar") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -870,7 +896,7 @@ fun main() {
                 inlineMenu.keyboard[7][1] = InlineButton("фильм-нуар", "фильм-нуар")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("фильм-нуар")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("фильм-нуар")
             }
 
 
@@ -880,7 +906,7 @@ fun main() {
                 inlineMenu.keyboard[8][0] = InlineButton("✅ церемония", "ceremoniya")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("церемония")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("церемония")
             }
             callbackQuery("ceremoniya") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -888,7 +914,7 @@ fun main() {
                 inlineMenu.keyboard[8][0] = InlineButton("церемония", "церемония")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("церемония")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("церемония")
             }
 
 
@@ -898,7 +924,7 @@ fun main() {
                 inlineMenu.keyboard[8][1] = InlineButton("✅ боевик", "boevik")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("боевик")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("боевик")
             }
             callbackQuery("boevik") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -906,7 +932,7 @@ fun main() {
                 inlineMenu.keyboard[8][1] = InlineButton("боевик", "боевик")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("боевик")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("боевик")
             }
 
 
@@ -916,7 +942,7 @@ fun main() {
                 inlineMenu.keyboard[9][0] = InlineButton("✅ детектив", "detektiv")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("детектив")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("детектив")
             }
             callbackQuery("detektiv") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -924,7 +950,7 @@ fun main() {
                 inlineMenu.keyboard[9][0] = InlineButton("детектив", "детектив")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("детектив")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("детектив")
             }
 
 
@@ -934,7 +960,7 @@ fun main() {
                 inlineMenu.keyboard[9][1] = InlineButton("✅ новости", "novosti")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("новости")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("новости")
             }
             callbackQuery("novosti") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -942,7 +968,7 @@ fun main() {
                 inlineMenu.keyboard[9][1] = InlineButton("новости", "новости")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("новости")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("новости")
             }
 
 
@@ -952,7 +978,7 @@ fun main() {
                 inlineMenu.keyboard[10][0] = InlineButton("✅ мелодрама", "melodrama")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("мелодрама")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("мелодрама")
             }
             callbackQuery("melodrama") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -960,7 +986,7 @@ fun main() {
                 inlineMenu.keyboard[10][0] = InlineButton("мелодрама", "мелодрама")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("мелодрама")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("мелодрама")
             }
 
 
@@ -970,7 +996,7 @@ fun main() {
                 inlineMenu.keyboard[10][1] = InlineButton("✅ мюзикл", "myuzikl")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("мюзикл")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("мюзикл")
             }
             callbackQuery("myuzikl") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -978,7 +1004,7 @@ fun main() {
                 inlineMenu.keyboard[10][1] = InlineButton("мюзикл", "мюзикл")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("мюзикл")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("мюзикл")
             }
 
 
@@ -988,7 +1014,7 @@ fun main() {
                 inlineMenu.keyboard[11][0] = InlineButton("✅ фантастика", "fantastika")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("фантастика")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("фантастика")
             }
             callbackQuery("fantastika") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -996,7 +1022,7 @@ fun main() {
                 inlineMenu.keyboard[11][0] = InlineButton("фантастика", "фантастика")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("фантастика")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("фантастика")
             }
 
 
@@ -1006,7 +1032,7 @@ fun main() {
                 inlineMenu.keyboard[11][1] = InlineButton("✅ реальное ТВ", "realnoe TV")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("реальное ТВ")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("реальное ТВ")
             }
             callbackQuery("realnoe TV") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -1014,7 +1040,7 @@ fun main() {
                 inlineMenu.keyboard[11][1] = InlineButton("реальное ТВ", "реальное ТВ")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("реальное ТВ")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("реальное ТВ")
             }
 
 
@@ -1024,7 +1050,7 @@ fun main() {
                 inlineMenu.keyboard[12][0] = InlineButton("✅ криминал", "kriminal")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("криминал")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("криминал")
             }
             callbackQuery("kriminal") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -1032,7 +1058,7 @@ fun main() {
                 inlineMenu.keyboard[12][0] = InlineButton("криминал", "криминал")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("криминал")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("криминал")
             }
 // ===================== MINI-GAMES (DICE) =====================
 
@@ -1046,7 +1072,7 @@ fun main() {
                 inlineMenu.keyboard[12][1] = InlineButton("✅ мультфильм", "multfilm")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("мультфильм")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("мультфильм")
             }
             callbackQuery("multfilm") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -1054,7 +1080,7 @@ fun main() {
                 inlineMenu.keyboard[12][1] = InlineButton("мультфильм", "мультфильм")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("мультфильм")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("мультфильм")
             }
 
 
@@ -1064,42 +1090,42 @@ fun main() {
                 inlineMenu.keyboard[13][0] = InlineButton("✅ детский", "detskij")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("детский")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("детский")
             }
             callbackQuery("detskij") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[13][0] = InlineButton("детский", "детский")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("детский")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("детский")
             }
             callbackQuery("спорт") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[13][1] = InlineButton("✅ спорт", "sport")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("спорт")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("спорт")
             }
             callbackQuery("sport") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[13][1] = InlineButton("спорт", "спорт")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("спорт")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("спорт")
             }
             callbackQuery("концерт") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[14][0] = InlineButton("✅ концерт", "koncert")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("концерт")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("концерт")
             }
             callbackQuery("koncert") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[14][0] = InlineButton("концерт", "концерт")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("концерт")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("концерт")
             }
             callbackQuery("история") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -1107,7 +1133,7 @@ fun main() {
                 inlineMenu.keyboard[14][1] = InlineButton("✅ история", "istoriya")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("история")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("история")
             }
             callbackQuery("istoriya") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
@@ -1115,51 +1141,51 @@ fun main() {
                 inlineMenu.keyboard[14][1] = InlineButton("история", "история")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("история")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("история")
             }
             callbackQuery("документальный") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[15][0] = InlineButton("✅ документальный", "dokumentalnyj")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("документальный")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("документальный")
             }
             callbackQuery("dokumentalnyj") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[15][0] = InlineButton("документальный", "документальный")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("документальный")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("документальный")
             }
             callbackQuery("драма") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[15][1] = InlineButton("✅ драма", "droma")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("драма")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.add("драма")
             }
             callbackQuery("droma") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 inlineMenu.keyboard[15][1] = InlineButton("драма", "драма")
                 inlineMenu.update()
                 bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("драма")
+                globalStates.globalKino[chatId.id]!!.chosenGenres.remove("драма")
             }
             callbackQuery("endSearchingBooks") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 println(chatId)
-                currState = States.GeneralMenu
-                openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id)
+                globalStates.globalStates[chatId.id] = States.GeneralMenu
+                openGeneralMenu("/start", bot, ChatId.fromId(callbackQuery.message!!.chat.id), callbackQuery.from.username!!, callbackQuery.from.id,chtId = callbackQuery.message!!.chat.id, 0)
             }
             callbackQuery("checkNextBook") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 bot.sendMessage(chatId, "Вот что мне удалось найти:")
-                val maxIndex = min(BooksStates.searchResult.size, BooksStates.bookResponseIndex + 5) - 1
-                if (BooksStates.bookResponseIndex == maxIndex) {
+                val maxIndex = min(globalStates.globalBooks[chatId.id]!!.searchResult.size, globalStates.globalBooks[chatId.id]!!.bookResponseIndex + 5) - 1
+                if (globalStates.globalBooks[chatId.id]!!.bookResponseIndex == maxIndex) {
                     bot.sendMessage(chatId, "К сожалению это всё что я сумел найти. Возвращаю вас в главное меню.")
                 } else {
-                    for (outputIndex in BooksStates.bookResponseIndex..maxIndex) {
-                        bot.sendMessage(chatId, BooksStates.searchResult[outputIndex])
+                    for (outputIndex in globalStates.globalBooks[chatId.id]!!.bookResponseIndex..maxIndex) {
+                        bot.sendMessage(chatId, globalStates.globalBooks[chatId.id]!!.searchResult[outputIndex])
                     }
                     inlineMenu.keyboard = mutableListOf(
                         mutableListOf(
@@ -1169,7 +1195,7 @@ fun main() {
                             InlineButton("Завершить", "endSearchingBooks")
                         )
                     )
-                    BooksStates.bookResponseIndex = maxIndex
+                    globalStates.globalBooks[chatId.id]!!.bookResponseIndex = maxIndex
                     inlineMenu.update()
                     bot.sendMessage(
                         chatId,
@@ -1188,11 +1214,51 @@ fun main() {
                 val username = getUsername(message.from)
                 val userId = getUserId(message.from)
 
+                println("IN MESSAGE")
+                println(globalStates)
+
+                if (globalStates.globalAccounts[chatIdLong] == null) {
+                    globalStates.globalAccounts[chatIdLong] = Account
+                }
+                println("PRE")
+                if (globalStates.globalKeyboardIndex[chatIdLong] == null) {
+                    println("SNOVA NOL")
+                    globalStates.globalKeyboardIndex[chatIdLong] = 0
+                }
+                println("POS")
+                if (globalStates.globalBooks[chatIdLong] == null) {
+                    globalStates.globalBooks[chatIdLong] = BooksStates
+                }
+                println("PRE")
+                if (globalStates.globalKino[chatIdLong] == null) {
+                    globalStates.globalKino[chatIdLong] = KinoStates
+                }
+                println("POS")
+                if (globalStates.globalStates[chatIdLong] == null) {
+                    globalStates.globalStates[chatIdLong] = States.GeneralMenu
+                }
+                println("PRE")
+                println(globalStates.globalRepliesList[chatIdLong] == null)
+                if (globalStates.globalRepliesList[chatIdLong] == null) {
+                    ReplyList.replyGeneralMenu = getReplyGeneralMenu(chatIdLong, 0)
+                    println("1")
+                    ReplyList.replySettings = getReplySettings(chatIdLong, 0)
+                    println("2")
+                    ReplyList.replyAccount = getReplyAccount(chatIdLong, 0)
+                    println("3")
+                    ReplyList.replyFeedback = getReplyFeedback(chatIdLong, 0)
+                    println("4")
+                    globalStates.globalRepliesList[chatIdLong] = ReplyList
+                }
+                println("POS")
+                println(globalStates.globalKeyboardIndex[chatIdLong])
+
+
                 // 1) Photo handling (used for meme upload)
                 val photo = message.photo?.lastOrNull()
                 if (photo != null) {
                     val fileId = photo.fileId
-                    if (currState == States.MemeMenu && MemeAddState.waitingForPhoto) {
+                    if (globalStates.globalStates[chatId.id]!! == States.MemeMenu && MemeAddState.waitingForPhoto) {
                         MemeAddState.waitingForPhoto = false
                         val meme = MemeStorage.addMeme(fileId)
                         bot.sendMessage(chatId, "Мем сохранён под номером ${meme.id}", replyMarkup = getKeyboardMemes())
@@ -1205,26 +1271,28 @@ fun main() {
                 val t = message.text ?: return@message
 
                 // 0) /start всегда доступен
+                println("SURVIVED")
                 if (t == "/start") {
-                    currState = States.GeneralMenu
-                    openGeneralMenu("/start", bot, chatId, username, userId)
+                    globalStates.globalStates[chatId.id] = States.GeneralMenu
+                    println("OPENING MENU")
+                    openGeneralMenu("/start", bot, chatId, username, userId,chtId = chatIdLong, 0)
                     return@message
                 }
 
                 // 2) Global entries from general menu
 
-                if (BooksStates.waitingForKeyWord) {
-                    BooksStates.waitingForKeyWord = false
-                    BooksStates.searchResult = getInfo(t)
-                    if (BooksStates.searchResult.isEmpty()) {
+                if (globalStates.globalBooks[chatId.id]!!.waitingForKeyWord) {
+                    globalStates.globalBooks[chatId.id]!!.waitingForKeyWord = false
+                    globalStates.globalBooks[chatId.id]!!.searchResult = getInfo(t)
+                    if (globalStates.globalBooks[chatId.id]!!.searchResult.isEmpty()) {
                         bot.sendMessage(chatId, "К сожалению по вашему запросу я не смог ничего найти.")
                     } else {
                         bot.sendMessage(chatId, "Вот что мне удалось найти:")
-                        val maxIndex = min(BooksStates.searchResult.size, BooksStates.bookResponseIndex + 5) - 1
-                        for (outputIndex in BooksStates.bookResponseIndex..maxIndex) {
-                            bot.sendMessage(chatId, BooksStates.searchResult[outputIndex])
+                        val maxIndex = min(globalStates.globalBooks[chatId.id]!!.searchResult.size, globalStates.globalBooks[chatId.id]!!.bookResponseIndex + 5) - 1
+                        for (outputIndex in globalStates.globalBooks[chatId.id]!!.bookResponseIndex..maxIndex) {
+                            bot.sendMessage(chatId, globalStates.globalBooks[chatId.id]!!.searchResult[outputIndex])
                         }
-                        BooksStates.bookResponseIndex = maxIndex
+                        globalStates.globalBooks[chatId.id]!!.bookResponseIndex = maxIndex
                         inlineMenu.keyboard = mutableListOf(
                             mutableListOf(
                                 InlineButton("Далее", "checkNextBook")
@@ -1369,29 +1437,29 @@ fun main() {
 
                 when (t) {
                     "😂 Мемы" -> {
-                        currState = States.MemeMenu
+                        globalStates.globalStates[chatId.id] = States.MemeMenu
                         showMemeMenu(bot, chatId, chatIdLong)
                         return@message
                     }
                     "🎮 Мини-игры" -> {
-                        currState = States.MiniGamesMenu
+                        globalStates.globalStates[chatId.id] = States.MiniGamesMenu
                         showMiniGamesMain(bot, chatId)
                         return@message
                     }
                     "🔮 Предсказания" -> {
-                        currState = States.PredictionsMenu
+                        globalStates.globalStates[chatId.id] = States.PredictionsMenu
                         showPredictionsMain(bot, chatId)
                         return@message
                     }
                     "📝 Тесты" -> {
-                        currState = States.TestsMenu
+                        globalStates.globalStates[chatId.id] = States.TestsMenu
                         showTestsMain(bot, chatId)
                         return@message
                     }
                     "💬 Обратная связь", "/feedback" -> {
-                        currState = States.FeedbackMenu
+                        globalStates.globalStates[chatId.id] = States.FeedbackMenu
                         // Показываем инструкцию + клавиатуру с "Обратно"
-                        openGeneralMenu("/feedback", bot, chatId, username, userId)
+                        openGeneralMenu("/feedback", bot, chatId, username, userId, chatIdLong, 0)
                         return@message
                     }
                     "\uD83D\uDDC2\uFE0F Подборки" -> {
@@ -1411,21 +1479,21 @@ fun main() {
                         //bot.sendPhoto(chatId, getPodbImg(), "Выберите тип подборки", replyMarkup = replyMenu.getKeyboardReplyMarkup())
                         bot.sendMessage(chatId, "Выберите тип подборки", replyMarkup = replyMenu.getKeyboardReplyMarkup())
 
-                        currState = States.CollectionsMenu
+                        globalStates.globalStates[chatId.id] = States.CollectionsMenu
                     }
                     "\uD83D\uDCD6 Книги" -> {
                         bot.sendMessage(chatId, "Хороший выбор! Напишите ключевые слова, по которым будем искать книги:")
-                        BooksStates.waitingForKeyWord = true
+                        globalStates.globalBooks[chatId.id]!!.waitingForKeyWord = true
                     }
                 }
 
 
                 // 3) State-driven flows
-                when (currState) {
+                when (globalStates.globalStates[chatId.id]!!) {
                     States.MemeMenu -> {
                         val handled = handleMemes(t, bot, chatId, chatIdLong)
                         if (handled) {
-                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId)
+                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId, chatIdLong, 1)
                             return@message
                         }
                         bot.sendMessage(chatId, "Меню мемов", replyMarkup = getKeyboardMemes())
@@ -1434,7 +1502,7 @@ fun main() {
                     States.MiniGamesMenu -> {
                         val handled = handleMiniGames(t, bot, chatId, chatIdLong)
                         if (handled) {
-                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId)
+                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId, chatIdLong, 0)
                             return@message
                         }
                         showMiniGamesMain(bot, chatId)
@@ -1443,7 +1511,7 @@ fun main() {
                     States.PredictionsMenu -> {
                         val handled = handlePredictions(t, bot, chatId, chatIdLong)
                         if (handled) {
-                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId)
+                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId, chatIdLong, 1)
                             return@message
                         }
                         return@message
@@ -1451,7 +1519,7 @@ fun main() {
                     States.TestsMenu -> {
                         val handled = handleTests(t, bot, chatId, chatIdLong)
                         if (handled) {
-                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId)
+                            if (t == "⬅️ Обратно") openGeneralMenu("/start", bot, chatId, username, userId, chatIdLong, 1)
                             return@message
                         }
                         return@message
@@ -1459,13 +1527,13 @@ fun main() {
                     States.FeedbackMenu -> {
                         // ReplyClass уже обработает кнопку "⬅️ Обратно".
                         if (t == "⬅️ Обратно") {
-                            currState = States.GeneralMenu
-                            openGeneralMenu("/start", bot, chatId, username, userId)
+                            globalStates.globalStates[chatId.id] = States.GeneralMenu
+                            openGeneralMenu("/start", bot, chatId, username, userId,chatIdLong, 2)
                             return@message
                         }
                         val reply = FeedbackHandlers.saveFeedback(chatIdLong, username, t)
                         bot.sendMessage(chatId, reply)
-                        openGeneralMenu("/start", bot, chatId, username, userId)
+                        openGeneralMenu("/start", bot, chatId, username, userId,chatIdLong, 2)
                         return@message
                     }
                     else -> {
@@ -1474,7 +1542,7 @@ fun main() {
                 }
 
                 // 4) Default flow (menus / settings / account)
-                openGeneralMenu(t, bot, chatId, username, userId)
+                openGeneralMenu(t, bot, chatId, username, userId, chatIdLong, 0)
             }
         }
     }

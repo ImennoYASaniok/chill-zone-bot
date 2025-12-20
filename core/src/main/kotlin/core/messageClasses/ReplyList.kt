@@ -1,8 +1,15 @@
 package core.messageClasses
 
+import core.globalStates
+
+object cI {
+    var chatId: Long = 0L
+}
+
 object ReplyList {
-    val replyGeneralMenu = getReplyGeneralMenu()
-    val replySettings = getReplySettings()
-    val replyAccount = getReplyAccount()
-    val replyFeedback = getReplyFeedback()
+
+    var replyGeneralMenu = getReplyGeneralMenu(cI.chatId, globalStates.globalKeyboardIndex[cI.chatId] ?: 0)
+    var replySettings = getReplySettings(cI.chatId, globalStates.globalKeyboardIndex[cI.chatId] ?: 0)
+    var replyAccount = getReplyAccount(cI.chatId, globalStates.globalKeyboardIndex[cI.chatId] ?: 0)
+    var replyFeedback = getReplyFeedback(cI.chatId, globalStates.globalKeyboardIndex[cI.chatId] ?: 0)
 }

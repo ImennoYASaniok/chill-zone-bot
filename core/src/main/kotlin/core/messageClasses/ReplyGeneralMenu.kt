@@ -6,13 +6,15 @@ import core.handlers.handlerMenu
 import core.keyboards.getKeyboardGeneralMenu
 import core.utils.Logger
 
-fun getReplyGeneralMenu(): ReplyClass {
+fun getReplyGeneralMenu(chatId: Long, currPage: Int): ReplyClass {
     val replyClass = ReplyClass(
-        keyboard = getKeyboardGeneralMenu(),
+        keyboard = getKeyboardGeneralMenu(chatId),
         globalCommand = "/start",
         state = States.GeneralMenu,
         startFunc = ::handlerMenu,
-        urls = mutableListOf("generalMenu/GeneralMenu.png")
+        urls = mutableListOf("generalMenu/GeneralMenu.png"),
+        chatId = chatId,
+        currPage = currPage
     )
     Logger.info("replyClass", "Создан ReplyClass: $replyClass")
 
