@@ -57,6 +57,7 @@ object GameStorage {
         user.currentStreak++
         if (user.currentStreak > user.maxStreak) user.maxStreak = user.currentStreak
         save()
+        users[userId]?.rating = user.rating
         return points
     }
 
