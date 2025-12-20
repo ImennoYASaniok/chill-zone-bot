@@ -437,7 +437,7 @@ fun main() {
 
         val replyMenu = ReplyClass1(
             keyboard = getKeyboardMenu(),
-            startCommand = "/start",
+            startCommand = "/2311232132",
             textMessage = "replyMenu"
         )
 

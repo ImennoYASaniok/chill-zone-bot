@@ -11,7 +11,7 @@ fun main() {
     try {
         val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
         var createTablesQuery =
-            "TRUNCATE Tests CASCADE;TRUNCATE Questions CASCADE;TRUNCATE correctTextAnswers CASCADE;"
+            "TRUNCATE Memes CASCADE;TRUNCATE History CASCADE; TRUNCATE Favourites CASCADE; TRUNCATE LikesDislikes CASCADE;"
 
         connection.prepareStatement(createTablesQuery).execute()
 
