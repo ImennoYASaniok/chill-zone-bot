@@ -1,19 +1,12 @@
 package ChillZoneBot.app.src.main.kotlin.App
 
 
-import BooksPart.BooksStates
-import BooksPart.getInfo
-
 import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineButton
 import ChillZoneBot.core.src.main.kotlin.InlineClass.InlineClass
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.Button
 import ChillZoneBot.core.src.main.kotlin.ReplyClass.ReplyClass
 import ChillZoneBot.core.src.main.kotlin.TestCore.AnswerType
 import ChillZoneBot.core.src.main.kotlin.TestCore.Question
-
-import KinoPart.KinoStates
-import KinoPart.searchMoviesDB
-import KinoPart.searchSeriesDB
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
@@ -33,7 +26,7 @@ import kotlin.math.min
 
 fun main() {
     val dotenv = dotenv()
-    val bot = bot {
+    bot = bot {
         token = dotenv["BOT_TOKEN"]
 
         dispatch {
@@ -49,754 +42,195 @@ fun main() {
                 textMessage = "inlineMenu"
             )
 
-
-
-            callbackQuery("UNLIKEitSERIES") {
-
-            }
-            callbackQuery("LIKEDitSERIES") {
-
-            }
-            callbackQuery("UNLIKEitMOVIES") {
-
-            }
-            callbackQuery("LIKEDitMOVIES") {
-
-            }
-
-
-            callbackQuery("dislikeITmovies") {
+            callbackQuery("ans1_toggle") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                KinoStates.filmIndex++
-                if (KinoStates.filmIndex >= KinoStates.foundFilms.size) {
-                    bot.sendMessage(
-                        chatId,
-                        "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
-                    )
-                    TODO("Вернуть в главное меню")
-                } else {
-
-                    val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
-
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("Нравится", "LIKEDitMOVIES"), InlineButton("Не нравится", "UNLIKEitMOVIES")
-                        ), mutableListOf(
-                            InlineButton("Далее", "dislikeITmovies")
-                        )
-                    )
-                    inlineMenu.update()
-                    bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                }
-            }
-            callbackQuery("endChoosingGenresMovies") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                bot.sendMessage(chatId, "Вот один из фильмов, которые подходят под ваш выбор:")
-
-                searchMoviesDB()
-
-                if (KinoStates.filmIndex == KinoStates.foundFilms.size) {
-                    bot.sendMessage(
-                        chatId,
-                        "К сожалению, фильмы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
-                    )
-                    TODO("Вернуть в главное меню")
-                } else {
-
-                    val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("Нравится", "LIKEDitMOVIES"), InlineButton("Не нравится", "UNLIKEitMOVIES")
-                        ), mutableListOf(
-                            InlineButton("Далее", "dislikeITmovies")
-                        )
-                    )
-                    inlineMenu.update()
-                    bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                }
+                toggleAnswer(chatId, 0, update.callbackQuery?.message?.messageId)
             }
 
-            callbackQuery("dislikeITseries") {
+            callbackQuery("ans2_toggle") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                KinoStates.filmIndex++
-                if (KinoStates.filmIndex >= KinoStates.foundFilms.size) {
-                    bot.sendMessage(
-                        chatId,
-                        "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
-                    )
-                    TODO("Вернуть в главное меню")
-                } else {
-
-                    val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
-
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("Нравится", "LIKEDitSERIES"), InlineButton("Не нравится", "UNLIKEitSERIES")
-                        ), mutableListOf(
-                            InlineButton("Далее", "dislikeITseries")
-                        )
-                    )
-                    inlineMenu.update()
-                    bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                }
+                toggleAnswer(chatId, 1, update.callbackQuery?.message?.messageId)
             }
-            callbackQuery("endChoosingGenresSeries") {
+
+            callbackQuery("ans3_toggle") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                toggleAnswer(chatId, 2, update.callbackQuery?.message?.messageId)
+            }
 
-                bot.sendMessage(chatId, "Вот один из сериалов, которые подходят под ваш выбор:")
+            callbackQuery("ans4_toggle") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                toggleAnswer(chatId, 3, update.callbackQuery?.message?.messageId)
+            }
 
-                searchSeriesDB()
+            callbackQuery("ans5_toggle") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                toggleAnswer(chatId, 4, update.callbackQuery?.message?.messageId)
+            }
 
-                if (KinoStates.filmIndex == KinoStates.foundFilms.size) {
-                    bot.sendMessage(
-                        chatId,
-                        "К сожалению, сериалы, которые я знаю на эту тему, закончились. Возвращаю вас в главное меню."
-                    )
-                    TODO("Вернуть в главное меню")
-                } else {
+            callbackQuery("ans6_toggle") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                toggleAnswer(chatId, 5, update.callbackQuery?.message?.messageId)
+            }
 
-                    val desc =
-                        KinoStates.foundFilms[KinoStates.filmIndex].replace("Описание: null", "Описание: отсутствует")
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("Нравится", "LIKEDitSERIES"), InlineButton("Не нравится", "UNLIKEitSERIES")
-                        ), mutableListOf(
-                            InlineButton("Далее", "dislikeITseries")
-                        )
-                    )
-                    inlineMenu.update()
-                    bot.sendMessage(chatId, desc, replyMarkup = inlineMenu.getKeyboardInlineMarkup())
+            // Подтверждение выбора ответа
+            callbackQuery("confirm_test_answer") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                confirmTestAnswer(chatId)
+            }
+
+            // Переход к следующему вопросу
+            callbackQuery("next_question") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                goToNextQuestion(chatId)
+            }
+
+            // Завершение теста
+            callbackQuery("finish_test") {
+                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+                finishTest(chatId)
+            }
+
+
+            // Динамические callback для прохождения тестов
+            // Проверяем callback data вручную
+            callbackQuery {
+                val callbackData = update.callbackQuery?.data ?: return@callbackQuery
+
+                if (callbackData.startsWith("playIt_")) {
+                    val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
+
+                    // Извлекаем ID теста из callback data
+                    val testId = callbackData.substringAfter("playIt_").toIntOrNull()
+                    println(testId)
+                    if (testId != null) {
+                        println("паарарарараар $testId")
+                        startTest(chatId, testId)
+                    } else {
+                        bot.sendMessage(chatId, "Ошибка: не удалось определить тест")
+                    }
                 }
             }
 
-            callbackQuery("биография") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[0][0] = InlineButton("✅ биография", "biografiya")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("биография")
-            }
-            callbackQuery("biografiya") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[0][0] = InlineButton("биография", "биография")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("биография")
-            }
-
-
-            callbackQuery("музыка") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[0][1] = InlineButton("✅ музыка", "muzyka")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("музыка")
-            }
-            callbackQuery("muzyka") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[0][1] = InlineButton("музыка", "музыка")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("музыка")
-            }
-
-
-            callbackQuery("триллер") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[1][0] = InlineButton("✅ триллер", "triller")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("триллер")
-            }
-            callbackQuery("triller") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[1][0] = InlineButton("триллер", "триллер")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("триллер")
-            }
-
-
-            callbackQuery("ток-шоу") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[1][1] = InlineButton("✅ ток-шоу", "tokshou")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("ток-шоу")
-            }
-            callbackQuery("tokshou") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[1][1] = InlineButton("ток-шоу", "ток-шоу")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("ток-шоу")
-            }
-
-
-            callbackQuery("вестерн") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[2][0] = InlineButton("✅ вестерн", "vestern")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("вестерн")
-            }
-            callbackQuery("vestern") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[2][0] = InlineButton("вестерн", "вестерн")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("вестерн")
-            }
-
-
-            callbackQuery("приключения") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[2][1] = InlineButton("✅ приключения", "priklyucheniya")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("приключения")
-            }
-            callbackQuery("priklyucheniya") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[2][1] = InlineButton("приключения", "приключения")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("приключения")
-            }
-
-
-            callbackQuery("военный") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[3][0] = InlineButton("✅ военный", "voennyj")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("военный")
-            }
-            callbackQuery("voennyj") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[3][0] = InlineButton("военный", "военный")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("военный")
-            }
-
-
-            callbackQuery("игра") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[3][1] = InlineButton("✅ игра", "igra")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("игра")
-            }
-            callbackQuery("igra") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[3][1] = InlineButton("игра", "игра")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("игра")
-            }
-
-
-            callbackQuery("семейный") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[4][0] = InlineButton("✅ семейный", "semejnyj")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("семейный")
-            }
-            callbackQuery("semejnyj") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[4][0] = InlineButton("семейный", "семейный")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("семейный")
-            }
-
-
-            callbackQuery("ужасы") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[4][1] = InlineButton("✅ ужасы", "uzhasy")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("ужасы")
-            }
-            callbackQuery("uzhasy") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[4][1] = InlineButton("ужасы", "ужасы")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("ужасы")
-            }
-
-
-            callbackQuery("фэнтези") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[5][0] = InlineButton("✅ фэнтези", "fentezi")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("фэнтези")
-            }
-            callbackQuery("fentezi") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[5][0] = InlineButton("фэнтези", "фэнтези")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("фэнтези")
-            }
-
-
-            callbackQuery("аниме") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[5][1] = InlineButton("✅ аниме", "anime")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("аниме")
-            }
-            callbackQuery("anime") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[5][1] = InlineButton("аниме", "аниме")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("аниме")
-            }
-
-
-            callbackQuery("для взрослых") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[6][0] = InlineButton("✅ для взрослых", "dlya vzroslyh")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("для взрослых")
-            }
-            callbackQuery("dlya vzroslyh") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[6][0] = InlineButton("для взрослых", "для взрослых")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("для взрослых")
-            }
-
-
-            callbackQuery("короткометражка") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[6][1] = InlineButton("✅ короткометражка", "korotkometrazhka")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("короткометражка")
-            }
-            callbackQuery("korotkometrazhka") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[6][1] = InlineButton("короткометражка", "короткометражка")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("короткометражка")
-            }
-
-
-            callbackQuery("комедия") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[7][0] = InlineButton("✅ комедия", "komediya")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("комедия")
-            }
-            callbackQuery("komediya") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[7][0] = InlineButton("комедия", "комедия")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("комедия")
-            }
-
-
-            callbackQuery("фильм-нуар") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[7][1] = InlineButton("✅ фильм-нуар", "filmnuar")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("фильм-нуар")
-            }
-            callbackQuery("filmnuar") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[7][1] = InlineButton("фильм-нуар", "фильм-нуар")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("фильм-нуар")
-            }
-
-
-            callbackQuery("церемония") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[8][0] = InlineButton("✅ церемония", "ceremoniya")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("церемония")
-            }
-            callbackQuery("ceremoniya") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[8][0] = InlineButton("церемония", "церемония")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("церемония")
-            }
-
-
-            callbackQuery("боевик") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[8][1] = InlineButton("✅ боевик", "boevik")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("боевик")
-            }
-            callbackQuery("boevik") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[8][1] = InlineButton("боевик", "боевик")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("боевик")
-            }
-
-
-            callbackQuery("детектив") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[9][0] = InlineButton("✅ детектив", "detektiv")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("детектив")
-            }
-            callbackQuery("detektiv") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[9][0] = InlineButton("детектив", "детектив")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("детектив")
-            }
-
-
-            callbackQuery("новости") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[9][1] = InlineButton("✅ новости", "novosti")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("новости")
-            }
-            callbackQuery("novosti") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[9][1] = InlineButton("новости", "новости")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("новости")
-            }
-
-
-            callbackQuery("мелодрама") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[10][0] = InlineButton("✅ мелодрама", "melodrama")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("мелодрама")
-            }
-            callbackQuery("melodrama") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[10][0] = InlineButton("мелодрама", "мелодрама")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("мелодрама")
-            }
-
-
-            callbackQuery("мюзикл") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[10][1] = InlineButton("✅ мюзикл", "myuzikl")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("мюзикл")
-            }
-            callbackQuery("myuzikl") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[10][1] = InlineButton("мюзикл", "мюзикл")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("мюзикл")
-            }
-
-
-            callbackQuery("фантастика") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[11][0] = InlineButton("✅ фантастика", "fantastika")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("фантастика")
-            }
-            callbackQuery("fantastika") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[11][0] = InlineButton("фантастика", "фантастика")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("фантастика")
-            }
-
-
-            callbackQuery("реальное ТВ") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[11][1] = InlineButton("✅ реальное ТВ", "realnoe TV")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("реальное ТВ")
-            }
-            callbackQuery("realnoe TV") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[11][1] = InlineButton("реальное ТВ", "реальное ТВ")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("реальное ТВ")
-            }
-
-
-            callbackQuery("криминал") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[12][0] = InlineButton("✅ криминал", "kriminal")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("криминал")
-            }
-            callbackQuery("kriminal") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[12][0] = InlineButton("криминал", "криминал")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("криминал")
-            }
-
-
-            callbackQuery("мультфильм") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[12][1] = InlineButton("✅ мультфильм", "multfilm")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("мультфильм")
-            }
-            callbackQuery("multfilm") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[12][1] = InlineButton("мультфильм", "мультфильм")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("мультфильм")
-            }
-
-
-            callbackQuery("детский") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[13][0] = InlineButton("✅ детский", "detskij")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("детский")
-            }
-            callbackQuery("detskij") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[13][0] = InlineButton("детский", "детский")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("детский")
-            }
-
-
-            callbackQuery("спорт") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[13][1] = InlineButton("✅ спорт", "sport")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("спорт")
-            }
-            callbackQuery("sport") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[13][1] = InlineButton("спорт", "спорт")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("спорт")
-            }
-
-
-            callbackQuery("концерт") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[14][0] = InlineButton("✅ концерт", "koncert")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("концерт")
-            }
-            callbackQuery("koncert") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[14][0] = InlineButton("концерт", "концерт")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("концерт")
-            }
-
-
-            callbackQuery("история") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[14][1] = InlineButton("✅ история", "istoriya")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("история")
-            }
-            callbackQuery("istoriya") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[14][1] = InlineButton("история", "история")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("история")
-            }
-
-
-            callbackQuery("документальный") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[15][0] = InlineButton("✅ документальный", "dokumentalnyj")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("документальный")
-            }
-            callbackQuery("dokumentalnyj") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[15][0] = InlineButton("документальный", "документальный")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("документальный")
-            }
-
-
-
-            callbackQuery("драма") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[15][1] = InlineButton("✅ драма", "droma")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.add("драма")
-            }
-            callbackQuery("droma") {
-                val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
-
-                inlineMenu.keyboard[15][1] = InlineButton("драма", "драма")
-                inlineMenu.update()
-                bot.sendMessage(chatId, "Выберите жанры:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
-                KinoStates.chosenGenres.remove("драма")
-            }
-
-
-            callbackQuery("endSearchingBooks") {
+            callbackQuery("chooseTest") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
                 println(chatId)
-                TODO() // вернуться в main menu
+
+                val chosenTest = GoingThroughTests.testsId[GoingThroughTests.currentIndex]
+
+                val query = "SELECT id, title, author, questionsAmount FROM tests ORDER BY id;"
+
+                val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+                val databaseUser = dotenv()["DATABASE_USER"]
+                val databasePassword = dotenv()["DATABASE_PASSWORD"]
+                try {
+                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+                    val preparedStatement = connection.prepareStatement(query)
+                    preparedStatement.executeQuery().use { resultSet ->
+                        GoingThroughTests.testsId.add(resultSet.getInt(1))
+                        GoingThroughTests.testsTitles.add(resultSet.getString(2))
+                        GoingThroughTests.testsAuthor.add(resultSet.getString(3))
+                        GoingThroughTests.testsQAmount.add(resultSet.getInt(4))
+                    }
+                } catch (e: SQLException) {
+                    e.printStackTrace()
+                }
+                println("Я ЗДЕСЬ!!!!!")
+                println("Ответ: ${getTestQuestions(chosenTest)}")
+                GoingThroughTests.currentQaA = getTestQuestions(chosenTest)
+
+                bot.sendMessage(chatId, "Вопрос №${GoingThroughTests.currentQIndex+1}:\n" +
+                        GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex].title
+                )
+
+                if (GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex].type=="CHOOSE") {
+                    var counter = 0
+                    for (i in GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex].chooseAnswers) {
+                        if (i.isCorrect) counter++
+                    }
+
+                    GoingThroughTests.choosingAns = counter
+
+                    // Создаем клавиатуру с toggle-кнопками
+                    inlineMenu.keyboard = mutableListOf()
+                    val currentQuestion = GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex]
+
+                    for (i in 0 until currentQuestion.answersAmount) {
+                        val answerText = currentQuestion.chooseAnswers[i].text
+                        val callbackData = "ans${i+1}_toggle"
+
+                        if (i % 2 == 0) {
+                            // Новая строка
+                            inlineMenu.keyboard.add(mutableListOf(
+                                InlineButton(answerText, callbackData)
+                            ))
+                        } else {
+                            // Добавляем к последней строке
+                            inlineMenu.keyboard.last().add(InlineButton(answerText, callbackData))
+                        }
+                    }
+
+                    // Добавляем кнопку подтверждения
+                    inlineMenu.keyboard.add(mutableListOf(
+                        InlineButton("✅ Подтвердить выбор", "confirm_test_answer")
+                    ))
+
+                    inlineMenu.update()
+
+                    bot.sendMessage(chatId, "Выберите $counter из ${GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex].answersAmount} ответов:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
+                } else {
+                    if (GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex].type == "TEXT") {
+                        bot.sendMessage(chatId, "Введите текстовый ответ:")
+                        GoingThroughTests.waitingForAnswer = true
+                    } else {
+                        bot.sendMessage(chatId, "Введите числовой ответ:")
+                        GoingThroughTests.waitingForAnswer = true
+                    }
+                }
             }
-            callbackQuery("checkNextBook") {
+
+            callbackQuery("sledTest") {
                 val chatId = ChatId.fromId(update.callbackQuery?.message?.chat?.id ?: return@callbackQuery)
 
                 bot.sendMessage(chatId, "Вот что мне удалось найти:")
-                val maxIndex = min(BooksStates.searchResult.size, BooksStates.bookResponseIndex + 5) - 1
-                if (BooksStates.bookResponseIndex == maxIndex) {
+                val maxIndex = min(GoingThroughTests.testsId.size, GoingThroughTests.currentIndex+5)-1
+                if (GoingThroughTests.currentIndex >= maxIndex) {
                     bot.sendMessage(chatId, "К сожалению это всё что я сумел найти. Возвращаю вас в главное меню.")
                 } else {
-                    for (outputIndex in BooksStates.bookResponseIndex..maxIndex) {
-                        bot.sendMessage(chatId, BooksStates.searchResult[outputIndex])
-                    }
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("Далее", "checkNextBook")
-                        ),
-                        mutableListOf(
-                            InlineButton("Завершить", "endSearchingBooks")
+                    for (outputIndex in GoingThroughTests.currentIndex..maxIndex) {
+                        inlineMenu.keyboard = mutableListOf(mutableListOf(
+                            InlineButton("Пройти тест","playIt_${GoingThroughTests.testsId[outputIndex]}")
+                        ))
+                        inlineMenu.update()
+
+                        bot.sendMessage(
+                            chatId,
+                            "Название теста: ${GoingThroughTests.testsTitles[outputIndex]}\n" +
+                                    "Количество вопросов: ${GoingThroughTests.testsQAmount[outputIndex]}\n" +
+                                    "Автор: ${GoingThroughTests.testsAuthor[outputIndex]}",
+                            replyMarkup = inlineMenu.getKeyboardInlineMarkup()
                         )
-                    )
-                    BooksStates.bookResponseIndex = maxIndex
-                    inlineMenu.update()
-                    bot.sendMessage(
-                        chatId,
-                        "Выберите, искать книгу по заданному запросу далее или завершить поиск:",
-                        replyMarkup = inlineMenu.getKeyboardInlineMarkup()
-                    )
+                    }
+                    GoingThroughTests.currentIndex = maxIndex + 1
+
+                    if (GoingThroughTests.currentIndex < GoingThroughTests.testsId.size) {
+                        inlineMenu.keyboard = mutableListOf(
+                            mutableListOf(InlineButton("Далее", "sledTest"))
+                        )
+                        inlineMenu.update()
+                        bot.sendMessage(chatId, "Смотреть еще тесты:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
+                    }
                 }
             }
-
-
 
 
 
 
             text {
                 val chatId = ChatId.fromId(message.chat.id)
-                if (text == "/start") {
+                if (text=="/start") {
                     replyMenu.main(text, bot = bot, chatId = chatId)
                 } else if (text == "/start1") {
-                    inlineMenu.main(text, bot = bot, chatId = chatId)
+                    inlineMenu.main(text, bot= bot, chatId = chatId)
                 }
 
                 if (text == "Пройти тест") {
@@ -836,9 +270,13 @@ fun main() {
                         bot.sendMessage(chatId, "К сожалению у меня нет тестов, которые вы могли бы пройти.")
                     } else {
                         GoingThroughTests.currentIndex = 0
-                        val maxIndex = min(GoingThroughTests.testsId.size, 5) - 1
+                        val maxIndex = min(GoingThroughTests.testsId.size, 5)-1
+                        println("УУУУУ: $maxIndex")
+                        println(GoingThroughTests.testsId)
 
                         for (outputIndex in 0..maxIndex) {
+                            println("10000000000")
+
                             inlineMenu.keyboard = mutableListOf(
                                 mutableListOf(
                                     InlineButton("Пройти тест", "playIt_${GoingThroughTests.testsId[outputIndex]}")
@@ -862,159 +300,552 @@ fun main() {
                                 mutableListOf(InlineButton("Далее", "sledTest"))
                             )
                             inlineMenu.update()
-                            bot.sendMessage(
-                                chatId,
-                                "Смотреть еще тесты:",
-                                replyMarkup = inlineMenu.getKeyboardInlineMarkup()
-                            )
+                            bot.sendMessage(chatId, "Смотреть еще тесты:", replyMarkup = inlineMenu.getKeyboardInlineMarkup())
                         }
                     }
 
-                } else if (text == "Найти книгу") {
-                    bot.sendMessage(chatId, "Хороший выбор! Напишите ключевые слова, по которым будем искать книги:")
-                    BooksStates.waitingForKeyWord = true
-                } else if (BooksStates.waitingForKeyWord) {
-                    BooksStates.waitingForKeyWord = false
-                    BooksStates.searchResult = getInfo(text)
-                    if (BooksStates.searchResult.isEmpty()) {
-                        bot.sendMessage(chatId, "К сожалению по вашему запросу я не смог ничего найти.")
+                }
+
+                else if ((text == "Создать тест") and !TestsStates.creatingTest) {
+                    TestsStates.creatingTest = true
+
+                    bot.sendMessage(chatId, "Отлично, введите название вашего теста:")
+                    TestsStates.waitingForName = true
+                }
+
+                else if (TestsStates.waitingForName) {
+                    TestsStates.currentTest.name = text
+
+                    bot.sendMessage(chatId, "Хорошо, теперь введите псевдоним, под которым будет опубликован тест:")
+                    TestsStates.waitingForName = false
+                    TestsStates.waitingForAuthor = true
+                }
+                else if (TestsStates.waitingForAuthor) {
+                    TestsStates.currentTest.author = text
+
+                    bot.sendMessage(chatId, "Хороший псевдоним, теперь укажите количество вопросов в тесте(число от 1 до 20):")
+                    TestsStates.waitingForAuthor = false
+
+                    TestsStates.waitingForQuestionsAmount = true
+                }
+                else if (TestsStates.waitingForQuestionsAmount) {
+
+                    if (text.toIntOrNull() == null) {
+                        bot.sendMessage(chatId, "Вы ввели некорректное число, введите заново. Это должно быть число от 1 до 20.")
                     } else {
-                        bot.sendMessage(chatId, "Вот что мне удалось найти:")
-                        val maxIndex = min(BooksStates.searchResult.size, BooksStates.bookResponseIndex + 5) - 1
-                        for (outputIndex in BooksStates.bookResponseIndex..maxIndex) {
-                            bot.sendMessage(chatId, BooksStates.searchResult[outputIndex])
+                        if (text.toInt() !in 1..20) {
+                            bot.sendMessage(chatId, "Вы ввели некорректное число, введите заново. Это должно быть число от 1 до 20.")
+                        } else {
+                            TestsStates.waitingForQuestionsAmount = false
+                            TestsStates.waitingForQuestionText = true
+                            TestsStates.currentTest.questionsAmount = text.toInt()
+                            bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
                         }
-                        BooksStates.bookResponseIndex = maxIndex
-                        inlineMenu.keyboard = mutableListOf(
-                            mutableListOf(
-                                InlineButton("Далее", "checkNextBook")
-                            )
-                        )
-                        inlineMenu.update()
-                        bot.sendMessage(
-                            chatId,
-                            "Если здесь нету нужной вам книги, нажмите на кнопку ниже:",
-                            replyMarkup = inlineMenu.getKeyboardInlineMarkup()
-                        )
                     }
-                } else if (text == "Найти фильм для просмотра") {
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("биография", "биография"), InlineButton("музыка", "музыка")
-                        ),
-                        mutableListOf(
-                            InlineButton("триллер", "триллер"), InlineButton("ток-шоу", "ток-шоу")
-                        ),
-                        mutableListOf(
-                            InlineButton("вестерн", "вестерн"), InlineButton("приключения", "приключения")
-                        ),
-                        mutableListOf(
-                            InlineButton("военный", "военный"), InlineButton("игра", "игра")
-                        ),
-                        mutableListOf(
-                            InlineButton("семейный", "семейный"), InlineButton("ужасы", "ужасы")
-                        ),
-                        mutableListOf(
-                            InlineButton("фэнтези", "фэнтези"), InlineButton("аниме", "аниме")
-                        ),
-                        mutableListOf(
-                            InlineButton("для взрослых", "для взрослых"),
-                            InlineButton("короткометражка", "короткометражка")
-                        ),
-                        mutableListOf(
-                            InlineButton("комедия", "комедия"), InlineButton("фильм-нуар", "фильм-нуар")
-                        ),
-                        mutableListOf(
-                            InlineButton("церемония", "церемония"), InlineButton("боевик", "боевик")
-                        ),
-                        mutableListOf(
-                            InlineButton("детектив", "детектив"), InlineButton("новости", "новости")
-                        ),
-                        mutableListOf(
-                            InlineButton("мелодрама", "мелодрама"), InlineButton("мюзикл", "мюзикл")
-                        ),
-                        mutableListOf(
-                            InlineButton("фантастика", "фантастика"), InlineButton("реальное ТВ", "реальное ТВ")
-                        ),
-                        mutableListOf(
-                            InlineButton("криминал", "криминал"), InlineButton("мультфильм", "мультфильм")
-                        ),
-                        mutableListOf(
-                            InlineButton("детский", "детский"), InlineButton("спорт", "спорт")
-                        ),
-                        mutableListOf(
-                            InlineButton("концерт", "концерт"), InlineButton("история", "история")
-                        ),
-                        mutableListOf(
-                            InlineButton("документальный", "документальный"), InlineButton("драма", "драма")
-                        ),
-                        mutableListOf(InlineButton("Завершить выбор жанров", "endChoosingGenresMovies"))
-                    )
-                    inlineMenu.update()
-                    bot.sendMessage(
-                        chatId,
-                        "Хороший выбор! Вот список жанров, которые вы можете выбрать для просмотра:",
-                        replyMarkup = inlineMenu.getKeyboardInlineMarkup()
-                    )
-                } else if (text == "Найти сериал для просмотра") {
-                    inlineMenu.keyboard = mutableListOf(
-                        mutableListOf(
-                            InlineButton("биография", "биография"), InlineButton("музыка", "музыка")
-                        ),
-                        mutableListOf(
-                            InlineButton("триллер", "триллер"), InlineButton("ток-шоу", "ток-шоу")
-                        ),
-                        mutableListOf(
-                            InlineButton("вестерн", "вестерн"), InlineButton("приключения", "приключения")
-                        ),
-                        mutableListOf(
-                            InlineButton("военный", "военный"), InlineButton("игра", "игра")
-                        ),
-                        mutableListOf(
-                            InlineButton("семейный", "семейный"), InlineButton("ужасы", "ужасы")
-                        ),
-                        mutableListOf(
-                            InlineButton("фэнтези", "фэнтези"), InlineButton("аниме", "аниме")
-                        ),
-                        mutableListOf(
-                            InlineButton("для взрослых", "для взрослых"),
-                            InlineButton("короткометражка", "короткометражка")
-                        ),
-                        mutableListOf(
-                            InlineButton("комедия", "комедия"), InlineButton("фильм-нуар", "фильм-нуар")
-                        ),
-                        mutableListOf(
-                            InlineButton("церемония", "церемония"), InlineButton("боевик", "боевик")
-                        ),
-                        mutableListOf(
-                            InlineButton("детектив", "детектив"), InlineButton("новости", "новости")
-                        ),
-                        mutableListOf(
-                            InlineButton("мелодрама", "мелодрама"), InlineButton("мюзикл", "мюзикл")
-                        ),
-                        mutableListOf(
-                            InlineButton("фантастика", "фантастика"), InlineButton("реальное ТВ", "реальное ТВ")
-                        ),
-                        mutableListOf(
-                            InlineButton("криминал", "криминал"), InlineButton("мультфильм", "мультфильм")
-                        ),
-                        mutableListOf(
-                            InlineButton("детский", "детский"), InlineButton("спорт", "спорт")
-                        ),
-                        mutableListOf(
-                            InlineButton("концерт", "концерт"), InlineButton("история", "история")
-                        ),
-                        mutableListOf(
-                            InlineButton("документальный", "документальный"), InlineButton("драма", "драма")
-                        ),
-                        mutableListOf(InlineButton("Завершить выбор жанров", "endChoosingGenresSeries"))
-                    )
-                    inlineMenu.update()
-                    bot.sendMessage(
-                        chatId,
-                        "Хороший выбор! Вот список жанров, которые вы можете выбрать для просмотра:",
-                        replyMarkup = inlineMenu.getKeyboardInlineMarkup()
-                    )
+                }
+                else if (TestsStates.waitingForQuestionText and (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1)) {
+                    TestsStates.currentQuestionText = text
+                    replyMenu.keyboard = mutableListOf(mutableListOf(Button("Цифровой"), Button("Текстовый")), mutableListOf(Button("Выбрать вариант"), Button("Соединить цвета")), mutableListOf(Button("Выбрать несколько вариантов")))
+                    replyMenu.update()
+                    bot.sendMessage(chatId, "Хорошо, теперь выберите тип ответа из следующих вариантов:", replyMarkup = replyMenu.getKeyboardReplyMarkup())
+                    TestsStates.waitingForQuestionText = false
+                    TestsStates.waitingForQuestionType = true
+                }
+                else if (TestsStates.waitingForQuestionType) when (text) {
+                    "Цифровой" -> {
+                        TestsStates.currentAnswerType = AnswerType.DIGITAL
+                        TestsStates.waitingForQuestionType = false
+                        TestsStates.waitingForCorrectAnswers = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответ на вопрос(число):")
+                    }
+                    "Текстовый" -> {
+                        TestsStates.currentAnswerType = AnswerType.TEXT
+                        TestsStates.waitingForQuestionType = false
+                        TestsStates.waitingForCorrectAnswers = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите правильный ответ на вопрос(текст):")
+                    }
+                    "Выбрать вариант" -> {
+                        TestsStates.currentAnswerType = AnswerType.ONE_OPTION
+                        TestsStates.waitingForQuestionType = false
+                        TestsStates.waitingForAnswersAmount = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
+                    }
+                    "Соединить цвета" -> {
+                        TestsStates.currentAnswerType = AnswerType.COLOR
+                        TestsStates.waitingForQuestionType = false
+                        TestsStates.waitingForAnswersAmount = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
+                    }
+                    "Выбрать несколько вариантов" -> {
+                        TestsStates.currentAnswerType = AnswerType.MULTIPLE_OPTIONS
+                        TestsStates.waitingForQuestionType = false
+                        TestsStates.waitingForAnswersAmount = true
+                        bot.sendMessage(chatId, "Отлично, теперь введите количество ответов на вопрос(от 1 до 6):")
+                    }
+                    else -> {
+                        bot.sendMessage(chatId, "Вы ввели некорректный тип ответа. Повторите попытку.")
+                    }
+                }
+                else if (TestsStates.waitingForAnswersAmount) {
+                    if (text.toIntOrNull() == null) {
+                        bot.sendMessage(chatId, "Вы ввели некорректное количество ответов. Повторите попытку.")
+                    } else {
+                        if (text.toInt() in 1..6) {
+                            TestsStates.currentAnswersAmount = text.toInt()
+                            TestsStates.waitingForAnswersAmount = false
+                            TestsStates.waitingForAnswers = true
+                            bot.sendMessage(chatId, "Хорошо, теперь введите сами ответы. Начните с ответа №1, введите его ниже:")
+                        } else {
+                            bot.sendMessage(chatId, "Вы ввели некорректное количество ответов. Это должно быть число от 1 до 6:")
+                        }
+
+                    }
+                }
+                else if (TestsStates.waitingForAnswers) {
+                    if (TestsStates.answerNomer >= TestsStates.currentAnswersAmount) {
+                        TestsStates.waitingForAnswers = false
+                        TestsStates.waitingForCorrectAnswers = true
+                        bot.sendMessage(chatId, "Замечательно, теперь введите правильный ответ:")
+                    } else {
+                        bot.sendMessage(chatId, "Хорошо, теперь введите ответ №${TestsStates.answerNomer+1}")
+                        if ((TestsStates.answerNomer-1) % 2 == 0) {
+                            TestsStates.currentAnswers.add(mutableListOf(Button(text)))
+                        } else {
+                            TestsStates.currentAnswers.last().add(Button(text))
+                        }
+                        TestsStates.answerNomer++
+                    }
+                }
+                else if (TestsStates.waitingForCorrectAnswers) {
+                    when (TestsStates.currentAnswerType) {
+                        AnswerType.COLOR -> {
+                            TestsStates.waitingForCorrectAnswers = false
+                            TestsStates.questionNomer++
+                            TestsStates.waitingForQuestionText = true
+                            if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
+
+                            TestsStates.answerNomer = 1
+                        }
+                        AnswerType.TEXT -> {
+                            TestsStates.currentCorrectAnswer = text
+                            TestsStates.waitingForCorrectAnswers = false
+                            TestsStates.questionNomer++
+                            TestsStates.waitingForQuestionText = true
+                            TestsStates.answerNomer = 1
+
+                            TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
+                                TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
+                            if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
+                            else {
+                                bot.sendMessage(chatId, "Всё готово! Ваш тест был успешно опубликован!")
+                                println("Название теста: ${TestsStates.currentTest.name}")
+                                println("Автор: ${TestsStates.currentTest.author}")
+                                println("Количество вопросов: ${TestsStates.currentTest.questionsAmount}")
+                                for (i in TestsStates.currentTest.questions) {
+                                    println(i.content)
+                                    println(i.answers)
+                                    println(i.correctAnswer)
+                                }
+                                try {
+                                    val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+                                    val databaseUser = dotenv()["DATABASE_USER"]
+                                    val databasePassword = dotenv()["DATABASE_PASSWORD"]
+
+
+                                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+
+                                    // insert into movies table
+                                    val getLastIdQuery = "SELECT MAX(id) FROM tests;"
+
+                                    val prepStatement = connection.createStatement()
+                                    var lastId = 0
+                                    prepStatement.executeQuery(getLastIdQuery).use { resultSet ->
+                                        while (resultSet.next()) {
+                                            lastId = resultSet.getInt(1)
+                                        }
+                                    }
+
+                                    val getLastQIdQuery = "SELECT MAX(id) FROM questions;"
+
+                                    val prep1Statement = connection.createStatement()
+                                    var lastQId = 0
+                                    prep1Statement.executeQuery(getLastQIdQuery).use { resultSet ->
+                                        while (resultSet.next()) {
+                                            lastQId = resultSet.getInt(1)
+                                        }
+                                    }
+
+                                    val insertTestQuery =
+                                        "INSERT INTO tests (title, questionsAmount, author) VALUES (?, ?, ?)"
+                                    val preparedTestStatement = connection.prepareStatement(insertTestQuery)
+
+                                    preparedTestStatement.setString(1, TestsStates.currentTest.name)
+                                    preparedTestStatement.setInt(2, TestsStates.currentTest.questionsAmount)
+                                    preparedTestStatement.setString(3, TestsStates.currentTest.author)
+
+                                    val rowsAffected = preparedTestStatement.executeUpdate()
+                                    println("Rows affected: $rowsAffected")
+
+                                    for (question in TestsStates.currentTest.questions) {
+                                        val insertQuestionsQuery =
+                                            "INSERT INTO questions (testId, title, answersAmount) VALUES (?, ?, ?)"
+                                        val preparedQuestionsStatement = connection.prepareStatement(insertQuestionsQuery)
+
+                                        preparedQuestionsStatement.setInt(1, lastId+1)
+                                        preparedQuestionsStatement.setString(2, question.content)
+                                        preparedQuestionsStatement.setInt(3, question.answers.size)
+
+                                        val rows1Affected = preparedQuestionsStatement.executeUpdate()
+                                        println("Rows affected: $rows1Affected")
+                                        val insertCAnsQuery =
+                                            "INSERT INTO correctTextAnswers (questionId, ans) VALUES (?, ?)"
+
+                                        val preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
+
+                                        preparedCAnsStatement.setInt(1, lastQId+1)
+                                        preparedCAnsStatement.setString(2, question.correctAnswer.toString())
+                                        lastQId++
+                                    }
+                                } catch (e: SQLException) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                        AnswerType.ONE_OPTION -> {
+                            TestsStates.currentCorrectAnswer = text
+                            TestsStates.waitingForCorrectAnswers = false
+                            TestsStates.questionNomer++
+                            TestsStates.waitingForQuestionText = true
+                            TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
+                                TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
+                            TestsStates.answerNomer = 1
+                            if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
+                            else {
+                                bot.sendMessage(chatId, "Всё готово! Ваш тест был успешно опубликован!")
+                                println("Название теста: ${TestsStates.currentTest.name}")
+                                println("Автор: ${TestsStates.currentTest.author}")
+                                println("Количество вопросов: ${TestsStates.currentTest.questionsAmount}")
+                                for (i in TestsStates.currentTest.questions) {
+                                    println(i.content)
+                                    println(i.answers)
+                                    println(i.correctAnswer)
+                                }
+                                try {
+                                    val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+                                    val databaseUser = dotenv()["DATABASE_USER"]
+                                    val databasePassword = dotenv()["DATABASE_PASSWORD"]
+
+
+                                    val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+
+                                    // insert into movies table
+                                    val getLastIdQuery = "SELECT MAX(id) FROM tests;"
+
+                                    val prepStatement = connection.createStatement()
+                                    var lastId = 0
+                                    prepStatement.executeQuery(getLastIdQuery).use { resultSet ->
+                                        while (resultSet.next()) {
+                                            lastId = resultSet.getInt(1)
+                                        }
+                                    }
+
+                                    val getLastQIdQuery = "SELECT MAX(id) FROM questions;"
+
+                                    val prep1Statement = connection.createStatement()
+                                    var lastQId = 0
+                                    prep1Statement.executeQuery(getLastQIdQuery).use { resultSet ->
+                                        while (resultSet.next()) {
+                                            lastQId = resultSet.getInt(1)
+                                        }
+                                    }
+
+                                    val insertTestQuery =
+                                        "INSERT INTO tests (title, questionsAmount, author) VALUES (?, ?, ?)"
+                                    val preparedTestStatement = connection.prepareStatement(insertTestQuery)
+
+                                    preparedTestStatement.setString(1, TestsStates.currentTest.name)
+                                    preparedTestStatement.setInt(2, TestsStates.currentTest.questionsAmount)
+                                    preparedTestStatement.setString(3, TestsStates.currentTest.author)
+
+                                    val rowsAffected = preparedTestStatement.executeUpdate()
+                                    println("Rows affected: $rowsAffected")
+
+                                    for (question in TestsStates.currentTest.questions) {
+                                        val insertQuestionsQuery =
+                                            "INSERT INTO questions (testId, title, answersAmount) VALUES (?, ?, ?)"
+                                        val preparedQuestionsStatement = connection.prepareStatement(insertQuestionsQuery)
+
+                                        preparedQuestionsStatement.setInt(1, lastId+1)
+                                        preparedQuestionsStatement.setString(2, question.content)
+                                        preparedQuestionsStatement.setInt(3, question.answers.size)
+
+                                        val rows1Affected = preparedQuestionsStatement.executeUpdate()
+                                        println("Rows affected: $rows1Affected")
+                                        val insertCAnsQuery =
+                                            "INSERT INTO correctChooseAnswers (questionId, ans1, ans2, ans3, ans4, ans5, ans6) VALUES (?, ?, ?, ?, ?, ?, ?)"
+
+                                        val preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
+
+                                        val insertAnswersQuery =
+                                            "INSERT INTO chooseAnswers (questionId, ans1, ans2, ans3, ans4, ans5, ans6) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                        val preparedAnswersStatement = connection.prepareStatement(insertAnswersQuery)
+
+
+                                        preparedCAnsStatement.setInt(1, lastQId+1)
+                                        preparedAnswersStatement.setInt(1, lastQId+1)
+
+                                        for (index in 0..<question.answers.size) {
+                                            preparedCAnsStatement.setBoolean(
+                                                2+index,
+                                                question.answers[index].toString() == question.correctAnswer
+                                            )
+                                            preparedAnswersStatement.setString(
+                                                2+index,
+                                                question.answers[index].toString()
+                                            )
+                                        }
+
+                                        for (index in question.answers.size..5) {
+                                            preparedCAnsStatement.setNull(
+                                                2+index,
+                                                java.sql.Types.BOOLEAN
+                                            )
+                                            preparedAnswersStatement.setNull(
+                                                2+index,
+                                                java.sql.Types.VARCHAR
+                                            )
+                                        }
+
+                                        val rows2Affected = preparedAnswersStatement.executeUpdate()
+                                        println("Rows affected: $rows2Affected")
+
+                                        val rows3Affected = preparedCAnsStatement.executeUpdate()
+                                        println("Rows affected: $rows3Affected")
+                                        lastQId++
+                                    }
+                                } catch (e: SQLException) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                        AnswerType.MULTIPLE_OPTIONS -> {
+                            val preparedAns = text.split(",").filter { it.isNotBlank() }
+                            preparedAns.forEach { it.replace(" ", "") }
+
+                            if (preparedAns.size != TestsStates.currentMaxChooseOptions) {
+                                bot.sendMessage(chatId, "Ошибка. Вы ввели неправильное количество нужных ответов. Повторите попытку.")
+                            } else {
+                                TestsStates.currentCorrectAnswer = preparedAns
+                                TestsStates.waitingForCorrectAnswers = false
+                                TestsStates.questionNomer++
+                                TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
+                                    TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
+                                TestsStates.answerNomer = 1
+                                if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
+                                else {
+                                    bot.sendMessage(chatId, "Всё готово! Ваш тест был успешно опубликован!")
+                                    println("Название теста: ${TestsStates.currentTest.name}")
+                                    println("Автор: ${TestsStates.currentTest.author}")
+                                    println("Количество вопросов: ${TestsStates.currentTest.questionsAmount}")
+                                    for (i in TestsStates.currentTest.questions) {
+                                        println(i.content)
+                                        println(i.answers)
+                                        println(i.correctAnswer)
+                                    }
+                                    try {
+                                        val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+                                        val databaseUser = dotenv()["DATABASE_USER"]
+                                        val databasePassword = dotenv()["DATABASE_PASSWORD"]
+
+
+                                        val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+
+                                        // insert into movies table
+                                        val getLastIdQuery = "SELECT MAX(id) FROM tests;"
+
+                                        val prepStatement = connection.createStatement()
+                                        var lastId = 0
+                                        prepStatement.executeQuery(getLastIdQuery).use { resultSet ->
+                                            while (resultSet.next()) {
+                                                lastId = resultSet.getInt(1)
+                                            }
+                                        }
+
+                                        val getLastQIdQuery = "SELECT MAX(id) FROM questions;"
+
+                                        val prep1Statement = connection.createStatement()
+                                        var lastQId = 0
+                                        prep1Statement.executeQuery(getLastQIdQuery).use { resultSet ->
+                                            while (resultSet.next()) {
+                                                lastQId = resultSet.getInt(1)
+                                            }
+                                        }
+
+                                        val insertTestQuery =
+                                            "INSERT INTO tests (title, questionsAmount, author) VALUES (?, ?, ?)"
+                                        val preparedTestStatement = connection.prepareStatement(insertTestQuery)
+
+                                        preparedTestStatement.setString(1, TestsStates.currentTest.name)
+                                        preparedTestStatement.setInt(2, TestsStates.currentTest.questionsAmount)
+                                        preparedTestStatement.setString(3, TestsStates.currentTest.author)
+
+                                        val rowsAffected = preparedTestStatement.executeUpdate()
+                                        println("Rows affected: $rowsAffected")
+
+                                        for (question in TestsStates.currentTest.questions) {
+                                            val insertQuestionsQuery =
+                                                "INSERT INTO questions (testId, title, answersAmount) VALUES (?, ?, ?)"
+                                            val preparedQuestionsStatement = connection.prepareStatement(insertQuestionsQuery)
+
+                                            preparedQuestionsStatement.setInt(1, lastId+1)
+                                            preparedQuestionsStatement.setString(2, question.content)
+                                            preparedQuestionsStatement.setInt(3, question.answers.size)
+
+                                            val rows1Affected = preparedQuestionsStatement.executeUpdate()
+                                            println("Rows affected: $rows1Affected")
+
+                                            val insertCAnsQuery =
+                                                "INSERT INTO correctChooseAnswers (questionId, ans1, ans2, ans3, ans4, ans5, ans6) VALUES (?, ?, ?, ?, ?, ?, ?)"
+
+                                            val preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
+
+                                            val insertAnswersQuery =
+                                                "INSERT INTO chooseAnswers (questionId, ans1, ans2, ans3, ans4, ans5, ans6) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                            val preparedAnswersStatement = connection.prepareStatement(insertAnswersQuery)
+
+
+                                            preparedCAnsStatement.setInt(1, lastQId+1)
+                                            preparedAnswersStatement.setInt(1, lastQId+1)
+
+                                            for (index in 0..<question.answers.size) {
+                                                preparedCAnsStatement.setBoolean(
+                                                    2+index,
+                                                    question.answers[index].toString() == question.correctAnswer
+                                                )
+                                                preparedAnswersStatement.setString(
+                                                    2+index,
+                                                    question.answers[index].toString()
+                                                )
+                                            }
+
+                                            for (index in question.answers.size..5) {
+                                                preparedCAnsStatement.setNull(
+                                                    2+index,
+                                                    java.sql.Types.BOOLEAN
+                                                )
+                                                preparedAnswersStatement.setNull(
+                                                    2+index,
+                                                    java.sql.Types.VARCHAR
+                                                )
+                                            }
+
+                                            val rows2Affected = preparedAnswersStatement.executeUpdate()
+                                            println("Rows affected: $rows2Affected")
+
+                                            val rows3Affected = preparedCAnsStatement.executeUpdate()
+                                            println("Rows affected: $rows3Affected")
+                                            lastQId++
+                                        }
+                                    } catch (e: SQLException) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                            }
+                        }
+                        AnswerType.DIGITAL -> {
+                            if (text.toIntOrNull() == null) {
+                                bot.sendMessage(chatId, "Повторите попытку. Введенное число должно быть целым без всяких знаков")
+                            } else {
+                                TestsStates.currentCorrectAnswer = text.toInt()
+                                TestsStates.questionNomer++
+                                TestsStates.waitingForCorrectAnswers = false
+                                TestsStates.currentTest.questions.add(Question(TestsStates.currentQuestionText, TestsStates.currentAnswerType,
+                                    TestsStates.currentCorrectAnswer, mutableListOf(TestsStates.currentAnswers)))
+                                TestsStates.waitingForQuestionText = true
+                                TestsStates.answerNomer = 1
+                                println(TestsStates.questionNomer)
+                                println(TestsStates.currentTest.questionsAmount)
+                                if (TestsStates.questionNomer < TestsStates.currentTest.questionsAmount+1) bot.sendMessage(chatId, "Отлично, теперь введите текст вопроса №${TestsStates.questionNomer}")
+                                else {
+                                    bot.sendMessage(chatId, "Всё готово! Ваш тест был успешно опубликован!")
+                                    println("Название теста: ${TestsStates.currentTest.name}")
+                                    println("Автор: ${TestsStates.currentTest.author}")
+                                    println("Количество вопросов: ${TestsStates.currentTest.questionsAmount}")
+                                    for (i in TestsStates.currentTest.questions) {
+                                        println(i.content)
+                                        println(i.answers)
+                                        println(i.correctAnswer)
+                                    }
+                                    try {
+                                        val databaseUrl = dotenv()["DATABASE_URL"] // "jdbc:postgresql://localhost:5432/dbname"
+                                        val databaseUser = dotenv()["DATABASE_USER"]
+                                        val databasePassword = dotenv()["DATABASE_PASSWORD"]
+
+
+                                        val connection = DriverManager.getConnection(databaseUrl, databaseUser, databasePassword)
+
+                                        // insert into movies table
+                                        val getLastIdQuery = "SELECT MAX(id) FROM tests;"
+
+                                        val prepStatement = connection.createStatement()
+                                        var lastId = 0
+                                        prepStatement.executeQuery(getLastIdQuery).use { resultSet ->
+                                            while (resultSet.next()) {
+                                                lastId = resultSet.getInt(1)
+                                            }
+                                        }
+
+                                        val getLastQIdQuery = "SELECT MAX(id) FROM questions;"
+
+                                        val prep1Statement = connection.createStatement()
+                                        var lastQId = 0
+                                        prep1Statement.executeQuery(getLastQIdQuery).use { resultSet ->
+                                            while (resultSet.next()) {
+                                                lastQId = resultSet.getInt(1)
+                                            }
+                                        }
+
+                                        val insertTestQuery =
+                                            "INSERT INTO tests (title, questionsAmount, author) VALUES (?, ?, ?)"
+                                        val preparedTestStatement = connection.prepareStatement(insertTestQuery)
+
+                                        preparedTestStatement.setString(1, TestsStates.currentTest.name)
+                                        preparedTestStatement.setInt(2, TestsStates.currentTest.questionsAmount)
+                                        preparedTestStatement.setString(3, TestsStates.currentTest.author)
+
+                                        val rowsAffected = preparedTestStatement.executeUpdate()
+                                        println("Rows affected: $rowsAffected")
+
+                                        for (question in TestsStates.currentTest.questions) {
+                                            val insertQuestionsQuery =
+                                                "INSERT INTO questions (testId, title, answersAmount) VALUES (?, ?, ?)"
+                                            val preparedQuestionsStatement = connection.prepareStatement(insertQuestionsQuery)
+
+                                            preparedQuestionsStatement.setInt(1, lastId+1)
+                                            preparedQuestionsStatement.setString(2, question.content)
+                                            preparedQuestionsStatement.setInt(3, question.answers.size)
+
+                                            val rows1Affected = preparedQuestionsStatement.executeUpdate()
+                                            println("Rows affected: $rows1Affected")
+                                            val insertCAnsQuery =
+                                                "INSERT INTO correctIntAnswers (questionId, ans) VALUES (?, ?)"
+
+                                            val preparedCAnsStatement = connection.prepareStatement(insertCAnsQuery)
+
+                                            preparedCAnsStatement.setInt(1, lastQId+1)
+                                            preparedCAnsStatement.setInt(2, question.correctAnswer.toString().toInt())
+                                            lastQId++
+                                        }
+                                    } catch (e: SQLException) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (GoingThroughTests.waitingForAnswer) {
+                    handleTextAnswer(chatId, text)
                 }
             }
         }
@@ -1022,3 +853,382 @@ fun main() {
 
     bot.startPolling()
 }
+
+fun startTest(chatId: ChatId, testId: Int) {
+    // Получаем вопросы теста
+    GoingThroughTests.currentQaA = getTestQuestions(testId)
+
+
+
+    if (GoingThroughTests.currentQaA.isEmpty()) {
+        bot.sendMessage(chatId, "Ошибка: вопросы теста не найдены")
+        return
+    }
+
+    // Сбрасываем состояние
+    GoingThroughTests.currentQIndex = 0
+    GoingThroughTests.waitingForAnswer = false
+    GoingThroughTests.selectedAnswers.clear()
+    GoingThroughTests.userAnswers.clear()
+    GoingThroughTests.correctAnswersCount = 0
+
+    // Отправляем первый вопрос
+    sendTestQuestion(chatId, GoingThroughTests.currentQIndex)
+}
+
+// Функция для отправки вопроса теста
+fun sendTestQuestion(chatId: ChatId, questionIndex: Int) {
+    if (questionIndex >= GoingThroughTests.currentQaA.size) {
+        finishTest(chatId)
+        return
+    }
+
+    println("IM SURVIVOR")
+
+    val question = GoingThroughTests.currentQaA[questionIndex]
+    val questionNumber = questionIndex + 1
+    val totalQuestions = GoingThroughTests.currentQaA.size
+
+    println(question.type)
+
+    when (question.type) {
+        "CHOOSE" -> {
+            // Считаем количество правильных ответов для этого вопроса
+            val correctCount = question.chooseAnswers.count { it.isCorrect }
+            GoingThroughTests.choosingAns = correctCount
+
+            // Создаем клавиатуру с toggle-кнопками
+            val keyboard = mutableListOf<MutableList<InlineButton>>()
+
+            for (i in 0 until question.answersAmount) {
+                val answerText = question.chooseAnswers.getOrNull(i)?.text ?: "Вариант ${i+1}"
+                println(answerText)
+                val callbackData = "ans${i+1}_toggle"
+
+                // Проверяем, выбран ли уже этот ответ
+                val isSelected = GoingThroughTests.selectedAnswers.contains(i)
+                val buttonText = if (isSelected) "✅ $answerText" else answerText
+
+                if (i % 2 == 0) {
+                    // Новая строка
+                    keyboard.add(mutableListOf(InlineButton(buttonText, callbackData)))
+                } else {
+                    // Добавляем к последней строке
+                    keyboard.last().add(InlineButton(buttonText, callbackData))
+                }
+            }
+
+            // Кнопка подтверждения выбора
+            keyboard.add(mutableListOf(InlineButton("✅ Подтвердить выбор", "confirm_test_answer")))
+
+            bot.sendMessage(
+                chatId,
+                "📝 Вопрос $questionNumber/$totalQuestions:\n\n${question.title}\n\n" +
+                        "Выберите $correctCount из ${question.answersAmount} ответов:",
+                replyMarkup = InlineClass(keyboard, "", "").getKeyboardInlineMarkup()
+            )
+        }
+
+        "INT", "TEXT" -> {
+            println("TEXT131312312")
+            GoingThroughTests.waitingForAnswer = true
+            val answerType = if (question.type == "TEXT") "текстовый" else "числовой"
+            println(chatId)
+            println("📝 Вопрос $questionNumber/$totalQuestions:\n\n${question.title}\n\n" +
+                    "Введите $answerType ответ:")
+            bot.sendMessage(chatId, "230194192481032рлотлаотдлуцц")
+            bot.sendMessage(
+                chatId,
+                "📝 Вопрос $questionNumber/$totalQuestions:\n\n${question.title}\n\n" +
+                        "Введите $answerType ответ:"
+            )
+        }
+
+        else -> {
+            bot.sendMessage(chatId, "Неизвестный тип вопроса")
+        }
+    }
+}
+
+// Функция для переключения выбора ответа (toggle)
+fun toggleAnswer(chatId: ChatId, answerIndex: Int, messageId: Long?) {
+    val question = GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex]
+
+    if (answerIndex < question.answersAmount) {
+        if (GoingThroughTests.selectedAnswers.contains(answerIndex)) {
+            // Убираем выбор
+            GoingThroughTests.selectedAnswers.remove(answerIndex)
+        } else {
+            // Добавляем выбор, но проверяем лимит
+            val correctCount = question.chooseAnswers.count { it.isCorrect }
+            if (GoingThroughTests.selectedAnswers.size < correctCount) {
+                GoingThroughTests.selectedAnswers.add(answerIndex)
+            } else {
+                // Можно показать сообщение о превышении лимита
+                return
+            }
+        }
+
+        // Обновляем клавиатуру
+        updateAnswerKeyboard(chatId, messageId, question)
+    }
+}
+
+// Функция для обновления клавиатуры с ответами
+fun updateAnswerKeyboard(chatId: ChatId, messageId: Long?, question: QuestionWithAnswers) {
+    val keyboard = mutableListOf<MutableList<InlineButton>>()
+
+    for (i in 0 until question.answersAmount) {
+        val answerText = question.chooseAnswers.getOrNull(i)?.text ?: "Вариант ${i+1}"
+        val callbackData = "ans${i+1}_toggle"
+
+        val isSelected = GoingThroughTests.selectedAnswers.contains(i)
+        val buttonText = if (isSelected) "✅ $answerText" else answerText
+
+        if (i % 2 == 0) {
+            keyboard.add(mutableListOf(InlineButton(buttonText, callbackData)))
+        } else {
+            keyboard.last().add(InlineButton(buttonText, callbackData))
+        }
+    }
+
+    // Кнопка подтверждения
+    val confirmButtonText = if (GoingThroughTests.selectedAnswers.size == GoingThroughTests.choosingAns) {
+        "✅ Подтвердить выбор (${GoingThroughTests.selectedAnswers.size}/$GoingThroughTests.choosingAns)"
+    } else {
+        "Подтвердить выбор (${GoingThroughTests.selectedAnswers.size}/$GoingThroughTests.choosingAns)"
+    }
+
+    keyboard.add(mutableListOf(InlineButton(confirmButtonText, "confirm_test_answer")))
+
+    // Обновляем сообщение с клавиатурой
+    if (messageId != null) {
+        bot.editMessageReplyMarkup(
+            chatId = chatId,
+            messageId = messageId,
+            replyMarkup = InlineClass(keyboard, "", "").getKeyboardInlineMarkup()
+        )
+    }
+}
+
+// Функция для подтверждения выбора ответа
+fun confirmTestAnswer(chatId: ChatId) {
+    val question = GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex]
+    val correctCount = question.chooseAnswers.count { it.isCorrect }
+
+    // Проверяем, что выбрано правильное количество ответов
+    if (GoingThroughTests.selectedAnswers.size != correctCount) {
+        bot.sendMessage(
+            chatId,
+            "⚠️ Нужно выбрать ровно $correctCount ответов. Вы выбрали ${GoingThroughTests.selectedAnswers.size}."
+        )
+        return
+    }
+
+    // Проверяем правильность выбора
+    var isCorrect = true
+    for (i in 0 until question.answersAmount) {
+        val shouldBeSelected = question.chooseAnswers[i].isCorrect
+        val isSelected = GoingThroughTests.selectedAnswers.contains(i)
+
+        if (shouldBeSelected != isSelected) {
+            isCorrect = false
+            break
+        }
+    }
+
+    // Сохраняем ответ пользователя
+    GoingThroughTests.userAnswers.add(
+        UserAnswer(
+            questionId = question.id,
+            selectedIndices = GoingThroughTests.selectedAnswers.toList(),
+            isCorrect = isCorrect
+        )
+    )
+
+    if (isCorrect) {
+        GoingThroughTests.correctAnswersCount++
+    }
+
+    // Переходим к следующему вопросу
+    GoingThroughTests.currentQIndex++
+    GoingThroughTests.selectedAnswers.clear()
+
+    if (GoingThroughTests.currentQIndex < GoingThroughTests.currentQaA.size) {
+        sendTestQuestion(chatId, GoingThroughTests.currentQIndex)
+    } else {
+        finishTest(chatId)
+    }
+}
+
+// Функция для обработки текстовых ответов
+fun handleTextAnswer(chatId: ChatId, answerText: String) {
+    if (GoingThroughTests.currentQIndex >= GoingThroughTests.currentQaA.size) {
+        bot.sendMessage(chatId, "Ошибка: нет текущего вопроса")
+        GoingThroughTests.waitingForAnswer = false
+        return
+    }
+
+    val question = GoingThroughTests.currentQaA[GoingThroughTests.currentQIndex]
+    var isCorrect = false
+
+    when (question.type) {
+        "INT" -> {
+            // Обработка числового ответа
+            val userAnswer = answerText.trim().toIntOrNull()
+
+            if (userAnswer != null) {
+                // Получаем правильные числовые ответы
+                val intAnswers = question.answers
+                if (intAnswers is List<*>) {
+                    // Проверяем, есть ли среди правильных ответов введенное число
+                    val correctAnswers = intAnswers.filterIsInstance<IntAnswer>()
+                    isCorrect = correctAnswers.any { it.value == userAnswer }
+
+                    // Альтернативно, если answers хранятся как List<Any>
+                    val correctNumericAnswers = mutableListOf<Int>()
+                    for (answer in intAnswers) {
+                        when (answer) {
+                            is IntAnswer -> correctNumericAnswers.add(answer.value)
+                            is Int -> correctNumericAnswers.add(answer)
+                            is String -> answer.toIntOrNull()?.let { correctNumericAnswers.add(it) }
+                        }
+                    }
+                    isCorrect = correctNumericAnswers.contains(userAnswer)
+                }
+            } else {
+                bot.sendMessage(chatId, "Пожалуйста, введите целое число.")
+                return
+            }
+        }
+
+        "TEXT" -> {
+            // Обработка текстового ответа
+            val userAnswer = answerText.trim().lowercase()
+
+            // Получаем правильные текстовые ответы
+            val textAnswers = question.answers
+            if (textAnswers is List<*>) {
+                // Проверяем, есть ли среди правильных ответов введенный текст
+                val correctAnswers = textAnswers.filterIsInstance<TextAnswer>()
+                isCorrect = correctAnswers.any {
+                    it.value.trim().lowercase() == userAnswer
+                }
+
+                // Альтернативно, если answers хранятся как List<Any>
+                val correctTextResponses = mutableListOf<String>()
+                for (answer in textAnswers) {
+                    when (answer) {
+                        is TextAnswer -> correctTextResponses.add(answer.value.trim().lowercase())
+                        is String -> correctTextResponses.add(answer.trim().lowercase())
+                    }
+                }
+                isCorrect = correctTextResponses.contains(userAnswer)
+            }
+        }
+
+        else -> {
+            bot.sendMessage(chatId, "Неизвестный тип вопроса")
+            GoingThroughTests.waitingForAnswer = false
+            return
+        }
+    }
+
+    // Сохраняем ответ пользователя
+    GoingThroughTests.userAnswers.add(
+        UserAnswer(
+            questionId = question.id,
+            answerText = answerText,
+            isCorrect = isCorrect
+        )
+    )
+
+    // Увеличиваем счетчик правильных ответов
+    if (isCorrect) {
+        GoingThroughTests.correctAnswersCount++
+        bot.sendMessage(chatId, "✅ Правильно!")
+    } else {
+        // Показываем правильный ответ
+        val correctAnswer = when (question.type) {
+            "INT" -> {
+                val intAnswers = question.answers.filterIsInstance<IntAnswer>()
+                intAnswers.joinToString(", ") { it.value.toString() }
+            }
+            "TEXT" -> {
+                val textAnswers = question.answers.filterIsInstance<TextAnswer>()
+                textAnswers.joinToString(", ") { it.value }
+            }
+            else -> "Неизвестно"
+        }
+        bot.sendMessage(chatId, "❌ Неправильно. Правильный ответ: $correctAnswer")
+    }
+
+    // Сбрасываем флаг ожидания ответа
+    GoingThroughTests.waitingForAnswer = false
+
+    // Переходим к следующему вопросу
+    GoingThroughTests.currentQIndex++
+
+    if (GoingThroughTests.currentQIndex < GoingThroughTests.currentQaA.size) {
+        // Даем небольшую паузу перед следующим вопросом
+        Thread.sleep(1000)
+        sendTestQuestion(chatId, GoingThroughTests.currentQIndex)
+    } else {
+        // Тест завершен
+        finishTest(chatId)
+    }
+}
+
+// Функция для завершения теста
+fun finishTest(chatId: ChatId) {
+    val totalQuestions = GoingThroughTests.currentQaA.size
+    val correctAnswers = GoingThroughTests.correctAnswersCount
+    val percentage = if (totalQuestions > 0) {
+        (correctAnswers.toDouble() / totalQuestions.toDouble() * 100).toInt()
+    } else {
+        0
+    }
+
+    val resultMessage = """
+        🎉 Тест завершен!
+        
+        📊 Результаты:
+        Правильных ответов: $correctAnswers из $totalQuestions
+        Процент правильных: $percentage%
+        
+        ${getResultMessage(percentage)}
+        
+        Спасибо за прохождение теста! 🎓
+    """.trimIndent()
+
+    bot.sendMessage(chatId, resultMessage)
+
+    // Сбрасываем состояние
+    GoingThroughTests.reset()
+}
+
+// Функция для получения сообщения о результате
+fun getResultMessage(percentage: Int): String {
+    return when {
+        percentage >= 90 -> "🏆 Отличный результат! Вы настоящий эксперт!"
+        percentage >= 70 -> "👍 Хороший результат! Вы хорошо разбираетесь в теме."
+        percentage >= 50 -> "💪 Неплохо! Есть что повторить, но в целом неплохо."
+        else -> "📚 Есть над чем поработать! Рекомендую изучить материал еще раз."
+    }
+}
+
+// Функция для перехода к следующему вопросу (если нужно)
+fun goToNextQuestion(chatId: ChatId) {
+    GoingThroughTests.currentQIndex++
+    sendTestQuestion(chatId, GoingThroughTests.currentQIndex)
+}
+
+// Класс для хранения ответов пользователя
+data class UserAnswer(
+    val questionId: Int,
+    val selectedIndices: List<Int> = emptyList(),
+    val answerText: String = "",
+    val isCorrect: Boolean = false
+)
+
+lateinit var bot: com.github.kotlintelegrambot.Bot
