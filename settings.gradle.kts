@@ -19,6 +19,4 @@ plugins {
 }
 
 rootProject.name = "ChillZoneBot"
-include("app")
-include("core")
-include("data")
+include("app", "core", "data")
