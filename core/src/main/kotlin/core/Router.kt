@@ -37,9 +37,13 @@ class Router(
 
         val text = message.text?.trim()
 
-        if (text == "/start" || text == "/menu") {
+        if (text == "/start" || text == "/menu" || text?.startsWith("/start@") == true || text?.startsWith("/menu@") == true) {
             SessionStore.clear(uid)
-            bot.sendMessage(chat, "Привет! Это Chill Zone Bot — всё для досуга в одном месте.", replyMarkup = KeyboardFactory.mainMenu())
+            bot.sendMessage(
+                chat,
+                "Привет! Это Chill Zone Bot — всё для досуга в одном месте.",
+                replyMarkup = KeyboardFactory.mainMenu()
+            )
             return
         }
 
@@ -621,7 +625,11 @@ class Router(
 
     private fun showGameStats(bot: Bot, chat: ChatId, uid: Long) {
         val s = games.stats(uid)
-        bot.sendMessage(chat, "Статистика:\nРейтинг: ${s.rating}\nПобеды: ${s.wins}\nПоражения: ${s.losses}\nStreak: ${s.streak}\nЛучший streak: ${s.bestStreak}", replyMarkup = KeyboardFactory.gamesMenu())
+        bot.sendMessage(
+            chat,
+            "Статистика:\nРейтинг: ${s.rating}\nПобеды: ${s.wins}\nПоражения: ${s.losses}\nStreak: ${s.streak}\nЛучший streak: ${s.bestStreak}",
+            replyMarkup = KeyboardFactory.gamesMenu()
+        )
     }
 
     private fun showTopGames(bot: Bot, chat: ChatId) {
@@ -630,6 +638,10 @@ class Router(
             bot.sendMessage(chat, "Пока нет игроков в таблице.", replyMarkup = KeyboardFactory.gamesMenu())
             return
         }
-        bot.sendMessage(chat, top.withIndex().joinToString("\n") { (idx, s) -> "${idx + 1}. #${s.userId} — ${s.rating}" }, replyMarkup = KeyboardFactory.gamesMenu())
+        bot.sendMessage(
+            chat,
+            top.withIndex().joinToString("\n") { (idx, s) -> "${idx + 1}. #${s.userId} — ${s.rating}" },
+            replyMarkup = KeyboardFactory.gamesMenu()
+        )
     }
 }

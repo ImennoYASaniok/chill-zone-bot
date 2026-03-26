@@ -5,7 +5,8 @@ import data.Schema
 import data.SeedData
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.dispatcher.telegramError
+import com.github.kotlintelegrambot.dispatcher.text
 import io.github.cdimascio.dotenv.dotenv
 
 fun main() {
@@ -17,12 +18,26 @@ fun main() {
     val router = Entry.buildRouter()
 
     lateinit var telegramBot: com.github.kotlintelegrambot.Bot
+
     telegramBot = bot {
         this.token = token
+
         dispatch {
-            message {
-                router.handle(telegramBot, message)
+            text {
+                runCatching {
+                    router.handle(telegramBot, message)
+                }.onFailure { e ->
+                    e.printStackTrace()
+                    telegramBot.sendMessage(
+                        chatId = com.github.kotlintelegrambot.entities.ChatId.fromId(message.chat.id),
+                        text = "Внутренняя ошибка при обработке сообщения."
+                    )
+                }
             }
+
+//            telegramError {
+//                it.printStackTrace()
+//            }
         }
     }
 
