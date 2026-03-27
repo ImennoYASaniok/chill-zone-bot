@@ -1,17 +1,20 @@
 package app
 
+import com.github.kotlintelegrambot.bot
+import com.github.kotlintelegrambot.dispatch
+import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.dispatcher.telegramError
 import core.Entry
 import data.Schema
 import data.SeedData
-import com.github.kotlintelegrambot.bot
-import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.telegramError
-import com.github.kotlintelegrambot.dispatcher.text
 import io.github.cdimascio.dotenv.dotenv
 
 fun main() {
+    println("Chill Zone Bot: initializing database schema")
     Schema.ensure()
+    println("Chill Zone Bot: seeding default data")
     SeedData.ensure()
+    println("Chill Zone Bot: database is ready")
 
     val env = dotenv()
     val token = env["BOT_TOKEN"] ?: env["TELEGRAM_TOKEN"] ?: error("BOT_TOKEN is not set")
@@ -23,7 +26,15 @@ fun main() {
         this.token = token
 
         dispatch {
-            text {
+            message {
+                val preview = when {
+                    !message.text.isNullOrBlank() -> message.text!!.trim().replace(Regex("\\s+"), " ").take(80)
+                    message.photo != null -> "<photo>"
+                    else -> "<non-text>"
+                }
+
+                println("Chill Zone Bot: incoming message chat=${message.chat.id} user=${message.from?.id} payload=$preview")
+
                 runCatching {
                     router.handle(telegramBot, message)
                 }.onFailure { e ->
@@ -35,11 +46,14 @@ fun main() {
                 }
             }
 
-//            telegramError {
-//                it.printStackTrace()
-//            }
+            telegramError {
+                System.err.println(
+                    "Chill Zone Bot: Telegram polling error [${this.error.getType()}] ${this.error.getErrorMessage()}"
+                )
+            }
         }
     }
 
+    println("Chill Zone Bot: polling started")
     telegramBot.startPolling()
 }

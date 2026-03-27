@@ -1,26 +1,41 @@
 # Файлы настройки для Chill Zone Bot
 
-Поместите эти файлы в корневой каталог проекта рядом с папками "build.gradle.kts" и "app/", "core/", "data/".
+Поместите Docker-файлы в корень проекта рядом с `build.gradle.kts`, `app/`, `core/` и `data/`.
 
 ## Запуск
 
-1. Скопируйте ".env.example" в ".env"
-2. Введите "BOT_TOKEN", "DATABASE_USER", `DATABASE_PASSWORD`
-3. Запустите все:
+1. Скопируйте `.env.example` в `.env`
+2. Заполните `BOT_TOKEN`
+3. При необходимости поменяйте `DATABASE_USER`, `DATABASE_PASSWORD`, `POSTGRES_DB`
+4. Запустите контейнеры:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
-## Удаление контейнеров
+## Остановка
 
 ```bash
-docker-compose down
+docker compose down
 ```
+
+## Проверка логов
+
+Если бот не отвечает, откройте логи контейнера:
+
+```bash
+docker compose logs -f bot
+```
+
+После исправления entrypoint в логах должны появляться:
+
+- сообщения об инициализации схемы и сидов
+- сообщение о старте polling
+- запись о каждом входящем сообщении от Telegram
 
 ## Примечания
 
-- Внутри Docker Postgres доступен как "db:5432".
-- На вашем хост-компьютере Postgres отображается как `localhost:5430`.
-- Бот читает ".env", поэтому файл compose монтирует его в контейнер.
-- `DATABASE_URL` в compose заменен на `jdbc:postgresql://db:5432/chill_zone`.
+- Внутри Docker Postgres доступен по адресу `db:5432`
+- На хосте база доступна по `localhost:5430`
+- Для локального запуска из IDE удобно использовать `DATABASE_URL=jdbc:postgresql://localhost:5430/chill_zone`
+- Внутри контейнера `docker-compose.yml` автоматически подменяет `DATABASE_URL` на `jdbc:postgresql://db:5432/${POSTGRES_DB}`

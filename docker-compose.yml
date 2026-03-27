@@ -4,7 +4,7 @@ services:
     container_name: chill-zone-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB:-chill_zone}
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     ports:
@@ -12,7 +12,7 @@ services:
     volumes:
       - chill_zone_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d chill_zone"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${POSTGRES_DB:-chill_zone}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: jdbc:postgresql://db:5432/chill_zone
+      DATABASE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-chill_zone}
     volumes:
       - ./.env:/app/.env:ro
 
