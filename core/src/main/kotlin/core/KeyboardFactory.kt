@@ -1,10 +1,10 @@
 package core
 
-import com.github.kotlintelegrambot.entities.ReplyKeyboardMarkup
+import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 
-private fun kb(rows: List<List<String>>): ReplyKeyboardMarkup {
-    return ReplyKeyboardMarkup(
+private fun kb(rows: List<List<String>>): KeyboardReplyMarkup {
+    return KeyboardReplyMarkup(
         keyboard = rows.map { row -> row.map { KeyboardButton(text = it) } },
         resizeKeyboard = true,
         oneTimeKeyboard = false
@@ -12,7 +12,7 @@ private fun kb(rows: List<List<String>>): ReplyKeyboardMarkup {
 }
 
 object KeyboardFactory {
-    fun mainMenu(): ReplyKeyboardMarkup = kb(
+    fun mainMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("👤 Профиль", "🗂 Подборки"),
             listOf("😂 Мемы", "🔮 Предсказания"),
@@ -22,7 +22,7 @@ object KeyboardFactory {
         )
     )
 
-    fun profileMenu(): ReplyKeyboardMarkup = kb(
+    fun profileMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Изменить имя", "Изменить био"),
             listOf("Скрыть/показать профиль", "Переключить картинки"),
@@ -30,7 +30,7 @@ object KeyboardFactory {
         )
     )
 
-    fun settingsMenu(): ReplyKeyboardMarkup = kb(
+    fun settingsMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Переключить картинки"),
             listOf("Сбросить сессию"),
@@ -38,7 +38,7 @@ object KeyboardFactory {
         )
     )
 
-    fun memesMenu(): ReplyKeyboardMarkup = kb(
+    fun memesMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Следующий мем", "Добавить мем"),
             listOf("👍", "👎"),
@@ -47,7 +47,7 @@ object KeyboardFactory {
         )
     )
 
-    fun predictionsMenu(): ReplyKeyboardMarkup = kb(
+    fun predictionsMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Получить предсказание", "Мои предсказания"),
             listOf("Добавить предсказание", "Поиск предсказаний"),
@@ -55,7 +55,7 @@ object KeyboardFactory {
         )
     )
 
-    fun predictionRarity(): ReplyKeyboardMarkup = kb(
+    fun predictionRarity(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Обычное", "Редкое"),
             listOf("Эпическое", "Легендарное"),
@@ -63,7 +63,7 @@ object KeyboardFactory {
         )
     )
 
-    fun testsMenu(): ReplyKeyboardMarkup = kb(
+    fun testsMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Случайный тест", "Создать тест"),
             listOf("Мои тесты"),
@@ -71,7 +71,7 @@ object KeyboardFactory {
         )
     )
 
-    fun testKinds(): ReplyKeyboardMarkup = kb(
+    fun testKinds(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("SINGLE", "MULTI"),
             listOf("NUMBER", "MATCH"),
@@ -79,14 +79,14 @@ object KeyboardFactory {
         )
     )
 
-    fun testsContinue(): ReplyKeyboardMarkup = kb(
+    fun testsContinue(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Да", "Нет"),
             listOf("⬅️ Обратно")
         )
     )
 
-    fun eventsMenu(): ReplyKeyboardMarkup = kb(
+    fun eventsMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Ближайшие события", "Создать событие"),
             listOf("Мои события"),
@@ -94,7 +94,7 @@ object KeyboardFactory {
         )
     )
 
-    fun gamesMenu(): ReplyKeyboardMarkup = kb(
+    fun gamesMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("⚽ Гол", "🏀 В кольцо"),
             listOf("🎡 Колесо фортуны", "✂️ Камень-ножницы-бумага"),
@@ -103,7 +103,7 @@ object KeyboardFactory {
         )
     )
 
-    fun collectionsMenu(): ReplyKeyboardMarkup = kb(
+    fun collectionsMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("🎬 Фильм", "📺 Сериал"),
             listOf("📚 Книга", "🎮 Игра"),
@@ -112,14 +112,14 @@ object KeyboardFactory {
         )
     )
 
-    fun feedbackMenu(): ReplyKeyboardMarkup = kb(
+    fun feedbackMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Оставить отзыв", "Посмотреть поддержку"),
             listOf("⬅️ Обратно")
         )
     )
 
-    fun pixelMenu(): ReplyKeyboardMarkup = kb(
+    fun pixelMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Публичный холст"),
             listOf("⬅️ Обратно")

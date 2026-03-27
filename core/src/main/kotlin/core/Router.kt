@@ -37,13 +37,27 @@ class Router(
 
         val text = message.text?.trim()
 
-        if (text == "/start" || text == "/menu" || text?.startsWith("/start@") == true || text?.startsWith("/menu@") == true) {
+        if (text == "/start" || text?.startsWith("/start@") == true) {
             SessionStore.clear(uid)
-            bot.sendMessage(
+            val greetRes = bot.sendMessage(chat, "Привет! Это Chill Zone Bot — всё для досуга в одном месте.")
+            println("Chill Zone Bot: /start greeting sendMessage result=$greetRes")
+            val menuRes = bot.sendMessage(
                 chat,
-                "Привет! Это Chill Zone Bot — всё для досуга в одном месте.",
+                "Главное меню.",
                 replyMarkup = KeyboardFactory.mainMenu()
             )
+            println("Chill Zone Bot: /start menu sendMessage result=$menuRes")
+            return
+        }
+
+        if (text == "/menu" || text?.startsWith("/menu@") == true) {
+            SessionStore.clear(uid)
+            val menuRes = bot.sendMessage(
+                chat,
+                "Главное меню.",
+                replyMarkup = KeyboardFactory.mainMenu()
+            )
+            println("Chill Zone Bot: /menu sendMessage result=$menuRes")
             return
         }
 
