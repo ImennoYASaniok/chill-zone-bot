@@ -1,50 +1,83 @@
 package data
 
 object RecommendationRepository {
-    private val items = listOf(
-        RecommendationItem(1, RecommendationType.FILM, "Интерстеллар", listOf("sci-fi", "drama"), listOf("thoughtful", "epic"), 2014, "Фильм о выборе, времени и дальнем космосе."),
-        RecommendationItem(2, RecommendationType.FILM, "1+1", listOf("drama", "comedy"), listOf("uplifting", "warm"), 2011, "История дружбы и легкого, доброго юмора."),
-        RecommendationItem(3, RecommendationType.FILM, "Амели", listOf("romance", "comedy"), listOf("cozy", "light"), 2001, "Тёплая история для спокойного вечера."),
-        RecommendationItem(4, RecommendationType.SERIES, "Тед Лассо", listOf("comedy", "drama"), listOf("uplifting", "kind"), 2020, "Добрый сериал о людях, команде и характере."),
-        RecommendationItem(5, RecommendationType.SERIES, "Очень странные дела", listOf("mystery", "sci-fi"), listOf("tense", "nostalgic"), 2016, "Атмосферная история с тайной и ретро-настроением."),
-        RecommendationItem(6, RecommendationType.BOOK, "451° по Фаренгейту", listOf("classic", "dystopia"), listOf("thoughtful", "dark"), 1953, "Классика про свободу, знание и выбор."),
-        RecommendationItem(7, RecommendationType.BOOK, "Гарри Поттер и философский камень", listOf("fantasy", "adventure"), listOf("cozy", "magical"), 1997, "Лёгкое входное окно в волшебный мир."),
-        RecommendationItem(8, RecommendationType.GAME, "Stardew Valley", listOf("indie", "sim"), listOf("calm", "cozy"), 2016, "Спокойная игра для отдыха и маленьких побед."),
-        RecommendationItem(9, RecommendationType.GAME, "Hades", listOf("action", "roguelike"), listOf("energetic", "challenging"), 2020, "Быстрый экшен с сильной атмосферой и прогрессом."),
-        RecommendationItem(10, RecommendationType.FILM, "Достать ножи", listOf("mystery", "comedy"), listOf("smart", "fun"), 2019, "Легкий детектив с юмором и хорошим ритмом.")
-    )
+    fun all(): List<RecommendationItem> = emptyList()
 
-    fun all(): List<RecommendationItem> = items
-
-    fun search(type: RecommendationType, query: String): List<RecommendationItem> {
-        val q = query.trim().lowercase()
-        return items.filter {
-            it.type == type &&
-                (
-                    it.title.lowercase().contains(q) ||
-                    it.description.lowercase().contains(q) ||
-                    it.genres.any { g -> g.contains(q) } ||
-                    it.moods.any { m -> m.contains(q) }
-                )
+    fun searchMultiple(
+        type: RecommendationType,
+        query: String? = null,
+        limit: Int = 5,
+        offset: Int = 0
+    ): SearchResult {
+        val normalizedQuery = query?.trim().orEmpty()
+        val requestQuery = normalizedQuery.ifBlank { defaultQuery(type) }
+        val fetched = when (type) {
+            RecommendationType.FILM, RecommendationType.SERIES -> KinoApi.search(requestQuery, limit + offset + 20)
+            RecommendationType.BOOK -> BookApi.search(requestQuery, limit + offset + 20)
+            RecommendationType.GAME -> GameApi.search(requestQuery, limit + offset + 20)
         }
+
+        val filteredByType = when (type) {
+            RecommendationType.FILM, RecommendationType.SERIES -> fetched.filter { it.type == type }
+            else -> fetched
+        }
+
+        val ranked = rankByRelevance(filteredByType, normalizedQuery.ifBlank { requestQuery })
+        val page = ranked.drop(offset).take(limit)
+        val resultSource = ranked.firstOrNull()?.source ?: "external"
+
+        return SearchResult(
+            items = page,
+            totalCount = ranked.size,
+            hasMore = ranked.size > offset + limit,
+            source = resultSource
+        )
     }
 
     fun random(type: RecommendationType, query: String? = null): RecommendationItem? {
-        val list = if (query.isNullOrBlank()) {
-            items.filter { it.type == type }
-        } else {
-            val found = search(type, query)
-            if (found.isNotEmpty()) found else items.filter { it.type == type }
-        }
-        return list.randomOrNull()
+        return searchMultiple(type, query, limit = 20, offset = 0).items.randomOrNull()
     }
 
     fun summarize(item: RecommendationItem): String {
         return buildString {
             append(item.title).append(" (").append(item.year).append(")").append("\n")
-            append("Жанры: ").append(item.genres.joinToString(", ")).append("\n")
-            append("Настроение: ").append(item.moods.joinToString(", ")).append("\n\n")
-            append(item.description)
+            if (item.genres.isNotEmpty()) {
+                append("Жанры: ").append(item.genres.joinToString(", ")).append("\n")
+            }
+            if (item.moods.isNotEmpty()) {
+                append("Настроение: ").append(item.moods.joinToString(", ")).append("\n")
+            }
+            append("\n").append(item.description.ifBlank { "Описание отсутствует." })
+            append("\nИсточник: ").append(item.source)
         }
+    }
+
+    private fun defaultQuery(type: RecommendationType): String {
+        return when (type) {
+            RecommendationType.FILM -> "популярные фильмы"
+            RecommendationType.SERIES -> "популярные сериалы"
+            RecommendationType.BOOK -> "бестселлеры"
+            RecommendationType.GAME -> "popular games"
+        }
+    }
+
+    private fun rankByRelevance(items: List<RecommendationItem>, query: String): List<RecommendationItem> {
+        val words = query.lowercase().split(Regex("\\s+")).filter { it.isNotBlank() }
+        return items
+            .map { item ->
+                val title = item.title.lowercase()
+                val description = item.description.lowercase()
+                val genres = item.genres.joinToString(" ").lowercase()
+                val score = words.sumOf { word ->
+                    var s = 0.0
+                    if (title.contains(word)) s += 3.0
+                    if (description.contains(word)) s += 1.5
+                    if (genres.contains(word)) s += 1.0
+                    s
+                } + item.rating * 0.2
+                item.copy(relevanceScore = score)
+            }
+            .sortedByDescending { it.relevanceScore }
+            .distinctBy { "${it.type}_${it.id}_${it.title}_${it.year}" }
     }
 }

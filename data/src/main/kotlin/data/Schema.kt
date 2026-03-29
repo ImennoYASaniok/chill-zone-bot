@@ -12,6 +12,7 @@ object Schema {
                 hidden boolean not null default false,
                 show_media boolean not null default true,
                 rating integer not null default 0,
+                hide_username boolean not null default false,
                 created_at timestamptz not null default now(),
                 updated_at timestamptz not null default now()
             )
@@ -159,9 +160,27 @@ object Schema {
                 text text not null,
                 created_at timestamptz not null default now()
             )
+            """,
+            """
+            create table if not exists user_favorites (
+                user_id bigint not null references users(user_id) on delete cascade,
+                item_id integer not null,
+                item_type text not null,
+                title text not null,
+                year integer not null,
+                poster_url text,
+                source text not null,
+                created_at timestamptz not null default now(),
+                primary key (user_id, item_id, item_type)
+            )
             """
         )
 
         statements.forEach(Db::raw)
+        
+        // Миграция для добавления hide_username в существующие таблицы
+        Db.raw("""
+            alter table users add column if not exists hide_username boolean not null default false
+        """)
     }
 }

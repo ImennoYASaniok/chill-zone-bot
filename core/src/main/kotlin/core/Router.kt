@@ -39,25 +39,25 @@ class Router(
 
         if (text == "/start" || text?.startsWith("/start@") == true) {
             SessionStore.clear(uid)
-            val greetRes = bot.sendMessage(chat, "Привет! Это Chill Zone Bot — всё для досуга в одном месте.")
-            println("Chill Zone Bot: /start greeting sendMessage result=$greetRes")
-            val menuRes = bot.sendMessage(
-                chat,
-                "Главное меню.",
-                replyMarkup = KeyboardFactory.mainMenu()
-            )
-            println("Chill Zone Bot: /start menu sendMessage result=$menuRes")
+            val profile = users.profile(uid)
+            val welcomeMessage = "Привет! Это Chill Zone Bot — всё для досуга в одном месте."
+            ImageManager.sendMessageWithImage(bot, chat, welcomeMessage, profile) {
+                val menuMessage = "Главное меню."
+                ImageManager.sendMessageWithImage(bot, chat, menuMessage, profile) {
+                    // Отправляем клавиатуру отдельным сообщением
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.mainMenu())
+                }
+            }
             return
         }
 
         if (text == "/menu" || text?.startsWith("/menu@") == true) {
             SessionStore.clear(uid)
-            val menuRes = bot.sendMessage(
-                chat,
-                "Главное меню.",
-                replyMarkup = KeyboardFactory.mainMenu()
-            )
-            println("Chill Zone Bot: /menu sendMessage result=$menuRes")
+            val profile = users.profile(uid)
+            val menuMessage = "Главное меню."
+            ImageManager.sendMessageWithImage(bot, chat, menuMessage, profile) {
+                bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.mainMenu())
+            }
             return
         }
 
@@ -84,28 +84,110 @@ class Router(
         }
 
         when (text) {
+            "/debug_profile" -> {
+                val debugInfo = users.debugProfile(uid)
+                bot.sendMessage(chat, debugInfo)
+            }
+            "/debug_update" -> {
+                val testResult = users.debugUpdateName(uid, "DEBUG_TEST_" + System.currentTimeMillis())
+                bot.sendMessage(chat, testResult)
+                val checkResult = users.debugProfile(uid)
+                bot.sendMessage(chat, checkResult)
+            }
+            
+            "/debug_compare" -> {
+                val testName = "COMPARE_" + System.currentTimeMillis()
+                
+                // Тестируем обычный метод
+                users.updateName(uid, testName)
+                val normalResult = users.profile(uid)
+                
+                // Тестируем прямой метод
+                val directResult = users.debugProfile(uid)
+                
+                bot.sendMessage(chat, "СРАВНЕНИЕ:\nОбычный метод: ${normalResult?.displayName}\nПрямой метод: $directResult")
+            }
+            
             "👤 Профиль" -> showProfile(bot, chat, uid)
             "Изменить имя" -> {
                 session.action = PendingAction.EDIT_NAME
-                bot.sendMessage(chat, "Напиши новое имя.", replyMarkup = KeyboardFactory.profileMenu())
+                bot.sendMessage(chat, "Напиши новое имя.", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+            }
+            "Показать username [👁️]", "Скрыть username [🙈]" -> {
+                val hidden = users.toggleHideUsername(uid)
+                val resultMessage = if (hidden) "Username скрыт." else "Username снова видим."
+                bot.sendMessage(chat, resultMessage)
+                showProfile(bot, chat, uid)
             }
             "Изменить био" -> {
                 session.action = PendingAction.EDIT_BIO
-                bot.sendMessage(chat, "Напиши новое описание профиля.", replyMarkup = KeyboardFactory.profileMenu())
+                bot.sendMessage(chat, "Напиши новое описание профиля.", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
             }
-            "Скрыть/показать профиль" -> {
+            "Показать профиль [👁️]", "Скрыть профиль [🙈]" -> {
                 val hidden = users.toggleHidden(uid)
-                bot.sendMessage(chat, if (hidden) "Профиль скрыт." else "Профиль снова видим.", replyMarkup = KeyboardFactory.profileMenu())
+                val resultMessage = if (hidden) "Профиль скрыт." else "Профиль снова видим."
+                bot.sendMessage(chat, resultMessage)
+                showProfile(bot, chat, uid)
             }
-            "Переключить картинки" -> {
+            "Включить картинки [✅]", "Выключить картинки [❌]" -> {
                 val enabled = users.toggleMedia(uid)
-                bot.sendMessage(chat, if (enabled) "Картинки включены." else "Картинки выключены.", replyMarkup = KeyboardFactory.settingsMenu())
+                val profile = users.profile(uid)
+                val resultMessage = if (enabled) "Картинки включены." else "Картинки выключены."
+                bot.sendMessage(chat, resultMessage)
+                val settingsMessage = "Настройки."
+                ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.settingsMenu(profile))
+                }
             }
-            "⚙️ Настройки" -> bot.sendMessage(chat, "Настройки.", replyMarkup = KeyboardFactory.settingsMenu())
-            "🗂 Подборки" -> bot.sendMessage(chat, "Выбери тип подборки.", replyMarkup = KeyboardFactory.collectionsMenu())
-            "🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра", "По запросу" -> startCollectionFlow(bot, chat, uid, text)
-            "😂 Мемы" -> {
-                bot.sendMessage(chat, "Раздел мемов.", replyMarkup = KeyboardFactory.memesMenu())
+            "⚙️ Настройки" -> {
+                val profile = users.profile(uid)
+                val settingsMessage = "Настройки."
+                ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.settingsMenu(profile))
+                }
+            }
+            "🗂 Подборки" -> {
+                val profile = users.profile(uid)
+                val collectionsMessage = "Выбери тип подборки."
+                ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
+                    bot.sendMessage(chat, "Выберите тип:", replyMarkup = KeyboardFactory.collectionsMenu())
+                }
+            }
+            "🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра" -> startCollectionFlow(bot, chat, uid, text)
+            "По запросу" -> {
+                session.action = PendingAction.COLLECTION_QUERY
+                if (session.data["collection_type"].isNullOrBlank()) {
+                    session.data["collection_type"] = RecommendationType.FILM.name
+                }
+                bot.sendMessage(chat, "Напиши запрос для поиска.", replyMarkup = KeyboardFactory.searchResultsMenu())
+            }
+            "🔄 Другие варианты", "➡️ Ещё" -> {
+                val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) } ?: RecommendationType.FILM
+                val query = session.data["collection_query"]
+                val currentOffset = session.data["collection_offset"]?.toIntOrNull() ?: 0
+                val nextOffset = currentOffset + 5
+                val result = RecommendationRepository.searchMultiple(type, query, 5, offset = nextOffset)
+                
+                if (result.items.isEmpty()) {
+                    bot.sendMessage(chat, "Других вариантов не нашёл.", replyMarkup = KeyboardFactory.searchResultsMenu(false))
+                } else {
+                    session.data["collection_offset"] = nextOffset.toString()
+                    val itemsText = result.items.mapIndexed { index, item ->
+                        "${nextOffset + index + 1}. ${item.title} (${item.year})"
+                    }.joinToString("\n")
+                    bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenu(result.hasMore))
+                }
+            }
+            "💾 Сохранить" -> {
+                // TODO: Реализовать сохранение в избранное
+                bot.sendMessage(chat, "Функция сохранения в избранное будет доступна в следующем обновлении.", replyMarkup = KeyboardFactory.searchResultsMenu(false))
+            }
+            "�� Мемы" -> {
+                val profile = users.profile(uid)
+                val memesMessage = "Раздел мемов."
+                ImageManager.sendMessageWithImage(bot, chat, memesMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.memesMenu())
+                }
                 showMeme(bot, chat, uid)
             }
             "Следующий мем" -> showMeme(bot, chat, uid)
@@ -115,53 +197,120 @@ class Router(
             "Мои избранные" -> showFavorites(bot, chat, uid)
             "Добавить мем" -> {
                 session.action = PendingAction.ADD_MEME
-                bot.sendMessage(chat, "Отправь фото мема одним сообщением.", replyMarkup = KeyboardFactory.memesMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Отправь фото мема одним сообщением.", profile) {
+                    bot.sendMessage(chat, "Ожидаю фото:", replyMarkup = KeyboardFactory.memesMenu())
+                }
             }
-            "🔮 Предсказания" -> bot.sendMessage(chat, "Раздел предсказаний.", replyMarkup = KeyboardFactory.predictionsMenu())
+            "🔮 Предсказания" -> {
+                val profile = users.profile(uid)
+                val predictionsMessage = "Раздел предсказаний."
+                ImageManager.sendMessageWithImage(bot, chat, predictionsMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.predictionsMenu())
+                }
+            }
             "Получить предсказание" -> givePrediction(bot, chat, uid)
             "Мои предсказания" -> showCollectedPredictions(bot, chat, uid)
             "Добавить предсказание" -> {
                 session.action = PendingAction.ADD_PREDICTION_TEXT
-                bot.sendMessage(chat, "Напиши текст предсказания.", replyMarkup = KeyboardFactory.predictionsMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Напиши текст предсказания.", profile) {
+                    bot.sendMessage(chat, "Ожидаю текст:", replyMarkup = KeyboardFactory.predictionsMenu())
+                }
             }
             "Поиск предсказаний" -> {
                 session.action = PendingAction.SEARCH_PREDICTIONS
-                bot.sendMessage(chat, "Напиши часть текста или редкость.", replyMarkup = KeyboardFactory.predictionsMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Напиши часть текста или редкость.", profile) {
+                    bot.sendMessage(chat, "Ожидаю запрос:", replyMarkup = KeyboardFactory.predictionsMenu())
+                }
             }
-            "📝 Тесты" -> bot.sendMessage(chat, "Раздел тестов.", replyMarkup = KeyboardFactory.testsMenu())
+            "📝 Тесты" -> {
+                val profile = users.profile(uid)
+                val testsMessage = "Раздел тестов."
+                ImageManager.sendMessageWithImage(bot, chat, testsMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.testsMenu())
+                }
+            }
             "Случайный тест" -> startRandomTest(bot, chat, uid)
             "Создать тест" -> {
                 session.action = PendingAction.CREATE_TEST_TITLE
                 session.data.clear()
-                bot.sendMessage(chat, "Придумай название теста.", replyMarkup = KeyboardFactory.testsMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Придумай название теста.", profile) {
+                    bot.sendMessage(chat, "Ожидаю название:", replyMarkup = KeyboardFactory.testsMenu())
+                }
             }
             "Мои тесты" -> showUserTests(bot, chat)
-            "📅 События" -> bot.sendMessage(chat, "Раздел событий.", replyMarkup = KeyboardFactory.eventsMenu())
+            "📅 События" -> {
+                val profile = users.profile(uid)
+                val eventsMessage = "Раздел событий."
+                ImageManager.sendMessageWithImage(bot, chat, eventsMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.eventsMenu())
+                }
+            }
             "Ближайшие события" -> showEvents(bot, chat)
             "Создать событие" -> {
                 session.action = PendingAction.CREATE_EVENT_TITLE
                 session.data.clear()
-                bot.sendMessage(chat, "Напиши название события.", replyMarkup = KeyboardFactory.eventsMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Напиши название события.", profile) {
+                    bot.sendMessage(chat, "Ожидаю название:", replyMarkup = KeyboardFactory.eventsMenu())
+                }
             }
             "Мои события" -> showMineEvents(bot, chat, uid)
-            "🎮 Мини-игры" -> bot.sendMessage(chat, "Мини-игры.", replyMarkup = KeyboardFactory.gamesMenu())
+            "🎮 Мини-игры" -> {
+                val profile = users.profile(uid)
+                val gamesMessage = "Мини-игры."
+                ImageManager.sendMessageWithImage(bot, chat, gamesMessage, profile) {
+                    bot.sendMessage(chat, "Выберите игру:", replyMarkup = KeyboardFactory.gamesMenu())
+                }
+            }
             "⚽ Гол" -> playSimpleGame(bot, chat, uid, "football")
             "🏀 В кольцо" -> playSimpleGame(bot, chat, uid, "basketball")
             "🎡 Колесо фортуны" -> playWheel(bot, chat, uid)
             "✂️ Камень-ножницы-бумага" -> {
                 session.action = PendingAction.RPS_CHOICE
-                bot.sendMessage(chat, "Выбери ход: камень, ножницы или бумага.", replyMarkup = KeyboardFactory.gamesMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Выбери ход: камень, ножницы или бумага.", profile) {
+                    bot.sendMessage(chat, "Ваш ход:", replyMarkup = KeyboardFactory.gamesMenu())
+                }
             }
             "📊 Моя статистика" -> showGameStats(bot, chat, uid)
             "🏆 Топ игроков" -> showTopGames(bot, chat)
-            "🖼 Пиксель-арт" -> bot.sendMessage(chat, "Пиксель-арт пока доступен как отдельный веб-модуль, но раздел уже предусмотрен в меню.", replyMarkup = KeyboardFactory.pixelMenu())
-            "Публичный холст" -> bot.sendMessage(chat, "Публичный холст можно подключить как Web App поверх этого меню.", replyMarkup = KeyboardFactory.pixelMenu())
-            "💬 Обратная связь" -> bot.sendMessage(chat, "Раздел поддержки.", replyMarkup = KeyboardFactory.feedbackMenu())
+            "🖼 Пиксель-арт" -> {
+                val profile = users.profile(uid)
+                val pixelMessage = "Пиксель-арт пока доступен как отдельный веб-модуль, но раздел уже предусмотрен в меню."
+                ImageManager.sendMessageWithImage(bot, chat, pixelMessage, profile) {
+                    bot.sendMessage(chat, "Доступные опции:", replyMarkup = KeyboardFactory.pixelMenu())
+                }
+            }
+            "Публичный холст" -> {
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Публичный холст можно подключить как Web App поверх этого меню.", profile) {
+                    bot.sendMessage(chat, "Опции холста:", replyMarkup = KeyboardFactory.pixelMenu())
+                }
+            }
+            "💬 Обратная связь" -> {
+                val profile = users.profile(uid)
+                val feedbackMessage = "Раздел поддержки."
+                ImageManager.sendMessageWithImage(bot, chat, feedbackMessage, profile) {
+                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.feedbackMenu())
+                }
+            }
             "Оставить отзыв" -> {
                 session.action = PendingAction.FEEDBACK_TEXT
-                bot.sendMessage(chat, "Напиши отзыв одним сообщением.", replyMarkup = KeyboardFactory.feedbackMenu())
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Напиши отзыв одним сообщением.", profile) {
+                    bot.sendMessage(chat, "Ожидаю отзыв:", replyMarkup = KeyboardFactory.feedbackMenu())
+                }
             }
-            "Посмотреть поддержку" -> bot.sendMessage(chat, "Если что-то сломалось, просто напиши сюда отзыв — он сохранится в PostgreSQL.", replyMarkup = KeyboardFactory.feedbackMenu())
+            "Посмотреть поддержку" -> {
+                val profile = users.profile(uid)
+                ImageManager.sendMessageWithImage(bot, chat, "Если что-то сломалось, просто напиши сюда отзыв — он сохранится в PostgreSQL.", profile) {
+                    bot.sendMessage(chat, "Поддержка:", replyMarkup = KeyboardFactory.feedbackMenu())
+                }
+            }
             else -> bot.sendMessage(chat, "Не понял команду. Открой меню через /start.", replyMarkup = KeyboardFactory.mainMenu())
         }
     }
@@ -171,14 +320,18 @@ class Router(
             PendingAction.EDIT_NAME -> {
                 users.updateName(uid, text)
                 session.action = PendingAction.NONE
-                bot.sendMessage(chat, "Имя обновлено.", replyMarkup = KeyboardFactory.profileMenu())
+                session.data.clear()
+                bot.sendMessage(chat, "Имя обновлено.")
+                showProfile(bot, chat, uid)
                 return true
             }
 
             PendingAction.EDIT_BIO -> {
                 users.updateBio(uid, text)
                 session.action = PendingAction.NONE
-                bot.sendMessage(chat, "Описание обновлено.", replyMarkup = KeyboardFactory.profileMenu())
+                session.data.clear()
+                bot.sendMessage(chat, "Описание обновлено.")
+                showProfile(bot, chat, uid)
                 return true
             }
 
@@ -337,14 +490,37 @@ class Router(
 
             PendingAction.COLLECTION_QUERY -> {
                 val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) } ?: RecommendationType.FILM
-                val item = RecommendationRepository.random(type, text)
+                val query = text.trim()
+                session.data["collection_query"] = query
+                session.data["collection_offset"] = "0"
+                val result = RecommendationRepository.searchMultiple(type, query, 5, offset = 0)
                 session.action = PendingAction.NONE
-                session.data.clear()
-                if (item == null) {
-                    bot.sendMessage(chat, "Ничего не нашёл.", replyMarkup = KeyboardFactory.collectionsMenu())
+                
+                // Формируем сообщение с результатами
+                val message = if (result.items.isEmpty()) {
+                    "Ничего не нашёл. Попробуйте другой запрос."
                 } else {
-                    bot.sendMessage(chat, RecommendationRepository.summarize(item), replyMarkup = KeyboardFactory.collectionsMenu())
+                    val header = when (type) {
+                        RecommendationType.FILM -> "🎬 Найденные фильмы:"
+                        RecommendationType.SERIES -> "📺 Найденные сериалы:"
+                        RecommendationType.BOOK -> "📚 Найденные книги:"
+                        RecommendationType.GAME -> "🎮 Найденные игры:"
+                    }
+                    
+                    val itemsText = result.items.mapIndexed { index, item ->
+                        "${index + 1}. ${item.title} (${item.year})\n${item.description}"
+                    }.joinToString("\n")
+                    
+                    val footer = if (result.hasMore) {
+                        "\n\nПоказано ${result.items.size} из ${result.totalCount}. Нажми '🔄 Другие варианты'."
+                    } else {
+                        "\n\nНайдено ${result.items.size} из ${result.totalCount}."
+                    }
+                    
+                    "${header}\n\n${itemsText}${footer}"
                 }
+                
+                bot.sendMessage(chat, message, replyMarkup = KeyboardFactory.searchResultsMenu(result.hasMore))
                 return true
             }
 
@@ -374,7 +550,13 @@ class Router(
     }
 
     private fun showProfile(bot: Bot, chat: ChatId, uid: Long) {
-        val profile = users.profile(uid) ?: return
+        println("DEBUG: Вызов showProfile для пользователя $uid")
+        val profile = users.profile(uid)
+        println("DEBUG: Получен профиль в showProfile: displayName='${profile?.displayName}'")
+        if (profile == null) {
+            println("ERROR: Профиль пользователя $uid не найден")
+            return
+        }
         val memeCount = memes.total()
         val predCount = predictions.total()
         val testCount = tests.total()
@@ -384,19 +566,23 @@ class Router(
             chat,
             buildString {
                 append("👤 Профиль\n\n")
-                append("Имя: ").append(profile.displayName.ifBlank { profile.username }).append("\n")
-                append("Username: ").append(profile.username.ifBlank { "не указан" }).append("\n")
+                append("Username: ")
+                if (profile.hideUsername || profile.username.isBlank()) {
+                    append("скрыт\n")
+                } else {
+                    append("@").append(profile.username).append("\n")
+                }
+                append("Имя: ").append(profile.displayName.ifBlank { "не указано" }).append("\n")
                 append("Рейтинг аккаунта: ").append(profile.rating).append("\n")
                 append("Био: ").append(profile.bio.ifBlank { "не заполнено" }).append("\n")
-                append("Профиль: ").append(if (profile.hidden) "скрыт" else "видим").append("\n")
-                append("Картинки в сообщениях: ").append(formatBool(profile.showMedia)).append("\n\n")
+                append("Профиль: ").append(if (profile.hidden) "скрыт" else "видим").append("\n\n")
                 append("Мемов в базе: ").append(memeCount).append("\n")
                 append("Предсказаний: ").append(predCount).append("\n")
                 append("Тестов: ").append(testCount).append("\n")
                 append("Событий создано: ").append(eventCount).append("\n")
                 append("Игровой рейтинг: ").append(gameStats.rating).append(" (побед ").append(gameStats.wins).append(", streak ").append(gameStats.streak).append(")")
             },
-            replyMarkup = KeyboardFactory.profileMenu()
+            replyMarkup = KeyboardFactory.profileMenu(profile)
         )
     }
 
@@ -483,7 +669,7 @@ class Router(
         session.data["test_id"] = test.id.toString()
         session.data["index"] = "0"
         session.data["correct"] = "0"
-        sendTestQuestion(bot, chat, uid, runId)
+        sendTestQuestion(bot, chat, runId)
     }
 
     private fun handleTestAnswer(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session) {
@@ -515,10 +701,10 @@ class Router(
 
         session.data["index"] = (index + 1).toString()
         session.data["correct"] = newCorrect.toString()
-        sendTestQuestion(bot, chat, uid, runId)
+        sendTestQuestion(bot, chat, runId)
     }
 
-    private fun sendTestQuestion(bot: Bot, chat: ChatId, uid: Long, runId: Long) {
+    private fun sendTestQuestion(bot: Bot, chat: ChatId, runId: Long) {
         val runInfo = tests.getRun(runId) ?: return
         val testId = runInfo.second
         val index = runInfo.third
@@ -606,7 +792,9 @@ class Router(
             "📚 Книга" -> RecommendationType.BOOK.name
             else -> RecommendationType.GAME.name
         }
-        bot.sendMessage(chat, "Напиши запрос, настроение или жанр.", replyMarkup = KeyboardFactory.collectionsMenu())
+        session.data.remove("collection_query")
+        session.data["collection_offset"] = "0"
+        bot.sendMessage(chat, "Напиши запрос, настроение или жанр.", replyMarkup = KeyboardFactory.searchResultsMenu())
     }
 
     private fun playSimpleGame(bot: Bot, chat: ChatId, uid: Long, mode: String) {

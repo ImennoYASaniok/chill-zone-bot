@@ -2,6 +2,8 @@ package core
 
 import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
+import data.UserProfile
+import data.UserRepository
 
 private fun kb(rows: List<List<String>>): KeyboardReplyMarkup {
     return KeyboardReplyMarkup(
@@ -22,27 +24,38 @@ object KeyboardFactory {
         )
     )
 
-    fun profileMenu(): KeyboardReplyMarkup = kb(
-        listOf(
-            listOf("Изменить имя", "Изменить био"),
-            listOf("Скрыть/показать профиль", "Переключить картинки"),
-            listOf("⬅️ Обратно")
+    fun profileMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
+        val profileHidden = userProfile?.hidden ?: false
+        val usernameHidden = userProfile?.hideUsername ?: false
+        
+        return kb(
+            listOf(
+                listOf("Изменить имя", if (usernameHidden) "Показать username [👁️]" else "Скрыть username [🙈]"),
+                listOf("Изменить био"),
+                listOf(
+                    if (profileHidden) "Показать профиль [👁️]" else "Скрыть профиль [🙈]"
+                ),
+                listOf("⬅️ Обратно")
+            )
         )
-    )
+    }
 
-    fun settingsMenu(): KeyboardReplyMarkup = kb(
-        listOf(
-            listOf("Переключить картинки"),
-            listOf("Сбросить сессию"),
-            listOf("⬅️ Обратно")
+    fun settingsMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
+        val mediaEnabled = userProfile?.showMedia ?: true
+        
+        return kb(
+            listOf(
+                listOf(if (mediaEnabled) "Выключить картинки [❌]" else "Включить картинки [✅]"),
+                listOf("⬅️ Обратно")
+            )
         )
-    )
+    }
 
     fun memesMenu(): KeyboardReplyMarkup = kb(
         listOf(
             listOf("Следующий мем", "Добавить мем"),
             listOf("👍", "👎"),
-            listOf("⭐ Избранное", "Мои избранные"),
+            listOf("💾 Избр. мем", "Мои избр. мемы"),
             listOf("⬅️ Обратно")
         )
     )
@@ -105,10 +118,16 @@ object KeyboardFactory {
 
     fun collectionsMenu(): KeyboardReplyMarkup = kb(
         listOf(
-            listOf("🎬 Фильм", "📺 Сериал"),
-            listOf("📚 Книга", "🎮 Игра"),
-            listOf("По запросу"),
+            listOf("🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра"),
+            listOf("По запросу", "⭐ Избранное"),
             listOf("⬅️ Обратно")
+        )
+    )
+
+    fun searchResultsMenu(hasMore: Boolean = false): KeyboardReplyMarkup = kb(
+        listOf(
+            listOf("🔄 Другие варианты", "💾 Сохранить"),
+            if (hasMore) listOf("➡️ Ещё", "⬅️ Обратно") else listOf("⬅️ Обратно")
         )
     )
 

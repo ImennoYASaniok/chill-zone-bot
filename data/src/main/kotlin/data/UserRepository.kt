@@ -1,6 +1,14 @@
 package data
 
+import io.github.cdimascio.dotenv.dotenv
+import java.sql.DriverManager
+
 class UserRepository {
+    private val env = dotenv()
+    private val url = env["DATABASE_URL"] ?: error("DATABASE_URL is not set")
+    private val user = env["DATABASE_USER"] ?: ""
+    private val pass = env["DATABASE_PASSWORD"] ?: ""
+    
     fun ensure(userId: Long, username: String, displayName: String) {
         Db.execute(
             """
@@ -8,7 +16,6 @@ class UserRepository {
             values (?, ?, ?)
             on conflict (user_id)
             do update set username = excluded.username,
-                          display_name = excluded.display_name,
                           updated_at = now()
             """
         ) { stmt ->
@@ -28,32 +35,111 @@ class UserRepository {
         }
     }
 
-    fun profile(userId: Long): UserProfile? {
-        return Db.single(
-            """
-            select user_id, username, display_name, bio, hidden, show_media, rating
-            from users
-            where user_id = ?
-            """,
-            bind = { stmt -> stmt.setLong(1, userId) },
-            map = { rs ->
-                UserProfile(
-                    userId = rs.getLong("user_id"),
-                    username = rs.getString("username") ?: "",
-                    displayName = rs.getString("display_name") ?: "",
-                    bio = rs.getString("bio") ?: "",
-                    hidden = rs.getBoolean("hidden"),
-                    showMedia = rs.getBoolean("show_media"),
-                    rating = rs.getInt("rating")
-                )
+    // Временный метод для отладки - прямая проверка БД
+    fun debugProfile(userId: Long): String {
+        return try {
+            val conn = DriverManager.getConnection(url, user, pass)
+            val stmt = conn.prepareStatement("SELECT user_id, display_name, username, updated_at FROM users WHERE user_id = ?")
+            stmt.setLong(1, userId)
+            val rs = stmt.executeQuery()
+            
+            val result = if (rs.next()) {
+                "DB_DIRECT: user_id=${rs.getLong("user_id")}, display_name='${rs.getString("display_name")}', username='${rs.getString("username")}', updated_at=${rs.getTimestamp("updated_at")}"
+            } else {
+                "DB_DIRECT: Пользователь $userId не найден"
             }
-        )
+            
+            rs.close()
+            stmt.close()
+            conn.close()
+            result
+        } catch (e: Exception) {
+            "DB_DIRECT ERROR: ${e.message}"
+        }
+    }
+
+    fun profile(userId: Long): UserProfile? {
+        println("DEBUG: Запрос профиля для пользователя $userId")
+        return try {
+            Db.single(
+                """
+                select user_id, username, display_name, bio, hidden, show_media, rating, coalesce(hide_username, false) as hide_username
+                from users
+                where user_id = ?
+                """,
+                bind = { stmt -> stmt.setLong(1, userId) },
+                map = { rs ->
+                    val profile = UserProfile(
+                        userId = rs.getLong("user_id"),
+                        username = rs.getString("username") ?: "",
+                        displayName = rs.getString("display_name") ?: "",
+                        bio = rs.getString("bio") ?: "",
+                        hidden = rs.getBoolean("hidden"),
+                        showMedia = rs.getBoolean("show_media"),
+                        rating = rs.getInt("rating"),
+                        hideUsername = rs.getBoolean("hide_username")
+                    )
+                    println("DEBUG: Получен профиль для пользователя $userId: displayName='${profile.displayName}', username='${profile.username}'")
+                    profile
+                }
+            )
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при получении профиля пользователя $userId: ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // Временный метод для отладки - прямое обновление БД
+    fun debugUpdateName(userId: Long, name: String): String {
+        return try {
+            val conn = DriverManager.getConnection(url, user, pass)
+            conn.autoCommit = true // Принудительный коммит
+            val stmt = conn.prepareStatement("UPDATE users SET display_name = ?, updated_at = now() WHERE user_id = ?")
+            stmt.setString(1, name)
+            stmt.setLong(2, userId)
+            val rowsAffected = stmt.executeUpdate()
+            
+            val result = "DB_UPDATE_DIRECT: rowsAffected=$rowsAffected, newName='$name'"
+            
+            stmt.close()
+            conn.close()
+            result
+        } catch (e: Exception) {
+            "DB_UPDATE_DIRECT ERROR: ${e.message}"
+        }
     }
 
     fun updateName(userId: Long, name: String) {
-        Db.execute("update users set display_name = ?, updated_at = now() where user_id = ?") { stmt ->
-            stmt.setString(1, name)
-            stmt.setLong(2, userId)
+        println("DEBUG: Обновление имени для пользователя $userId на '$name'")
+        
+        // Сначала проверим текущее состояние
+        val beforeProfile = debugProfile(userId)
+        println("DEBUG: Состояние ДО обновления: $beforeProfile")
+        
+        try {
+            Db.execute("update users set display_name = ?, updated_at = now() where user_id = ?") { stmt ->
+                stmt.setString(1, name)
+                stmt.setLong(2, userId)
+            }
+            println("DEBUG: SQL запрос на обновление имени выполнен успешно")
+            
+            // Проверяем сразу после обновления через прямой метод
+            val afterDirect = debugProfile(userId)
+            println("DEBUG: Состояние ПОСЛЕ обновления (прямой метод): $afterDirect")
+            
+            // Проверяем через обычный метод
+            val updatedProfile = profile(userId)
+            println("DEBUG: Состояние ПОСЛЕ обновления (обычный метод): displayName='${updatedProfile?.displayName}'")
+            
+            // Дополнительная проверка - ждем немного и проверяем еще раз
+            Thread.sleep(100)
+            val delayedCheck = debugProfile(userId)
+            println("DEBUG: Состояние через 100мс: $delayedCheck")
+            
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при обновлении имени: ${e.message}")
+            e.printStackTrace()
         }
     }
 
@@ -87,7 +173,11 @@ class UserRepository {
         }
     }
 
-    fun allCount(): Int {
-        return Db.single("select count(*) as c from users", map = { it.getInt("c") }) ?: 0
+    fun toggleHideUsername(userId: Long): Boolean {
+        return Db.single(
+            "update users set hide_username = not coalesce(hide_username, false), updated_at = now() where user_id = ? returning coalesce(hide_username, false)",
+            bind = { stmt -> stmt.setLong(1, userId) },
+            map = { rs -> rs.getBoolean(1) }
+        ) ?: false
     }
 }

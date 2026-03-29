@@ -4,6 +4,7 @@ import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.dispatcher.telegramError
+import com.github.kotlintelegrambot.entities.ChatId
 import core.Entry
 import data.Schema
 import data.SeedData
@@ -19,6 +20,9 @@ fun main() {
     val env = dotenv()
     val token = env["BOT_TOKEN"] ?: env["TELEGRAM_TOKEN"] ?: error("BOT_TOKEN is not set")
     val router = Entry.buildRouter()
+    var lastPollingErrorKey = ""
+    var lastPollingErrorAt = 0L
+    var suppressedPollingErrors = 0
 
     lateinit var telegramBot: com.github.kotlintelegrambot.Bot
 
@@ -35,21 +39,38 @@ fun main() {
 
                 println("Chill Zone Bot: incoming message chat=${message.chat.id} user=${message.from?.id} payload=$preview")
 
-                runCatching {
+                try {
                     router.handle(telegramBot, message)
-                }.onFailure { e ->
-                    e.printStackTrace()
+                } catch (e: java.lang.Exception) {
+                    println("Chill Zone Bot: message handling error")
                     telegramBot.sendMessage(
-                        chatId = com.github.kotlintelegrambot.entities.ChatId.fromId(message.chat.id),
+                        chatId = ChatId.fromId(message.chat.id),
                         text = "Внутренняя ошибка при обработке сообщения."
                     )
                 }
             }
 
             telegramError {
-                System.err.println(
-                    "Chill Zone Bot: Telegram polling error [${this.error.getType()}] ${this.error.getErrorMessage()}"
-                )
+                val type = this.error.getType().name
+                val message = this.error.getErrorMessage()
+                val key = "$type|$message"
+                val now = System.currentTimeMillis()
+                val sameAsLast = key == lastPollingErrorKey
+                val tooFrequent = now - lastPollingErrorAt < 15000
+                if (sameAsLast && tooFrequent) {
+                    suppressedPollingErrors += 1
+                    return@telegramError
+                }
+                if (suppressedPollingErrors > 0) {
+                    println("Chill Zone Bot: suppressed polling errors x$suppressedPollingErrors")
+                    suppressedPollingErrors = 0
+                }
+                lastPollingErrorKey = key
+                lastPollingErrorAt = now
+                println("Chill Zone Bot: Telegram polling error [$type] $message")
+                if (type == "RETRIEVE_UPDATES") {
+                    println("Chill Zone Bot: проверьте доступ контейнера к api.telegram.org, корректность BOT_TOKEN и отсутствие блокировок сети/VPN/DNS.")
+                }
             }
         }
     }

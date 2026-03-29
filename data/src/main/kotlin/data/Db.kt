@@ -14,7 +14,9 @@ object Db {
     private val pass = env["DATABASE_PASSWORD"] ?: ""
 
     val connection: Connection by lazy {
-        DriverManager.getConnection(url, user, pass)
+        val conn = DriverManager.getConnection(url, user, pass)
+        println("DEBUG: Подключение к БД установлено, autoCommit=${conn.autoCommit}")
+        conn
     }
 
     fun raw(sql: String) {
@@ -22,9 +24,18 @@ object Db {
     }
 
     fun execute(sql: String, bind: (PreparedStatement) -> Unit = {}): Int {
-        connection.prepareStatement(sql).use { stmt ->
-            bind(stmt)
-            return stmt.executeUpdate()
+        println("DEBUG: Выполнение SQL: $sql")
+        return try {
+            connection.prepareStatement(sql).use { stmt ->
+                bind(stmt)
+                val result = stmt.executeUpdate()
+                println("DEBUG: SQL выполнен успешно, затронуто строк: $result")
+                result
+            }
+        } catch (e: Exception) {
+            println("ERROR: Ошибка выполнения SQL '$sql': ${e.message}")
+            e.printStackTrace()
+            throw e
         }
     }
 
