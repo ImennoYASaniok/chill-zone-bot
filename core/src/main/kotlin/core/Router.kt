@@ -173,7 +173,12 @@ class Router(
                 } else {
                     session.data["collection_offset"] = nextOffset.toString()
                     val itemsText = result.items.mapIndexed { index, item ->
-                        "${nextOffset + index + 1}. ${item.title} (${item.year})"
+                        val itemUrl = item.metadata["url"] as? String
+                        if (itemUrl.isNullOrBlank()) {
+                            "${nextOffset + index + 1}. ${item.title} (${item.year})"
+                        } else {
+                            "${nextOffset + index + 1}. ${item.title} (${item.year})\n$itemUrl"
+                        }
                     }.joinToString("\n")
                     bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenu(result.hasMore))
                 }
@@ -508,7 +513,12 @@ class Router(
                     }
                     
                     val itemsText = result.items.mapIndexed { index, item ->
-                        "${index + 1}. ${item.title} (${item.year})\n${item.description}"
+                        val itemUrl = item.metadata["url"] as? String
+                        if (itemUrl.isNullOrBlank()) {
+                            "${index + 1}. ${item.title} (${item.year})\n${item.description}"
+                        } else {
+                            "${index + 1}. ${item.title} (${item.year})\n${item.description}\n$itemUrl"
+                        }
                     }.joinToString("\n")
                     
                     val footer = if (result.hasMore) {

@@ -39,6 +39,7 @@ object RecommendationRepository {
     }
 
     fun summarize(item: RecommendationItem): String {
+        val sourceUrl = item.metadata["url"] as? String
         return buildString {
             append(item.title).append(" (").append(item.year).append(")").append("\n")
             if (item.genres.isNotEmpty()) {
@@ -49,6 +50,9 @@ object RecommendationRepository {
             }
             append("\n").append(item.description.ifBlank { "Описание отсутствует." })
             append("\nИсточник: ").append(item.source)
+            if (!sourceUrl.isNullOrBlank()) {
+                append("\nСсылка: ").append(sourceUrl)
+            }
         }
     }
 
