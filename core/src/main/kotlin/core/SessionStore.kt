@@ -21,12 +21,16 @@ enum class PendingAction {
     CREATE_EVENT_MAX,
     CREATE_EVENT_KIND,
     COLLECTION_QUERY,
-    RPS_CHOICE
+    COLLECTION_RESULTS,  // Результаты поиска
+    SEARCH_TYPE_SELECT,  // Выбор типа поиска (фильмы, сериалы и т.д.)
+    RPS_CHOICE,
+    VIEW_FAVORITES  // Новый action для просмотра избранных с навигацией
 }
 
 data class Session(
     var action: PendingAction = PendingAction.NONE,
-    val data: MutableMap<String, String> = mutableMapOf()
+    val data: MutableMap<String, String> = mutableMapOf(),
+    var context: FSMContext = FSMContext.MEMES  // По умолчанию контекст мемов
 )
 
 object SessionStore {

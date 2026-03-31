@@ -3,6 +3,7 @@ package app
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.telegramError
 import com.github.kotlintelegrambot.entities.ChatId
 import core.Entry
@@ -47,6 +48,18 @@ fun main() {
                         chatId = ChatId.fromId(message.chat.id),
                         text = "Внутренняя ошибка при обработке сообщения."
                     )
+                }
+            }
+            
+            callbackQuery {
+                val callbackQuery = this.callbackQuery
+                println("Chill Zone Bot: incoming callback chat=${callbackQuery.message?.chat?.id} user=${callbackQuery.from.id} data=${callbackQuery.data}")
+                
+                try {
+                    router.handleCallback(telegramBot, callbackQuery)
+                } catch (e: java.lang.Exception) {
+                    println("Chill Zone Bot: callback handling error: ${e.message}")
+                    telegramBot.answerCallbackQuery(callbackQuery.id, "Ошибка при обработке запроса.")
                 }
             }
 
