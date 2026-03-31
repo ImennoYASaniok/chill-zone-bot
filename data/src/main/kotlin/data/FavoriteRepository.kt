@@ -7,15 +7,17 @@ data class FavoriteItem(
     val title: String,
     val year: Int,
     val posterUrl: String?,
-    val source: String
+    val source: String,
+    val url: String?
 )
 
 object FavoriteRepository {
     fun add(userId: Long, item: RecommendationItem) {
+        val url = item.metadata["url"] as? String
         Db.execute(
             """
-            insert into user_favorites(user_id, item_id, item_type, title, year, poster_url, source)
-            values (?, ?, ?, ?, ?, ?, ?)
+            insert into user_favorites(user_id, item_id, item_type, title, year, poster_url, source, url)
+            values (?, ?, ?, ?, ?, ?, ?, ?)
             on conflict (user_id, item_id, item_type) do nothing
             """
         ) { stmt ->
@@ -26,6 +28,7 @@ object FavoriteRepository {
             stmt.setInt(5, item.year)
             stmt.setString(6, item.posterUrl)
             stmt.setString(7, item.source)
+            stmt.setString(8, url)
         }
     }
 
@@ -39,7 +42,7 @@ object FavoriteRepository {
 
     fun list(userId: Long): List<FavoriteItem> {
         return Db.query(
-            "select item_id, item_type, title, year, poster_url, source from user_favorites where user_id = ? order by created_at desc",
+            "select item_id, item_type, title, year, poster_url, source, url from user_favorites where user_id = ? order by created_at desc",
             bind = { stmt -> stmt.setLong(1, userId) },
             map = { rs ->
                 FavoriteItem(
@@ -49,7 +52,8 @@ object FavoriteRepository {
                     title = rs.getString("title"),
                     year = rs.getInt("year"),
                     posterUrl = rs.getString("poster_url"),
-                    source = rs.getString("source")
+                    source = rs.getString("source"),
+                    url = rs.getString("url")
                 )
             }
         )

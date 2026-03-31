@@ -5,6 +5,8 @@ import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.User
+import com.github.kotlintelegrambot.entities.ParseMode
+import kotlinx.coroutines.*
 import kotlin.random.Random
 
 class Router(
@@ -44,8 +46,7 @@ class Router(
             ImageManager.sendMessageWithImage(bot, chat, welcomeMessage, profile) {
                 val menuMessage = "Главное меню."
                 ImageManager.sendMessageWithImage(bot, chat, menuMessage, profile) {
-                    // Отправляем клавиатуру отдельным сообщением
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.mainMenu())
+                    bot.sendMessage(chat, menuMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu())
                 }
             }
             return
@@ -56,7 +57,7 @@ class Router(
             val profile = users.profile(uid)
             val menuMessage = "Главное меню."
             ImageManager.sendMessageWithImage(bot, chat, menuMessage, profile) {
-                bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.mainMenu())
+                bot.sendMessage(chat, menuMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu())
             }
             return
         }
@@ -72,12 +73,6 @@ class Router(
         }
 
         if (text.isNullOrBlank()) return
-
-        if (text == "⬅️ Обратно") {
-            SessionStore.clear(uid)
-            bot.sendMessage(chat, "Главное меню.", replyMarkup = KeyboardFactory.mainMenu())
-            return
-        }
 
         if (session.action != PendingAction.NONE && handlePending(bot, chat, uid, text, session)) {
             return
@@ -136,70 +131,130 @@ class Router(
                 bot.sendMessage(chat, resultMessage)
                 val settingsMessage = "Настройки."
                 ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.settingsMenu(profile))
+                    bot.sendMessage(chat, settingsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.settingsMenu(profile))
                 }
             }
             "⚙️ Настройки" -> {
                 val profile = users.profile(uid)
                 val settingsMessage = "Настройки."
                 ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.settingsMenu(profile))
+                    bot.sendMessage(chat, settingsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.settingsMenu(profile))
                 }
             }
             "🗂 Подборки" -> {
+                val session = SessionStore.get(uid)
+                session.context = FSMContext.COLLECTIONS  // Установка контекста подборок
+                session.action = PendingAction.NONE
+                session.data.clear()
                 val profile = users.profile(uid)
-                val collectionsMessage = "Выбери тип подборки."
+                val collectionsMessage = """🔍 <b>Меню подборок</b>
+
+Здесь вы можете:
+• 🔍 <b>Поиск</b> - находить фильмы, сериалы, книги и игры по запросу
+• ⭐️ <b>Избранное</b> - просматривать сохраненные элементы
+
+Выберите действие:"""
                 ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
-                    bot.sendMessage(chat, "Выберите тип:", replyMarkup = KeyboardFactory.collectionsMenu())
+                    bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
                 }
             }
-            "🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра" -> startCollectionFlow(bot, chat, uid, text)
-            "По запросу" -> {
-                session.action = PendingAction.COLLECTION_QUERY
-                if (session.data["collection_type"].isNullOrBlank()) {
-                    session.data["collection_type"] = RecommendationType.FILM.name
+            "🔍 Поиск" -> {
+                val session = SessionStore.get(uid)
+                session.action = PendingAction.SEARCH_TYPE_SELECT
+                session.context = FSMContext.COLLECTIONS
+                session.data.clear()
+                val profile = users.profile(uid)
+                val searchTypeMessage = """🔍 <b>Выберите тип поиска</b>
+
+Выберите категорию для поиска:"""
+                ImageManager.sendMessageWithImage(bot, chat, searchTypeMessage, profile) {
+                    bot.sendMessage(chat, searchTypeMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.searchTypeMenu())
                 }
-                bot.sendMessage(chat, "Напиши запрос для поиска.", replyMarkup = KeyboardFactory.searchResultsMenu())
             }
-            "🔄 Другие варианты", "➡️ Ещё" -> {
+            "⭐ Избранное" -> {
+                val session = SessionStore.get(uid)
+                session.action = PendingAction.VIEW_FAVORITES
+                session.context = FSMContext.COLLECTIONS
+                showCollectionFavorites(bot, chat, uid)
+            }
+            "🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра" -> {
+                // Эти кнопки теперь обрабатываются в SEARCH_TYPE_SELECT
+            }
+            "➡️ Ещё" -> {
                 val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) } ?: RecommendationType.FILM
                 val query = session.data["collection_query"]
-                val currentOffset = session.data["collection_offset"]?.toIntOrNull() ?: 0
-                val nextOffset = currentOffset + 5
-                val result = RecommendationRepository.searchMultiple(type, query, 5, offset = nextOffset)
+                val offset = (session.data["collection_offset"]?.toIntOrNull() ?: 0) + 3
+                session.data["collection_offset"] = offset.toString()
                 
-                if (result.items.isEmpty()) {
-                    bot.sendMessage(chat, "Других вариантов не нашёл.", replyMarkup = KeyboardFactory.searchResultsMenu(false))
-                } else {
-                    session.data["collection_offset"] = nextOffset.toString()
-                    val itemsText = result.items.mapIndexed { index, item ->
-                        val itemUrl = item.metadata["url"] as? String
-                        if (itemUrl.isNullOrBlank()) {
-                            "${nextOffset + index + 1}. ${item.title} (${item.year})"
-                        } else {
-                            "${nextOffset + index + 1}. ${item.title} (${item.year})\n$itemUrl"
-                        }
-                    }.joinToString("\n")
-                    bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenu(result.hasMore))
+                // Устанавливаем состояние для навигации по результатам
+                session.action = PendingAction.COLLECTION_RESULTS
+                
+                // Вызываем suspend функцию через coroutine scope
+                GlobalScope.launch {
+                    val result = RecommendationRepository.searchMultiple(type, query, 3, offset = offset)
+                    
+                    if (result.items.isEmpty()) {
+                        bot.sendMessage(chat, "Других вариантов не нашёл.", replyMarkup = KeyboardFactory.searchResultsMenuWithInline(0, false))
+                    } else {
+                        val itemsText = result.items.mapIndexed { index, item ->
+                            "${index + offset + 1}. ${item.title} (${item.year})\n${item.description}"
+                        }.joinToString("\n")
+                        bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
+                        
+                        // Отправляем кнопки сохранения только если есть результаты
+                        bot.sendMessage(chat, "💾 Сохранить в избранное:", replyMarkup = KeyboardFactory.searchResultsInlineKeyboard(result.items.size))
+                    }
                 }
             }
             "💾 Сохранить" -> {
-                // TODO: Реализовать сохранение в избранное
-                bot.sendMessage(chat, "Функция сохранения в избранное будет доступна в следующем обновлении.", replyMarkup = KeyboardFactory.searchResultsMenu(false))
+                when (session.context) {
+                    FSMContext.MEMES -> {
+                        // Для мемов - существующая логика
+                        favoriteLastMeme(bot, chat, uid)
+                    }
+                    FSMContext.COLLECTIONS -> {
+                        // Для подборок - новая логика сохранения
+                        saveToFavorites(bot, chat, uid, session)
+                    }
+                }
             }
-            "�� Мемы" -> {
+            "🎭 Мемы" -> {
+                val session = SessionStore.get(uid)
+                session.context = FSMContext.MEMES  // Установка контекста мемов
                 val profile = users.profile(uid)
                 val memesMessage = "Раздел мемов."
                 ImageManager.sendMessageWithImage(bot, chat, memesMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.memesMenu())
+                    bot.sendMessage(chat, memesMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.memesMenu())
                 }
                 showMeme(bot, chat, uid)
             }
             "Следующий мем" -> showMeme(bot, chat, uid)
             "👍" -> rateLastMeme(bot, chat, uid, +1)
             "👎" -> rateLastMeme(bot, chat, uid, -1)
-            "⭐ Избранное" -> favoriteLastMeme(bot, chat, uid)
-            "Мои избранные" -> showFavorites(bot, chat, uid)
+            "⭐ Избранное" -> {
+                when (session.context) {
+                    FSMContext.MEMES -> {
+                        // Для мемов - существующая логика
+                        favoriteLastMeme(bot, chat, uid)
+                    }
+                    FSMContext.COLLECTIONS -> {
+                        // Для подборок - показ избранных подборок
+                        showCollectionFavorites(bot, chat, uid)
+                    }
+                }
+            }
+            "Мои избранные" -> {
+                when (session.context) {
+                    FSMContext.MEMES -> {
+                        // Показать избранные мемы
+                        showFavorites(bot, chat, uid)
+                    }
+                    FSMContext.COLLECTIONS -> {
+                        // Показать избранные подборки
+                        showCollectionFavorites(bot, chat, uid)
+                    }
+                }
+            }
             "Добавить мем" -> {
                 session.action = PendingAction.ADD_MEME
                 val profile = users.profile(uid)
@@ -211,7 +266,7 @@ class Router(
                 val profile = users.profile(uid)
                 val predictionsMessage = "Раздел предсказаний."
                 ImageManager.sendMessageWithImage(bot, chat, predictionsMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.predictionsMenu())
+                    bot.sendMessage(chat, predictionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.predictionsMenu())
                 }
             }
             "Получить предсказание" -> givePrediction(bot, chat, uid)
@@ -234,7 +289,7 @@ class Router(
                 val profile = users.profile(uid)
                 val testsMessage = "Раздел тестов."
                 ImageManager.sendMessageWithImage(bot, chat, testsMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.testsMenu())
+                    bot.sendMessage(chat, testsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
                 }
             }
             "Случайный тест" -> startRandomTest(bot, chat, uid)
@@ -251,7 +306,7 @@ class Router(
                 val profile = users.profile(uid)
                 val eventsMessage = "Раздел событий."
                 ImageManager.sendMessageWithImage(bot, chat, eventsMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.eventsMenu())
+                    bot.sendMessage(chat, eventsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.eventsMenu())
                 }
             }
             "Ближайшие события" -> showEvents(bot, chat)
@@ -268,7 +323,7 @@ class Router(
                 val profile = users.profile(uid)
                 val gamesMessage = "Мини-игры."
                 ImageManager.sendMessageWithImage(bot, chat, gamesMessage, profile) {
-                    bot.sendMessage(chat, "Выберите игру:", replyMarkup = KeyboardFactory.gamesMenu())
+                    bot.sendMessage(chat, gamesMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.gamesMenu())
                 }
             }
             "⚽ Гол" -> playSimpleGame(bot, chat, uid, "football")
@@ -300,7 +355,7 @@ class Router(
                 val profile = users.profile(uid)
                 val feedbackMessage = "Раздел поддержки."
                 ImageManager.sendMessageWithImage(bot, chat, feedbackMessage, profile) {
-                    bot.sendMessage(chat, "Выберите действие:", replyMarkup = KeyboardFactory.feedbackMenu())
+                    bot.sendMessage(chat, feedbackMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.feedbackMenu())
                 }
             }
             "Оставить отзыв" -> {
@@ -316,6 +371,12 @@ class Router(
                     bot.sendMessage(chat, "Поддержка:", replyMarkup = KeyboardFactory.feedbackMenu())
                 }
             }
+            "⬅️ Обратно" -> {
+                // Если нет активного действия, возвращаем в главное меню
+                SessionStore.clear(uid)
+                bot.sendMessage(chat, "Главное меню.", replyMarkup = KeyboardFactory.mainMenu())
+                return
+            }
             else -> bot.sendMessage(chat, "Не понял команду. Открой меню через /start.", replyMarkup = KeyboardFactory.mainMenu())
         }
     }
@@ -323,118 +384,212 @@ class Router(
     private fun handlePending(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session): Boolean {
         when (session.action) {
             PendingAction.EDIT_NAME -> {
-                users.updateName(uid, text)
-                session.action = PendingAction.NONE
-                session.data.clear()
-                bot.sendMessage(chat, "Имя обновлено.")
-                showProfile(bot, chat, uid)
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        showProfile(bot, chat, uid)
+                        return true
+                    }
+                    else -> {
+                        users.updateName(uid, text)
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Имя обновлено.")
+                        showProfile(bot, chat, uid)
+                        return true
+                    }
+                }
             }
 
             PendingAction.EDIT_BIO -> {
-                users.updateBio(uid, text)
-                session.action = PendingAction.NONE
-                session.data.clear()
-                bot.sendMessage(chat, "Описание обновлено.")
-                showProfile(bot, chat, uid)
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        showProfile(bot, chat, uid)
+                        return true
+                    }
+                    else -> {
+                        users.updateBio(uid, text)
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Описание обновлено.")
+                        showProfile(bot, chat, uid)
+                        return true
+                    }
+                }
             }
 
             PendingAction.FEEDBACK_TEXT -> {
-                feedback.save(uid, "", "support", text)
-                session.action = PendingAction.NONE
-                session.data.clear()
-                bot.sendMessage(chat, "Спасибо! Отзыв сохранён.", replyMarkup = KeyboardFactory.feedbackMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.feedbackMenu())
+                        return true
+                    }
+                    else -> {
+                        feedback.save(uid, "", "support", text)
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Спасибо! Отзыв сохранён.", replyMarkup = KeyboardFactory.feedbackMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.ADD_PREDICTION_TEXT -> {
-                session.data["prediction_text"] = text
-                session.action = PendingAction.ADD_PREDICTION_RARITY
-                bot.sendMessage(chat, "Выбери редкость.", replyMarkup = KeyboardFactory.predictionRarity())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.predictionsMenu())
+                        return true
+                    }
+                    else -> {
+                        session.data["prediction_text"] = text
+                        session.action = PendingAction.ADD_PREDICTION_RARITY
+                        bot.sendMessage(chat, "Выбери редкость.", replyMarkup = KeyboardFactory.predictionRarity())
+                        return true
+                    }
+                }
             }
 
             PendingAction.ADD_PREDICTION_RARITY -> {
-                val predText = session.data["prediction_text"] ?: text
-                predictions.add(predText, text, uid)
-                session.action = PendingAction.NONE
-                session.data.clear()
-                bot.sendMessage(chat, "Предсказание добавлено.", replyMarkup = KeyboardFactory.predictionsMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.predictionsMenu())
+                        return true
+                    }
+                    else -> {
+                        val predText = session.data["prediction_text"] ?: text
+                        predictions.add(predText, text, uid)
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Предсказание добавлено.", replyMarkup = KeyboardFactory.predictionsMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.SEARCH_PREDICTIONS -> {
-                val result = predictions.search(text)
-                session.action = PendingAction.NONE
-                if (result.isEmpty()) {
-                    bot.sendMessage(chat, "Ничего не найдено.", replyMarkup = KeyboardFactory.predictionsMenu())
-                } else {
-                    bot.sendMessage(chat, result.joinToString("\n\n") { "• ${it.rarity}: ${it.text}" }, replyMarkup = KeyboardFactory.predictionsMenu())
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.predictionsMenu())
+                        return true
+                    }
+                    else -> {
+                        val result = predictions.search(text)
+                        session.action = PendingAction.NONE
+                        if (result.isEmpty()) {
+                            bot.sendMessage(chat, "Ничего не найдено.", replyMarkup = KeyboardFactory.predictionsMenu())
+                        } else {
+                            bot.sendMessage(chat, result.joinToString("\n\n") { "• ${it.rarity}: ${it.text}" }, replyMarkup = KeyboardFactory.predictionsMenu())
+                        }
+                        return true
+                    }
                 }
-                return true
             }
 
             PendingAction.CREATE_TEST_TITLE -> {
-                val testId = tests.createTest(text, uid)
-                session.data["test_id"] = testId.toString()
-                session.action = PendingAction.CREATE_TEST_KIND
-                bot.sendMessage(chat, "Выбери тип вопроса.", replyMarkup = KeyboardFactory.testKinds())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.testsMenu())
+                        return true
+                    }
+                    else -> {
+                        val testId = tests.createTest(text, uid)
+                        session.data["test_id"] = testId.toString()
+                        session.action = PendingAction.CREATE_TEST_KIND
+                        bot.sendMessage(chat, "Выбери тип вопроса.", replyMarkup = KeyboardFactory.testKinds())
+                        return true
+                    }
+                }
             }
 
             PendingAction.CREATE_TEST_KIND -> {
-                if (text !in listOf("SINGLE", "MULTI", "NUMBER", "MATCH")) {
-                    bot.sendMessage(chat, "Нужно выбрать SINGLE, MULTI, NUMBER или MATCH.", replyMarkup = KeyboardFactory.testKinds())
-                    return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.testsMenu())
+                        return true
+                    }
+                    "SINGLE", "MULTI", "NUMBER", "MATCH" -> {
+                        session.data["kind"] = text
+                        session.action = PendingAction.CREATE_TEST_PROMPT
+                        bot.sendMessage(
+                            chat,
+                            when (text) {
+                                "SINGLE" -> "Отправь вопрос в формате: Вопрос | вариант1;вариант2;вариант3 | 2"
+                                "MULTI" -> "Отправь вопрос в формате: Вопрос | вариант1;вариант2;вариант3 | 1,3"
+                                "NUMBER" -> "Отправь вопрос в формате: Вопрос | 42"
+                                else -> "Отправь вопрос в формате: Вопрос | лев1=прав1;лев2=прав2"
+                            },
+                            replyMarkup = KeyboardFactory.testKinds()
+                        )
+                        return true
+                    }
+                    else -> {
+                        bot.sendMessage(chat, "Нужно выбрать SINGLE, MULTI, NUMBER или MATCH.", replyMarkup = KeyboardFactory.testKinds())
+                        return true
+                    }
                 }
-                session.data["kind"] = text
-                session.action = PendingAction.CREATE_TEST_PROMPT
-                bot.sendMessage(
-                    chat,
-                    when (text) {
-                        "SINGLE" -> "Отправь вопрос в формате: Вопрос | вариант1;вариант2;вариант3 | 2"
-                        "MULTI" -> "Отправь вопрос в формате: Вопрос | вариант1;вариант2;вариант3 | 1,3"
-                        "NUMBER" -> "Отправь вопрос в формате: Вопрос | 42"
-                        else -> "Отправь вопрос в формате: Вопрос | лев1=прав1;лев2=прав2"
-                    },
-                    replyMarkup = KeyboardFactory.testKinds()
-                )
-                return true
             }
 
             PendingAction.CREATE_TEST_PROMPT -> {
-                val testId = session.data["test_id"]?.toLongOrNull() ?: return true
-                val kind = session.data["kind"] ?: return true
-                val parts = text.split("|").map { it.trim() }
-                if (parts.isEmpty()) {
-                    bot.sendMessage(chat, "Неверный формат.", replyMarkup = KeyboardFactory.testKinds())
-                    return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.testsMenu())
+                        return true
+                    }
+                    else -> {
+                        val testId = session.data["test_id"]?.toLongOrNull() ?: return true
+                        val kind = session.data["kind"] ?: return true
+                        val parts = text.split("|").map { it.trim() }
+                        if (parts.isEmpty()) {
+                            bot.sendMessage(chat, "Неверный формат.", replyMarkup = KeyboardFactory.testKinds())
+                            return true
+                        }
+                        val prompt = parts[0]
+                        val options = if (parts.size > 1) normalizeList(parts[1]) else emptyList()
+                        val answer = if (parts.size > 2) parts[2] else parts.getOrNull(1).orEmpty()
+                        val questionKind = QuestionKind.valueOf(kind)
+                        val position = tests.questions(testId).size + 1
+                        tests.addQuestion(testId, position, questionKind, prompt, options, answer)
+                        session.action = PendingAction.CREATE_TEST_MORE
+                        bot.sendMessage(chat, "Вопрос добавлен. Добавить ещё?", replyMarkup = KeyboardFactory.testsContinue())
+                        return true
+                    }
                 }
-                val prompt = parts[0]
-                val options = if (parts.size > 1) normalizeList(parts[1]) else emptyList()
-                val answer = if (parts.size > 2) parts[2] else parts.getOrNull(1).orEmpty()
-                val questionKind = QuestionKind.valueOf(kind)
-                val position = tests.questions(testId).size + 1
-                tests.addQuestion(testId, position, questionKind, prompt, options, answer)
-                session.action = PendingAction.CREATE_TEST_MORE
-                bot.sendMessage(chat, "Вопрос добавлен. Добавить ещё?", replyMarkup = KeyboardFactory.testsContinue())
-                return true
             }
 
             PendingAction.CREATE_TEST_MORE -> {
                 when (text.lowercase()) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.testsMenu())
+                        return true
+                    }
                     "да" -> {
                         session.action = PendingAction.CREATE_TEST_KIND
                         bot.sendMessage(chat, "Выбери тип следующего вопроса.", replyMarkup = KeyboardFactory.testKinds())
                     }
-
                     "нет" -> {
                         session.action = PendingAction.NONE
                         session.data.clear()
                         bot.sendMessage(chat, "Тест сохранён.", replyMarkup = KeyboardFactory.testsMenu())
                     }
-
                     else -> bot.sendMessage(chat, "Ответь Да или Нет.", replyMarkup = KeyboardFactory.testsContinue())
                 }
                 return true
@@ -446,38 +601,88 @@ class Router(
             }
 
             PendingAction.CREATE_EVENT_TITLE -> {
-                session.data["title"] = text
-                session.action = PendingAction.CREATE_EVENT_DESC
-                bot.sendMessage(chat, "Опиши событие.", replyMarkup = KeyboardFactory.eventsMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                    else -> {
+                        session.data["title"] = text
+                        session.action = PendingAction.CREATE_EVENT_DESC
+                        bot.sendMessage(chat, "Опиши событие.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.CREATE_EVENT_DESC -> {
-                session.data["description"] = text
-                session.action = PendingAction.CREATE_EVENT_PLACE
-                bot.sendMessage(chat, "Укажи место проведения.", replyMarkup = KeyboardFactory.eventsMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                    else -> {
+                        session.data["description"] = text
+                        session.action = PendingAction.CREATE_EVENT_PLACE
+                        bot.sendMessage(chat, "Укажи место проведения.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.CREATE_EVENT_PLACE -> {
-                session.data["place"] = text
-                session.action = PendingAction.CREATE_EVENT_TIME
-                bot.sendMessage(chat, "Укажи время и дату в свободной форме.", replyMarkup = KeyboardFactory.eventsMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                    else -> {
+                        session.data["place"] = text
+                        session.action = PendingAction.CREATE_EVENT_TIME
+                        bot.sendMessage(chat, "Укажи время и дату в свободной форме.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.CREATE_EVENT_TIME -> {
-                session.data["time"] = text
-                session.action = PendingAction.CREATE_EVENT_MAX
-                bot.sendMessage(chat, "Сколько максимум человек?", replyMarkup = KeyboardFactory.eventsMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                    else -> {
+                        session.data["time"] = text
+                        session.action = PendingAction.CREATE_EVENT_MAX
+                        bot.sendMessage(chat, "Сколько максимум человек?", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.CREATE_EVENT_MAX -> {
-                session.data["max"] = text
-                session.action = PendingAction.CREATE_EVENT_KIND
-                bot.sendMessage(chat, "Укажи тип события: театр, кино, кастом и т.д.", replyMarkup = KeyboardFactory.eventsMenu())
-                return true
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "Отмена.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                    else -> {
+                        session.data["max"] = text
+                        session.action = PendingAction.CREATE_EVENT_KIND
+                        bot.sendMessage(chat, "Укажи тип события: театр, кино, кастом и т.д.", replyMarkup = KeyboardFactory.eventsMenu())
+                        return true
+                    }
+                }
             }
 
             PendingAction.CREATE_EVENT_KIND -> {
@@ -493,45 +698,158 @@ class Router(
                 return true
             }
 
-            PendingAction.COLLECTION_QUERY -> {
-                val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) } ?: RecommendationType.FILM
-                val query = text.trim()
-                session.data["collection_query"] = query
-                session.data["collection_offset"] = "0"
-                val result = RecommendationRepository.searchMultiple(type, query, 5, offset = 0)
-                session.action = PendingAction.NONE
-                
-                // Формируем сообщение с результатами
-                val message = if (result.items.isEmpty()) {
-                    "Ничего не нашёл. Попробуйте другой запрос."
-                } else {
-                    val header = when (type) {
-                        RecommendationType.FILM -> "🎬 Найденные фильмы:"
-                        RecommendationType.SERIES -> "📺 Найденные сериалы:"
-                        RecommendationType.BOOK -> "📚 Найденные книги:"
-                        RecommendationType.GAME -> "🎮 Найденные игры:"
-                    }
-                    
-                    val itemsText = result.items.mapIndexed { index, item ->
-                        val itemUrl = item.metadata["url"] as? String
-                        if (itemUrl.isNullOrBlank()) {
-                            "${index + 1}. ${item.title} (${item.year})\n${item.description}"
-                        } else {
-                            "${index + 1}. ${item.title} (${item.year})\n${item.description}\n$itemUrl"
+            PendingAction.SEARCH_TYPE_SELECT -> {
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        // Вернуться в основное меню подборок
+                        session.action = PendingAction.NONE
+                        val profile = users.profile(uid)
+                        val collectionsMessage = """🔍 <b>Меню подборок</b>
+
+Здесь вы можете:
+• 🔍 <b>Поиск</b> - находить фильмы, сериалы, книги и игры по запросу
+• ⭐ <b>Избранное</b> - просматривать сохраненные элементы
+
+Выберите действие:"""
+                        ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
+                            bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
                         }
-                    }.joinToString("\n")
-                    
-                    val footer = if (result.hasMore) {
-                        "\n\nПоказано ${result.items.size} из ${result.totalCount}. Нажми '🔄 Другие варианты'."
-                    } else {
-                        "\n\nНайдено ${result.items.size} из ${result.totalCount}."
+                        return true
                     }
-                    
-                    "${header}\n\n${itemsText}${footer}"
+                    "🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра" -> {
+                        // Определяем тип и переходим к вводу запроса
+                        val type = when (text) {
+                            "🎬 Фильм" -> RecommendationType.FILM
+                            "📺 Сериал" -> RecommendationType.SERIES
+                            "📚 Книга" -> RecommendationType.BOOK
+                            "🎮 Игра" -> RecommendationType.GAME
+                            else -> RecommendationType.FILM
+                        }
+                        session.data["collection_type"] = type.name
+                        session.action = PendingAction.COLLECTION_QUERY
+                        bot.sendMessage(chat, "Напиши запрос для поиска.", replyMarkup = KeyboardFactory.searchResultsMenu())
+                        return true
+                    }
+                    else -> {
+                        return false
+                    }
                 }
-                
-                bot.sendMessage(chat, message, replyMarkup = KeyboardFactory.searchResultsMenu(result.hasMore))
-                return true
+            }
+
+            PendingAction.COLLECTION_QUERY -> {
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        // Вернуться в меню выбора типа поиска
+                        session.action = PendingAction.SEARCH_TYPE_SELECT
+                        val profile = users.profile(uid)
+                        val searchTypeMessage = """🔍 <b>Выберите тип поиска</b>
+
+Выберите категорию для поиска:"""
+                        ImageManager.sendMessageWithImage(bot, chat, searchTypeMessage, profile) {
+                            bot.sendMessage(chat, "Выберите тип поиска:", replyMarkup = KeyboardFactory.searchTypeMenu())
+                        }
+                        return true
+                    }
+                    else -> {
+                        // Обработка поиска
+                        val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) } ?: RecommendationType.FILM
+                        val query = text.trim()
+                        session.data["collection_query"] = query
+                        session.data["collection_offset"] = "0"
+                        
+                        // Вызываем suspend функцию через coroutine scope
+                        GlobalScope.launch {
+                            val result = RecommendationRepository.searchMultiple(type, query, 3, offset = 0)
+                            
+                            // Формируем сообщение с результатами
+                            val message = if (result.items.isEmpty()) {
+                                "Ничего не нашёл. Попробуйте другой запрос."
+                            } else {
+                                val header = when (type) {
+                                    RecommendationType.FILM -> "🎬 Найденные фильмы:"
+                                    RecommendationType.SERIES -> "📺 Найденные сериалы:"
+                                    RecommendationType.BOOK -> "📚 Найденные книги:"
+                                    RecommendationType.GAME -> "🎮 Найденные игры:"
+                                }
+                                
+                                val itemsText = result.items.mapIndexed { index, item ->
+                                    val itemUrl = item.metadata["url"] as? String
+                                    if (itemUrl.isNullOrBlank()) {
+                                        "${index + 1}. ${item.title} (${item.year})\n${item.description}"
+                                    } else {
+                                        "${index + 1}. ${item.title} (${item.year})\n${item.description}\n$itemUrl"
+                                    }
+                                }.joinToString("\n")
+                                
+                                val footer = if (result.hasMore) {
+                                    "\n\nПоказано ${result.items.size} из ${result.totalCount}. Нажми '➡️ Ещё' для следующих вариантов."
+                                } else {
+                                    "\n\nНайдено ${result.items.size} из ${result.totalCount}."
+                                }
+                                
+                                "${header}\n\n${itemsText}${footer}"
+                            }
+                            
+                            // Устанавливаем состояние для навигации по результатам
+                            session.action = PendingAction.COLLECTION_RESULTS
+                            
+                            // Отправляем сообщение с результатами
+                            bot.sendMessage(chat, message, replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
+                            
+                            // Отправляем кнопки сохранения только если есть результаты
+                            if (result.items.isNotEmpty()) {
+                                bot.sendMessage(chat, "💾 Сохранить в избранное:", replyMarkup = KeyboardFactory.searchResultsInlineKeyboard(result.items.size))
+                            }
+                        }
+                        
+                        return true
+                    }
+                }
+            }
+            
+            PendingAction.COLLECTION_RESULTS -> {
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        // Вернуться в меню выбора типа поиска
+                        session.action = PendingAction.SEARCH_TYPE_SELECT
+                        val profile = users.profile(uid)
+                        val searchTypeMessage = """🔍 <b>Выберите тип поиска</b>
+
+Выберите категорию для поиска:"""
+                        ImageManager.sendMessageWithImage(bot, chat, searchTypeMessage, profile) {
+                            bot.sendMessage(chat, "Выберите тип поиска:", replyMarkup = KeyboardFactory.searchTypeMenu())
+                        }
+                        return true
+                    }
+                    "➡️ Ещё" -> {
+                        val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) } ?: RecommendationType.FILM
+                        val query = session.data["collection_query"]
+                        val offset = (session.data["collection_offset"]?.toIntOrNull() ?: 0) + 3
+                        session.data["collection_offset"] = offset.toString()
+                        
+                        // Вызываем suspend функцию через coroutine scope
+                        GlobalScope.launch {
+                            val result = RecommendationRepository.searchMultiple(type, query, 3, offset = offset)
+                            
+                            if (result.items.isEmpty()) {
+                                bot.sendMessage(chat, "Других вариантов не нашёл.", replyMarkup = KeyboardFactory.searchResultsMenuWithInline(0, false))
+                            } else {
+                                val itemsText = result.items.mapIndexed { index, item ->
+                                    "${index + offset + 1}. ${item.title} (${item.year})\n${item.description}"
+                                }.joinToString("\n")
+                                bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
+                                
+                                // Отправляем кнопки сохранения только если есть результаты
+                                bot.sendMessage(chat, "💾 Сохранить в избранное:", replyMarkup = KeyboardFactory.searchResultsInlineKeyboard(result.items.size))
+                            }
+                        }
+                        return true
+                    }
+                    else -> {
+                        // Игнорируем другие команды
+                        return false
+                    }
+                }
             }
 
             PendingAction.RPS_CHOICE -> {
@@ -554,9 +872,51 @@ class Router(
                 bot.sendMessage(chat, "Я выбрал: $botChoice. Результат: $result.", replyMarkup = KeyboardFactory.gamesMenu())
                 return true
             }
+            
+            PendingAction.VIEW_FAVORITES -> {
+                val favorites = FavoriteRepository.list(uid)
+                if (favorites.isEmpty()) {
+                    session.action = PendingAction.NONE
+                    bot.sendMessage(chat, "У вас пока нет избранных элементов.", replyMarkup = KeyboardFactory.mainMenu())
+                    return true
+                }
+                
+                when (text) {
+                    "⬅️ Обратно" -> {
+                        // Вернуться в основное меню подборок
+                        session.action = PendingAction.NONE
+                        val profile = users.profile(uid)
+                        val collectionsMessage = """🔍 <b>Меню подборок</b>
+
+Здесь вы можете:
+• 🔍 <b>Поиск</b> - находить фильмы, сериалы, книги и игры по запросу
+• ⭐ <b>Избранное</b> - просматривать сохраненные элементы
+
+Выберите действие:"""
+                        ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
+                            bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
+                        }
+                        return true
+                    }
+                    else -> {
+                        // Игнорируем другие текстовые команды, так как навигация через inline
+                        return false
+                    }
+                }
+                return true
+            }
 
             else -> return false
         }
+        
+        // Обработка "⬅️ Обратно" когда нет активного PendingAction
+        if (text == "⬅️ Обратно") {
+            SessionStore.clear(uid)
+            bot.sendMessage(chat, "Главное меню.", replyMarkup = KeyboardFactory.mainMenu())
+            return true
+        }
+        
+        return false
     }
 
     private fun showProfile(bot: Bot, chat: ChatId, uid: Long) {
@@ -796,6 +1156,7 @@ class Router(
     private fun startCollectionFlow(bot: Bot, chat: ChatId, uid: Long, typeText: String) {
         val session = SessionStore.get(uid)
         session.action = PendingAction.COLLECTION_QUERY
+        session.context = FSMContext.COLLECTIONS  // Установка контекста подборок
         session.data["collection_type"] = when (typeText) {
             "🎬 Фильм" -> RecommendationType.FILM.name
             "📺 Сериал" -> RecommendationType.SERIES.name
@@ -855,5 +1216,204 @@ class Router(
             top.withIndex().joinToString("\n") { (idx, s) -> "${idx + 1}. #${s.userId} — ${s.rating}" },
             replyMarkup = KeyboardFactory.gamesMenu()
         )
+    }
+
+    private fun saveToFavorites(bot: Bot, chat: ChatId, uid: Long, session: Session) {
+        val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) }
+        val query = session.data["collection_query"]
+        val offset = session.data["collection_offset"]?.toIntOrNull() ?: 0
+        
+        if (type == null) {
+            bot.sendMessage(chat, "Ошибка: не определен тип контента.", replyMarkup = KeyboardFactory.mainMenu())
+            return
+        }
+        
+        // Вызываем suspend функцию через coroutine scope
+        GlobalScope.launch {
+            try {
+                val results = RecommendationRepository.searchMultiple(type, query, 5, offset)
+                if (results.items.isNotEmpty()) {
+                    val item = results.items.first()
+                    FavoriteRepository.add(uid, item)
+                    bot.sendMessage(chat, "✅ Сохранено в избранное!", replyMarkup = KeyboardFactory.searchResultsMenu(results.hasMore))
+                } else {
+                    bot.sendMessage(chat, "Нет элементов для сохранения.", replyMarkup = KeyboardFactory.searchResultsMenu(false))
+                }
+            } catch (e: Exception) {
+                println("Error saving to favorites: ${e.message}")
+                bot.sendMessage(chat, "Ошибка при сохранении.", replyMarkup = KeyboardFactory.searchResultsMenu(false))
+            }
+        }
+    }
+
+    private fun showCollectionFavorites(bot: Bot, chat: ChatId, uid: Long) {
+        val favorites = FavoriteRepository.list(uid)
+        if (favorites.isEmpty()) {
+            bot.sendMessage(chat, "У вас пока нет избранных элементов.", replyMarkup = KeyboardFactory.mainMenu())
+        } else {
+            // Устанавливаем контекст для навигации
+            val session = SessionStore.get(uid)
+            session.action = PendingAction.VIEW_FAVORITES
+            session.data["favorites_index"] = "0"
+            session.data["favorites_total"] = favorites.size.toString()
+            
+            // Показываем первый элемент
+            showFavoriteItem(bot, chat, uid, favorites, 0)
+        }
+    }
+
+    private fun showFavoriteItem(bot: Bot, chat: ChatId, uid: Long, favorites: List<FavoriteItem>, index: Int) {
+        if (index < 0 || index >= favorites.size) return
+        
+        val favorite = favorites[index]
+        val message = buildString {
+            append("⭐ Избранное (${index + 1} из ${favorites.size})\n\n")
+            append("${favorite.title} (${favorite.year})\n")
+            append("Тип: ${getTypeDisplayName(favorite.itemType)}\n")
+            if (favorite.url != null) {
+                append("Ссылка: ${favorite.url}\n")
+            }
+        }
+        
+        // Inline клавиатура с кнопками удаления и навигации
+        val inlineKeyboard = KeyboardFactory.singleFavoriteDeleteKeyboard(favorite, index, favorites.size)
+        
+        // Reply клавиатура только с кнопкой "Обратно"
+        val replyKeyboard = KeyboardFactory.singleFavoriteNav()
+        
+        bot.sendMessage(chat, message, replyMarkup = replyKeyboard)
+        bot.sendMessage(chat, "Управление:", replyMarkup = inlineKeyboard)
+    }
+
+    private fun getTypeDisplayName(type: RecommendationType): String {
+        return when (type) {
+            RecommendationType.FILM -> "Фильм"
+            RecommendationType.SERIES -> "Сериал"
+            RecommendationType.BOOK -> "Книга"
+            RecommendationType.GAME -> "Игра"
+        }
+    }
+
+    fun handleCallback(bot: Bot, callback: com.github.kotlintelegrambot.entities.CallbackQuery) {
+        val chat = ChatId.fromId(callback.message!!.chat.id)
+        val uid = callback.from.id
+        val session = SessionStore.get(uid)
+        val data = callback.data ?: return
+
+        when {
+            data.startsWith("save_item_") -> {
+                val itemNumber = data.substringAfter("save_item_").toIntOrNull() ?: return
+                val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) }
+                val query = session.data["collection_query"]
+                val offset = session.data["collection_offset"]?.toIntOrNull() ?: 0
+                
+                if (type == null) {
+                    bot.answerCallbackQuery(callback.id, "Ошибка: не определен тип контента.")
+                    return
+                }
+                
+                GlobalScope.launch {
+                    try {
+                        val results = RecommendationRepository.searchMultiple(type, query, 3, offset)
+                        val itemIndex = itemNumber - 1
+                        if (itemIndex in results.items.indices) {
+                            val item = results.items[itemIndex]
+                            
+                            // Проверяем, уже ли в избранном
+                            val isAlreadyFavorite = FavoriteRepository.isFavorite(uid, item.id, item.type)
+                            
+                            if (isAlreadyFavorite) {
+                                bot.answerCallbackQuery(callback.id, "Этот ${getTypeDisplayName(item.type).lowercase()} уже есть в избранных")
+                            } else {
+                                FavoriteRepository.add(uid, item)
+                                bot.answerCallbackQuery(callback.id, "В избранные добавлен №$itemNumber")
+                            }
+                        } else {
+                            bot.answerCallbackQuery(callback.id, "Ошибка: элемент не найден.")
+                        }
+                    } catch (e: Exception) {
+                        println("Error saving item to favorites: ${e.message}")
+                        bot.answerCallbackQuery(callback.id, "Ошибка при сохранении.")
+                    }
+                }
+            }
+            
+            data.startsWith("delete_favorite_") -> {
+                val parts = data.substringAfter("delete_favorite_").split("_")
+                if (parts.size != 2) {
+                    bot.answerCallbackQuery(callback.id, "Ошибка: неверный формат данных.")
+                    return
+                }
+                
+                val itemId = parts[0].toIntOrNull()
+                val itemTypeName = parts[1]
+                
+                if (itemId == null) {
+                    bot.answerCallbackQuery(callback.id, "Ошибка: неверный ID элемента.")
+                    return
+                }
+                
+                try {
+                    val itemType = RecommendationType.valueOf(itemTypeName)
+                    FavoriteRepository.remove(uid, itemId, itemType)
+                    bot.answerCallbackQuery(callback.id, "✅ Удалено из избранного!")
+                    
+                    // Обновляем список избранных и показываем обновленный интерфейс
+                    GlobalScope.launch {
+                        val updatedFavorites = FavoriteRepository.list(uid)
+                        if (updatedFavorites.isEmpty()) {
+                            // Если избранных больше нет, возвращаем в меню
+                            val session = SessionStore.get(uid)
+                            session.action = PendingAction.NONE
+                            bot.sendMessage(chat, "У вас больше нет избранных элементов.", replyMarkup = KeyboardFactory.mainMenu())
+                        } else {
+                            // Показываем обновленный список
+                            val session = SessionStore.get(uid)
+                            val currentIndex = session.data["favorites_index"]?.toIntOrNull() ?: 0
+                            
+                            // Если удалили последний элемент и он был текущим, показываем предыдущий
+                            val newIndex = if (currentIndex >= updatedFavorites.size) {
+                                updatedFavorites.size - 1
+                            } else {
+                                currentIndex
+                            }
+                            
+                            session.data["favorites_index"] = newIndex.toString()
+                            session.data["favorites_total"] = updatedFavorites.size.toString()
+                            
+                            showFavoriteItem(bot, chat, uid, updatedFavorites, newIndex)
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("Error deleting from favorites: ${e.message}")
+                    bot.answerCallbackQuery(callback.id, "Ошибка при удалении.")
+                }
+            }
+            
+            data.startsWith("nav_favorite_") -> {
+                val newIndex = data.substringAfter("nav_favorite_").toIntOrNull()
+                if (newIndex == null) {
+                    bot.answerCallbackQuery(callback.id, "Ошибка: неверный индекс.")
+                    return
+                }
+                
+                val favorites = FavoriteRepository.list(uid)
+                if (newIndex < 0 || newIndex >= favorites.size) {
+                    bot.answerCallbackQuery(callback.id, "Ошибка: индекс вне диапазона.")
+                    return
+                }
+                
+                // Обновляем индекс в сессии
+                val session = SessionStore.get(uid)
+                session.data["favorites_index"] = newIndex.toString()
+                
+                // Показываем новый элемент
+                GlobalScope.launch {
+                    showFavoriteItem(bot, chat, uid, favorites, newIndex)
+                }
+                
+                bot.answerCallbackQuery(callback.id)
+            }
+        }
     }
 }

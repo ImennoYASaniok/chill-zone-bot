@@ -170,6 +170,7 @@ object Schema {
                 year integer not null,
                 poster_url text,
                 source text not null,
+                url text,
                 created_at timestamptz not null default now(),
                 primary key (user_id, item_id, item_type)
             )
@@ -177,6 +178,14 @@ object Schema {
         )
 
         statements.forEach(Db::raw)
+        
+        // Миграция для добавления url в user_favorites
+        try {
+            Db.raw("alter table user_favorites add column if not exists url text")
+        } catch (e: Exception) {
+            // Игнорируем ошибку, если колонка уже существует
+            println("Migration for url column in user_favorites: ${e.message}")
+        }
         
         // Миграция для добавления hide_username в существующие таблицы
         Db.raw("""
