@@ -2,6 +2,8 @@ package core
 
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.ParseMode
+import com.github.kotlintelegrambot.entities.ReplyMarkup
 import data.UserProfile
 
 /**
@@ -46,6 +48,8 @@ object ImageManager {
      * @param chat ID чата
      * @param message текст сообщения
      * @param userProfile профиль пользователя для проверки настроек
+     * @param replyMarkup клавиатура для сообщения
+     * @param parseMode режим парсинга HTML
      * @param onMessageSent callback для отправки текстового сообщения
      */
     fun sendMessageWithImage(
@@ -53,6 +57,8 @@ object ImageManager {
         chat: ChatId,
         message: String,
         userProfile: UserProfile?,
+        replyMarkup: ReplyMarkup? = null,
+        parseMode: ParseMode? = null,
         onMessageSent: () -> Unit = {}
     ) {
         val shouldSendImage = userProfile?.showMedia ?: true
@@ -63,14 +69,14 @@ object ImageManager {
             
             if (fileId != null) {
                 // Отправляем изображение
-                bot.sendPhoto(chat, fileId, caption = message)
+                bot.sendPhoto(chat, fileId, caption = message, parseMode = parseMode, replyMarkup = replyMarkup)
             } else {
                 // Если нет соответствующего изображения, отправляем только текст
-                bot.sendMessage(chat, message)
+                bot.sendMessage(chat, message, parseMode = parseMode, replyMarkup = replyMarkup)
             }
         } else {
             // Если у пользователя отключены картинки, отправляем только текст
-            bot.sendMessage(chat, message)
+            bot.sendMessage(chat, message, parseMode = parseMode, replyMarkup = replyMarkup)
         }
         
         onMessageSent()

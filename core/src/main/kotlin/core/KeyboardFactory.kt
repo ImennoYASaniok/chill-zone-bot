@@ -135,7 +135,6 @@ object KeyboardFactory {
 
     fun searchResultsMenu(hasMore: Boolean = false): KeyboardReplyMarkup = kb(
         listOf(
-            listOf(" Сохранить"),
             if (hasMore) listOf("➡️ Ещё", "⬅️ Обратно") else listOf("⬅️ Обратно")
         )
     )
@@ -203,26 +202,28 @@ object KeyboardFactory {
         )
         rows.add(listOf(deleteButton))
         
-        // Стрелочки навигации
-        val navButtons = mutableListOf<InlineKeyboardButton>()
-        
-        // Левая стрелочка (к предыдущему или к последнему если первый)
-        navButtons.add(
-            InlineKeyboardButton.CallbackData(
-                text = "⬅️",
-                callbackData = "nav_favorite_${if (currentIndex == 0) totalCount - 1 else currentIndex - 1}"
+        // Стрелочки навигации - только если больше 1 элемента
+        if (totalCount > 1) {
+            val navButtons = mutableListOf<InlineKeyboardButton>()
+            
+            // Левая стрелочка (к предыдущему или к последнему если первый)
+            navButtons.add(
+                InlineKeyboardButton.CallbackData(
+                        text = "⬅️",
+                        callbackData = "nav_favorite_${if (currentIndex == 0) totalCount - 1 else currentIndex - 1}"
+                )
             )
-        )
-        
-        // Правая стрелочка (к следующему или к первому если последний)
-        navButtons.add(
-            InlineKeyboardButton.CallbackData(
-                text = "➡️",
-                callbackData = "nav_favorite_${if (currentIndex == totalCount - 1) 0 else currentIndex + 1}"
+            
+            // Правая стрелочка (к следующему или к первому если последний)
+            navButtons.add(
+                InlineKeyboardButton.CallbackData(
+                        text = "➡️",
+                        callbackData = "nav_favorite_${if (currentIndex == totalCount - 1) 0 else currentIndex + 1}"
+                )
             )
-        )
-        
-        rows.add(navButtons)
+            
+            rows.add(navButtons)
+        }
         
         return InlineKeyboardMarkup.create(rows)
     }

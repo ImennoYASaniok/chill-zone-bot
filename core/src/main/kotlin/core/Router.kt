@@ -45,9 +45,7 @@ class Router(
             val welcomeMessage = "Привет! Это Chill Zone Bot — всё для досуга в одном месте."
             ImageManager.sendMessageWithImage(bot, chat, welcomeMessage, profile) {
                 val menuMessage = "Главное меню."
-                ImageManager.sendMessageWithImage(bot, chat, menuMessage, profile) {
-                    bot.sendMessage(chat, menuMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu())
-                }
+                bot.sendMessage(chat, menuMessage, replyMarkup = KeyboardFactory.mainMenu())
             }
             return
         }
@@ -56,9 +54,7 @@ class Router(
             SessionStore.clear(uid)
             val profile = users.profile(uid)
             val menuMessage = "Главное меню."
-            ImageManager.sendMessageWithImage(bot, chat, menuMessage, profile) {
-                bot.sendMessage(chat, menuMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu())
-            }
+            bot.sendMessage(chat, menuMessage, replyMarkup = KeyboardFactory.mainMenu())
             return
         }
 
@@ -100,7 +96,7 @@ class Router(
                 // Тестируем прямой метод
                 val directResult = users.debugProfile(uid)
                 
-                bot.sendMessage(chat, "СРАВНЕНИЕ:\nОбычный метод: ${normalResult?.displayName}\nПрямой метод: $directResult")
+                bot.sendMessage(chat, "СРАВНЕНИЕ:\nОбычный метод: ${normalResult?.displayName}\nПрямой метод: $directResult", parseMode = ParseMode.HTML)
             }
             
             "👤 Профиль" -> showProfile(bot, chat, uid)
@@ -131,15 +127,13 @@ class Router(
                 bot.sendMessage(chat, resultMessage)
                 val settingsMessage = "Настройки."
                 ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
-                    bot.sendMessage(chat, settingsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.settingsMenu(profile))
+                    // Клавиатура отправляется через ImageManager
                 }
             }
             "⚙️ Настройки" -> {
                 val profile = users.profile(uid)
                 val settingsMessage = "Настройки."
-                ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
-                    bot.sendMessage(chat, settingsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.settingsMenu(profile))
-                }
+                bot.sendMessage(chat, settingsMessage, replyMarkup = KeyboardFactory.settingsMenu(profile))
             }
             "🗂 Подборки" -> {
                 val session = SessionStore.get(uid)
@@ -154,9 +148,7 @@ class Router(
 • ⭐️ <b>Избранное</b> - просматривать сохраненные элементы
 
 Выберите действие:"""
-                ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
-                    bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
-                }
+                bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
             }
             "🔍 Поиск" -> {
                 val session = SessionStore.get(uid)
@@ -167,9 +159,7 @@ class Router(
                 val searchTypeMessage = """🔍 <b>Выберите тип поиска</b>
 
 Выберите категорию для поиска:"""
-                ImageManager.sendMessageWithImage(bot, chat, searchTypeMessage, profile) {
-                    bot.sendMessage(chat, searchTypeMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.searchTypeMenu())
-                }
+                bot.sendMessage(chat, searchTypeMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.searchTypeMenu())
             }
             "⭐ Избранное" -> {
                 val session = SessionStore.get(uid)
@@ -199,7 +189,7 @@ class Router(
                         val itemsText = result.items.mapIndexed { index, item ->
                             "${index + offset + 1}. ${item.title} (${item.year})\n${item.description}"
                         }.joinToString("\n")
-                        bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
+                        bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
                         
                         // Отправляем кнопки сохранения только если есть результаты
                         bot.sendMessage(chat, "💾 Сохранить в избранное:", replyMarkup = KeyboardFactory.searchResultsInlineKeyboard(result.items.size))
@@ -223,9 +213,7 @@ class Router(
                 session.context = FSMContext.MEMES  // Установка контекста мемов
                 val profile = users.profile(uid)
                 val memesMessage = "Раздел мемов."
-                ImageManager.sendMessageWithImage(bot, chat, memesMessage, profile) {
-                    bot.sendMessage(chat, memesMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.memesMenu())
-                }
+                bot.sendMessage(chat, memesMessage, replyMarkup = KeyboardFactory.memesMenu())
                 showMeme(bot, chat, uid)
             }
             "Следующий мем" -> showMeme(bot, chat, uid)
@@ -258,16 +246,15 @@ class Router(
             "Добавить мем" -> {
                 session.action = PendingAction.ADD_MEME
                 val profile = users.profile(uid)
-                ImageManager.sendMessageWithImage(bot, chat, "Отправь фото мема одним сообщением.", profile) {
-                    bot.sendMessage(chat, "Ожидаю фото:", replyMarkup = KeyboardFactory.memesMenu())
-                }
+                ImageManager.sendMessageWithImage(
+                    bot, chat, "Отправь фото мема одним сообщением.", profile,
+                    replyMarkup = KeyboardFactory.memesMenu()
+                )
             }
             "🔮 Предсказания" -> {
                 val profile = users.profile(uid)
                 val predictionsMessage = "Раздел предсказаний."
-                ImageManager.sendMessageWithImage(bot, chat, predictionsMessage, profile) {
-                    bot.sendMessage(chat, predictionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.predictionsMenu())
-                }
+                bot.sendMessage(chat, predictionsMessage, replyMarkup = KeyboardFactory.predictionsMenu())
             }
             "Получить предсказание" -> givePrediction(bot, chat, uid)
             "Мои предсказания" -> showCollectedPredictions(bot, chat, uid)
@@ -288,9 +275,7 @@ class Router(
             "📝 Тесты" -> {
                 val profile = users.profile(uid)
                 val testsMessage = "Раздел тестов."
-                ImageManager.sendMessageWithImage(bot, chat, testsMessage, profile) {
-                    bot.sendMessage(chat, testsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
-                }
+                bot.sendMessage(chat, testsMessage, replyMarkup = KeyboardFactory.testsMenu())
             }
             "Случайный тест" -> startRandomTest(bot, chat, uid)
             "Создать тест" -> {
@@ -305,9 +290,7 @@ class Router(
             "📅 События" -> {
                 val profile = users.profile(uid)
                 val eventsMessage = "Раздел событий."
-                ImageManager.sendMessageWithImage(bot, chat, eventsMessage, profile) {
-                    bot.sendMessage(chat, eventsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.eventsMenu())
-                }
+                bot.sendMessage(chat, eventsMessage, replyMarkup = KeyboardFactory.eventsMenu())
             }
             "Ближайшие события" -> showEvents(bot, chat)
             "Создать событие" -> {
@@ -322,9 +305,7 @@ class Router(
             "🎮 Мини-игры" -> {
                 val profile = users.profile(uid)
                 val gamesMessage = "Мини-игры."
-                ImageManager.sendMessageWithImage(bot, chat, gamesMessage, profile) {
-                    bot.sendMessage(chat, gamesMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.gamesMenu())
-                }
+                bot.sendMessage(chat, gamesMessage, replyMarkup = KeyboardFactory.gamesMenu())
             }
             "⚽ Гол" -> playSimpleGame(bot, chat, uid, "football")
             "🏀 В кольцо" -> playSimpleGame(bot, chat, uid, "basketball")
@@ -354,9 +335,7 @@ class Router(
             "💬 Обратная связь" -> {
                 val profile = users.profile(uid)
                 val feedbackMessage = "Раздел поддержки."
-                ImageManager.sendMessageWithImage(bot, chat, feedbackMessage, profile) {
-                    bot.sendMessage(chat, feedbackMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.feedbackMenu())
-                }
+                bot.sendMessage(chat, feedbackMessage, replyMarkup = KeyboardFactory.feedbackMenu())
             }
             "Оставить отзыв" -> {
                 session.action = PendingAction.FEEDBACK_TEXT
@@ -489,7 +468,7 @@ class Router(
                         if (result.isEmpty()) {
                             bot.sendMessage(chat, "Ничего не найдено.", replyMarkup = KeyboardFactory.predictionsMenu())
                         } else {
-                            bot.sendMessage(chat, result.joinToString("\n\n") { "• ${it.rarity}: ${it.text}" }, replyMarkup = KeyboardFactory.predictionsMenu())
+                            bot.sendMessage(chat, result.joinToString("\n\n") { "• ${it.rarity}: ${it.text}" }, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.predictionsMenu())
                         }
                         return true
                     }
@@ -711,9 +690,11 @@ class Router(
 • ⭐ <b>Избранное</b> - просматривать сохраненные элементы
 
 Выберите действие:"""
-                        ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
-                            bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
-                        }
+                        ImageManager.sendMessageWithImage(
+                            bot, chat, collectionsMessage, profile,
+                            replyMarkup = KeyboardFactory.collectionsMenu(),
+                            parseMode = ParseMode.HTML
+                        )
                         return true
                     }
                     "🎬 Фильм", "📺 Сериал", "📚 Книга", "🎮 Игра" -> {
@@ -837,7 +818,7 @@ class Router(
                                 val itemsText = result.items.mapIndexed { index, item ->
                                     "${index + offset + 1}. ${item.title} (${item.year})\n${item.description}"
                                 }.joinToString("\n")
-                                bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
+                                bot.sendMessage(chat, "Ещё варианты:\n\n${itemsText}", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.searchResultsMenuWithInline(result.items.size, result.hasMore))
                                 
                                 // Отправляем кнопки сохранения только если есть результаты
                                 bot.sendMessage(chat, "💾 Сохранить в избранное:", replyMarkup = KeyboardFactory.searchResultsInlineKeyboard(result.items.size))
@@ -877,7 +858,20 @@ class Router(
                 val favorites = FavoriteRepository.list(uid)
                 if (favorites.isEmpty()) {
                     session.action = PendingAction.NONE
-                    bot.sendMessage(chat, "У вас пока нет избранных элементов.", replyMarkup = KeyboardFactory.mainMenu())
+                    val profile = users.profile(uid)
+                    val collectionsMessage = """🔍 <b>Меню подборок</b>
+
+Здесь вы можете:
+• 🔍 <b>Поиск</b> - находить фильмы, сериалы, книги и игры по запросу
+• ⭐️ <b>Избранное</b> - просматривать сохраненные элементы
+
+Выберите действие:"""
+                    bot.sendMessage(chat, "У вас пока нет избранных элементов.")
+                    ImageManager.sendMessageWithImage(
+                        bot, chat, collectionsMessage, profile,
+                        replyMarkup = KeyboardFactory.collectionsMenu(),
+                        parseMode = ParseMode.HTML
+                    )
                     return true
                 }
                 
@@ -893,9 +887,11 @@ class Router(
 • ⭐ <b>Избранное</b> - просматривать сохраненные элементы
 
 Выберите действие:"""
-                        ImageManager.sendMessageWithImage(bot, chat, collectionsMessage, profile) {
-                            bot.sendMessage(chat, collectionsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.collectionsMenu())
-                        }
+                        ImageManager.sendMessageWithImage(
+                            bot, chat, collectionsMessage, profile,
+                            replyMarkup = KeyboardFactory.collectionsMenu(),
+                            parseMode = ParseMode.HTML
+                        )
                         return true
                     }
                     else -> {
@@ -966,7 +962,7 @@ class Router(
         val counts = memes.counts(meme.id)
         SessionStore.get(uid).data["last_meme"] = meme.id.toString()
         bot.sendPhoto(chat, meme.fileId)
-        bot.sendMessage(chat, "👍 ${counts.likes} | 👎 ${counts.dislikes}\n${meme.caption}", replyMarkup = KeyboardFactory.memesMenu())
+        bot.sendMessage(chat, "👍 ${counts.likes} | 👎 ${counts.dislikes}\n${meme.caption}", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.memesMenu())
     }
 
     private fun lastMeme(uid: Long): MemeItem? {
@@ -1013,7 +1009,7 @@ class Router(
         }
         predictions.collect(uid, p.id)
         users.addRating(uid, 1)
-        bot.sendMessage(chat, "🔮 ${p.text}\n\nРедкость: ${p.rarity}", replyMarkup = KeyboardFactory.predictionsMenu())
+        bot.sendMessage(chat, "🔮 ${p.text}\n\nРедкость: ${p.rarity}", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.predictionsMenu())
     }
 
     private fun showCollectedPredictions(bot: Bot, chat: ChatId, uid: Long) {
@@ -1022,7 +1018,7 @@ class Router(
             bot.sendMessage(chat, "Коллекция предсказаний пуста.", replyMarkup = KeyboardFactory.predictionsMenu())
             return
         }
-        bot.sendMessage(chat, list.joinToString("\n\n") { "• ${it.rarity}: ${it.text}" }, replyMarkup = KeyboardFactory.predictionsMenu())
+        bot.sendMessage(chat, list.joinToString("\n\n") { "• ${it.rarity}: ${it.text}" }, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.predictionsMenu())
     }
 
     private fun startRandomTest(bot: Bot, chat: ChatId, uid: Long) {
@@ -1084,10 +1080,10 @@ class Router(
         val q = questions[index]
         val header = "Вопрос ${index + 1}/${questions.size}:\n${q.prompt}"
         when (q.kind) {
-            QuestionKind.SINGLE -> bot.sendMessage(chat, header + "\n\nОтветь одним из вариантов: ${q.options.joinToString(", ")}", replyMarkup = KeyboardFactory.testsMenu())
-            QuestionKind.MULTI -> bot.sendMessage(chat, header + "\n\nОтправь несколько вариантов через запятую.", replyMarkup = KeyboardFactory.testsMenu())
-            QuestionKind.NUMBER -> bot.sendMessage(chat, header + "\n\nОтветь числом.", replyMarkup = KeyboardFactory.testsMenu())
-            QuestionKind.MATCH -> bot.sendMessage(chat, header + "\n\nОтправь пары в виде левый=правый;левый2=правый2.", replyMarkup = KeyboardFactory.testsMenu())
+            QuestionKind.SINGLE -> bot.sendMessage(chat, header + "\n\nОтветь одним из вариантов: ${q.options.joinToString(", ")}", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
+            QuestionKind.MULTI -> bot.sendMessage(chat, header + "\n\nОтправь несколько вариантов через запятую.", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
+            QuestionKind.NUMBER -> bot.sendMessage(chat, header + "\n\nОтветь числом.", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
+            QuestionKind.MATCH -> bot.sendMessage(chat, header + "\n\nОтправь пары в виде левый=правый;левый2=правый2.", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
         }
     }
 
@@ -1132,7 +1128,7 @@ class Router(
             return
         }
         val my = list.take(10).joinToString("\n") { "• #${it.id} ${it.title}" }
-        bot.sendMessage(chat, "Доступные тесты:\n$my", replyMarkup = KeyboardFactory.testsMenu())
+        bot.sendMessage(chat, "Доступные тесты:\n$my", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.testsMenu())
     }
 
     private fun showEvents(bot: Bot, chat: ChatId) {
@@ -1141,7 +1137,7 @@ class Router(
             bot.sendMessage(chat, "Пока событий нет.", replyMarkup = KeyboardFactory.eventsMenu())
             return
         }
-        bot.sendMessage(chat, list.joinToString("\n\n") { "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}\n${it.kind}" }, replyMarkup = KeyboardFactory.eventsMenu())
+        bot.sendMessage(chat, list.joinToString("\n\n") { "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}\n${it.kind}" }, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.eventsMenu())
     }
 
     private fun showMineEvents(bot: Bot, chat: ChatId, uid: Long) {
@@ -1150,7 +1146,7 @@ class Router(
             bot.sendMessage(chat, "У тебя пока нет своих событий.", replyMarkup = KeyboardFactory.eventsMenu())
             return
         }
-        bot.sendMessage(chat, list.joinToString("\n\n") { "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}" }, replyMarkup = KeyboardFactory.eventsMenu())
+        bot.sendMessage(chat, list.joinToString("\n\n") { "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}" }, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.eventsMenu())
     }
 
     private fun startCollectionFlow(bot: Bot, chat: ChatId, uid: Long, typeText: String) {
@@ -1249,7 +1245,24 @@ class Router(
     private fun showCollectionFavorites(bot: Bot, chat: ChatId, uid: Long) {
         val favorites = FavoriteRepository.list(uid)
         if (favorites.isEmpty()) {
-            bot.sendMessage(chat, "У вас пока нет избранных элементов.", replyMarkup = KeyboardFactory.mainMenu())
+            // Сбрасываем контекст при пустых избранных
+            val session = SessionStore.get(uid)
+            session.action = PendingAction.NONE
+            
+            val profile = users.profile(uid)
+            val collectionsMessage = """🔍 <b>Меню подборок</b>
+
+Здесь вы можете:
+• 🔍 <b>Поиск</b> - находить фильмы, сериалы, книги и игры по запросу
+• ⭐️ <b>Избранное</b> - просматривать сохраненные элементы
+
+Выберите действие:"""
+            bot.sendMessage(chat, "У вас пока нет избранных элементов.")
+            ImageManager.sendMessageWithImage(
+                bot, chat, collectionsMessage, profile,
+                replyMarkup = KeyboardFactory.collectionsMenu(),
+                parseMode = ParseMode.HTML
+            )
         } else {
             // Устанавливаем контекст для навигации
             val session = SessionStore.get(uid)
@@ -1362,10 +1375,23 @@ class Router(
                     GlobalScope.launch {
                         val updatedFavorites = FavoriteRepository.list(uid)
                         if (updatedFavorites.isEmpty()) {
-                            // Если избранных больше нет, возвращаем в меню
+                            // Если избранных больше нет, остаемся в меню подборок
                             val session = SessionStore.get(uid)
                             session.action = PendingAction.NONE
-                            bot.sendMessage(chat, "У вас больше нет избранных элементов.", replyMarkup = KeyboardFactory.mainMenu())
+                            val profile = users.profile(uid)
+                            val collectionsMessage = """🔍 <b>Меню подборок</b>
+
+Здесь вы можете:
+• 🔍 <b>Поиск</b> - находить фильмы, сериалы, книги и игры по запросу
+• ⭐️ <b>Избранное</b> - просматривать сохраненные элементы
+
+Выберите действие:"""
+                            bot.sendMessage(chat, "У вас больше нет избранных элементов.")
+                            ImageManager.sendMessageWithImage(
+                                bot, chat, collectionsMessage, profile,
+                                replyMarkup = KeyboardFactory.collectionsMenu(),
+                                parseMode = ParseMode.HTML
+                            )
                         } else {
                             // Показываем обновленный список
                             val session = SessionStore.get(uid)
