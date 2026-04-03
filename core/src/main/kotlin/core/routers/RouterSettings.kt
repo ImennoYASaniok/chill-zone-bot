@@ -1,0 +1,35 @@
+package core.routers
+
+import data.*
+import com.github.kotlintelegrambot.Bot
+import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.ParseMode
+import core.keyboards.KeyboardFactory
+import core.ImageManager
+import core.Session
+import core.PendingAction
+
+object RouterSettings {
+    fun handleSettingsAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository): Boolean {
+        when (text) {
+            "⚙️ Настройки" -> {
+                val profile = users.profile(uid)
+                val settingsMessage = "Настройки."
+                bot.sendMessage(chat, settingsMessage, replyMarkup = KeyboardFactory.settingsMenu(profile))
+                return true
+            }
+            "Включить картинки [✅]", "Выключить картинки [❌]" -> {
+                val enabled = users.toggleMedia(uid)
+                val profile = users.profile(uid)
+                val resultMessage = if (enabled) "Картинки включены." else "Картинки выключены."
+                bot.sendMessage(chat, resultMessage)
+                val settingsMessage = "Настройки."
+                ImageManager.sendMessageWithImage(bot, chat, settingsMessage, profile) {
+                    // Клавиатура отправляется через ImageManager
+                }
+                return true
+            }
+            else -> return false
+        }
+    }
+}

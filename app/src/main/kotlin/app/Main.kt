@@ -7,7 +7,7 @@ import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.telegramError
 import com.github.kotlintelegrambot.entities.ChatId
 import core.Entry
-import data.Schema
+import data.schemas.Schema
 import data.SeedData
 import io.github.cdimascio.dotenv.dotenv
 

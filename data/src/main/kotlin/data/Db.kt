@@ -15,7 +15,6 @@ object Db {
 
     val connection: Connection by lazy {
         val conn = DriverManager.getConnection(url, user, pass)
-        println("DEBUG: Подключение к БД установлено, autoCommit=${conn.autoCommit}")
         conn
     }
 
@@ -24,17 +23,13 @@ object Db {
     }
 
     fun execute(sql: String, bind: (PreparedStatement) -> Unit = {}): Int {
-        println("DEBUG: Выполнение SQL: $sql")
         return try {
             connection.prepareStatement(sql).use { stmt ->
                 bind(stmt)
-                val result = stmt.executeUpdate()
-                println("DEBUG: SQL выполнен успешно, затронуто строк: $result")
-                result
+                stmt.executeUpdate()
             }
         } catch (e: Exception) {
-            println("ERROR: Ошибка выполнения SQL '$sql': ${e.message}")
-            e.printStackTrace()
+            println("ERROR: Ошибка выполнения SQL: ${e.message}")
             throw e
         }
     }

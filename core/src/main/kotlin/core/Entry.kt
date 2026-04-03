@@ -1,10 +1,11 @@
 package core
 
 import data.*
+import core.routers.RouterCore
 
 object Entry {
-    fun buildRouter(): Router {
-        return Router(
+    fun buildRouter(): RouterCore {
+        return RouterCore(
             users = UserRepository(),
             memes = MemeRepository(),
             predictions = PredictionRepository(),

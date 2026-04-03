@@ -1,8 +1,8 @@
 package data
 
-import data.KinoApi
-import data.BookApi
-import data.GameApi
+import data.apis.KinoApi
+import data.apis.BookApi
+import data.apis.GameApi
 
 object RecommendationRepository {
     fun all(): List<RecommendationItem> = emptyList()
