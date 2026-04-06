@@ -24,7 +24,13 @@ enum class PendingAction {
     COLLECTION_RESULTS,  // Результаты поиска
     SEARCH_TYPE_SELECT,  // Выбор типа поиска (фильмы, сериалы и т.д.)
     RPS_CHOICE,
-    VIEW_FAVORITES  // Новый action для просмотра избранных с навигацией
+    VIEW_FAVORITES,  // Новый action для просмотра избранных с навигацией
+    
+    // Админские действия
+    ADMIN_USER_LIST,
+    ADMIN_BANNED_LIST,
+    ADMIN_SEARCH,
+    ADMIN_SEARCH_RESULTS
 }
 
 data class Session(
