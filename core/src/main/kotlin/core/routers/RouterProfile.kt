@@ -9,16 +9,24 @@ import core.keyboards.KeyboardFactory
 import core.SessionStore
 import core.Session
 import core.PendingAction
+import data.AdminService // исправленный импорт
 
 object RouterProfile {
     fun showProfile(bot: Bot, chat: ChatId, uid: Long, users: UserRepository, memes: MemeRepository, predictions: PredictionRepository, tests: TestRepository, events: EventRepository, games: GameRepository) {
         println("DEBUG: Вызов showProfile для пользователя $uid")
         val profile = users.profile(uid)
         println("DEBUG: Получен профиль в showProfile: displayName='${profile?.displayName}'")
+        
         if (profile == null) {
             println("ERROR: Профиль пользователя $uid не найден")
             return
         }
+        
+        // Проверяем админские права
+        val isAdmin = AdminService.isAdmin(uid)
+        println("DEBUG: Проверка админских прав для пользователя $uid: $isAdmin")
+        println("DEBUG: AdminService.adminIds: ${AdminService.adminIds}")
+        
         val memeCount = memes.total()
         val predCount = predictions.total()
         val testCount = tests.total()
@@ -49,7 +57,14 @@ object RouterProfile {
     }
 
     fun handleProfileAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, memes: MemeRepository, predictions: PredictionRepository, tests: TestRepository, events: EventRepository, games: GameRepository, session: Session): Boolean {
+        println("DEBUG: handleProfileAction вызван с text: '$text' для пользователя $uid")
+        
         when (text) {
+            "🛡️ Админ панель" -> {
+                println("DEBUG: Нажата кнопка админской панели пользователем $uid")
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                return true
+            }
             "Изменить имя" -> {
                 session.action = PendingAction.EDIT_NAME
                 bot.sendMessage(chat, "Напиши новое имя.", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))

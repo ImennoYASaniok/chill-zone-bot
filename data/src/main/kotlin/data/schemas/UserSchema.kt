@@ -8,6 +8,7 @@ object UserSchema {
         Db.raw(createUserTable())
         Db.raw(createGameStatsTable())
         Db.raw(createUserFavoritesTable())
+        Db.raw(createBannedUsersTable())
     }
 
     fun createUserTable(): String {
@@ -53,6 +54,16 @@ object UserSchema {
                 url text,
                 created_at timestamptz not null default now(),
                 primary key (user_id, item_id, item_type)
+            )
+            """
+    }
+
+    fun createBannedUsersTable(): String {
+        return """
+            create table if not exists banned_users (
+                user_id bigint primary key references users(user_id) on delete cascade,
+                banned_at timestamptz not null default now(),
+                reason text
             )
             """
     }

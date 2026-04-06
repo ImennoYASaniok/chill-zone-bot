@@ -16,7 +16,8 @@ data class UserProfile(
     val hidden: Boolean,
     val showMedia: Boolean,
     val rating: Int,
-    val hideUsername: Boolean = false
+    val hideUsername: Boolean = false,
+    val isBanned: Boolean = false
 )
 
 data class MemeItem(
@@ -73,6 +74,7 @@ data class RecommendationItem(
     val popularity: Int = 0,
     val rating: Double = 0.0,
     val posterUrl: String? = null,
+    val url: String? = null,
     val source: String = "local",
     val metadata: Map<String, Any> = emptyMap()
 )
@@ -111,4 +113,18 @@ data class FeedbackItem(
     val scope: String,
     val text: String,
     val createdAt: String
+)
+
+data class BannedUser(
+    val userId: Long,
+    val username: String,
+    val displayName: String,
+    val bannedAt: String,
+    val reason: String?
+)
+
+data class AdminSearchResult(
+    val users: List<UserProfile>,
+    val totalCount: Int,
+    val hasMore: Boolean
 )

@@ -32,6 +32,26 @@ class RouterCore(
         else -> "Пользователь"
     }
 
+    // Проверка бана пользователя
+    private fun checkUserBan(bot: Bot, chat: ChatId, uid: Long, serviceName: String): Boolean {
+        return if (AdminService.isUserBanned(uid)) {
+            val message = """🚫 <b>Доступ ограничен</b>
+
+Вы были забанены и не можете использовать сервис "$serviceName".
+
+Доступные функции:
+👤 Профиль
+⚙️ Настройки  
+💬 Обратная связь
+
+Для разбана обратитесь в службу поддержки."""
+            bot.sendMessage(chat, message, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu())
+            true
+        } else {
+            false
+        }
+    }
+
     fun handle(bot: Bot, message: Message) {
         val user = sender(message) ?: return
         val chat = ChatId.fromId(chatId(message))
@@ -63,11 +83,52 @@ class RouterCore(
             "/debug_profile" -> handleDebugProfile(bot, chat, uid)
             "/debug_update" -> handleDebugUpdate(bot, chat, uid)
             "/debug_compare" -> handleDebugCompare(bot, chat, uid)
+            "/myid" -> {
+                val profile = users.profile(uid)
+                val isAdmin = AdminService.isAdmin(uid)
+                val message = """🔍 <b>Информация о пользователе</b>
+
+🆔 Ваш ID: <code>$uid</code>
+👤 Имя: ${profile?.displayName ?: "неизвестно"}
+🔹 Админ: ${if (isAdmin) "✅ Да" else "❌ Нет"}
+
+📋 Админские ID в системе: ${AdminService.adminIds}"""
+                bot.sendMessage(chat, message, parseMode = ParseMode.HTML)
+            }
+            "/reload_admins" -> {
+                val newAdmins = AdminService.reloadAdmins()
+                val message = """🔄 <b>Админские ID перезагружены</b>
+
+📋 Новый список: $newAdmins
+
+🆔 Ваш ID: <code>$uid</code>
+🔹 Вы админ: ${if (uid in newAdmins) "✅ Да" else "❌ Нет"}"""
+                bot.sendMessage(chat, message, parseMode = ParseMode.HTML)
+            }
             "⬅️ Обратно" -> {
-                // Для контекста COLLECTIONS передаем обработку в RouterCollections
-                if (session.context == FSMContext.COLLECTIONS) {
-                    RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+                // Проверяем, находимся ли мы в админском контексте
+                if (session.action in listOf(
+                    PendingAction.ADMIN_USER_LIST, 
+                    PendingAction.ADMIN_BANNED_LIST, 
+                    PendingAction.ADMIN_SEARCH, 
+                    PendingAction.ADMIN_SEARCH_RESULTS
+                )) {
+                    // Если в админском контексте - передаем в RouterAdmin
+                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                } else if (session.context == FSMContext.COLLECTIONS) {
+                    // Для контекста COLLECTIONS проверяем текущее действие
+                    when (session.action) {
+                        PendingAction.NONE -> {
+                            // В основном меню подборок - возвращаем в главное меню
+                            handleBack(bot, chat, uid, session)
+                        }
+                        else -> {
+                            // В поиске, избранном, результатах и т.д. - передаем в RouterCollections для правильной обработки
+                            RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+                        }
+                    }
                 } else {
+                    // Для остальных контекстов - обычная логика
                     handleBack(bot, chat, uid, session)
                 }
             }
@@ -134,32 +195,74 @@ class RouterCore(
         when (text) {
             "👤 Профиль" -> RouterProfile.showProfile(bot, chat, uid, users, memes, predictions, tests, events, games)
             // Кнопки профиля
-            "Изменить имя", "Показать username [👁️]", "Скрыть username [🙈]", "Изменить био", "Показать профиль [👁️]", "Скрыть профиль [🙈]" -> {
+            "🛡️ Админ панель", "Изменить имя", "Показать username [👁️]", "Скрыть username [🙈]", "Изменить био", "Показать профиль [👁️]", "Скрыть профиль [🙈]" -> {
                 RouterProfile.handleProfileAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+            }
+            // Админские кнопки
+            "👥 Список пользователей", "🚫 Забаненные пользователи", "🔍 Поиск пользователей", "📊 Статистика" -> {
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
             }
             "⚙️ Настройки" -> RouterSettings.handleSettingsAction(bot, chat, uid, text, users)
             // Кнопки настроек
             "Включить картинки [✅]", "Выключить картинки [❌]" -> {
                 RouterSettings.handleSettingsAction(bot, chat, uid, text, users)
             }
-            "🗂 Подборки" -> RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
-            "🔍 Поиск" -> RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
-            "⭐ Избранное" -> RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
-            "😂 Мемы" -> RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
-            "Следующий мем", "Добавить мем", "💾 Избр. мем", "Мои избр. мемы" -> {
+            "🗂 Подборки" -> {
+                if (checkUserBan(bot, chat, uid, "🗂 Подборки")) return
+                RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+            }
+            "🔍 Поиск" -> {
+                if (checkUserBan(bot, chat, uid, "🔍 Поиск")) return
+                RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+            }
+            "⭐ Избранное" -> {
+                if (checkUserBan(bot, chat, uid, "⭐ Избранное")) return
+                RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+            }
+            "😂 Мемы" -> {
+                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
                 RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
             }
-            "👍" -> RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
-            "👎" -> RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
-            "Мои избранные" -> RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
-            "🔮 Предсказания" -> RouterPredictions.handlePredictionAction(bot, chat, uid, text, predictions, users, session)
-            "Получить предсказание", "Мои предсказания", "Поиск предсказаний", "Получить ещё", "Добавить в избранные" -> {
+            "Следующий мем", "Добавить мем", "💾 Избр. мем", "Мои избр. мемы" -> {
+                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+            }
+            "👍" -> {
+                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+            }
+            "👎" -> {
+                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+            }
+            "Мои избранные" -> {
+                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+            }
+            "🔮 Предсказания" -> {
+                if (checkUserBan(bot, chat, uid, "🔮 Предсказания")) return
                 RouterPredictions.handlePredictionAction(bot, chat, uid, text, predictions, users, session)
             }
-            "📝 Тесты" -> RouterTests.handleTestAction(bot, chat, uid, text, tests, users, session)
-            "📅 События" -> RouterEvents.handleEventAction(bot, chat, uid, text, events, users, session)
-            "🎮 Мини-игры" -> RouterGames.handleGameAction(bot, chat, uid, text, games, users, session)
-            "🖼 Пиксель-арт" -> RouterPixelArt.handlePixelAction(bot, chat, uid, text, users)
+            "Получить предсказание", "Мои предсказания", "Поиск предсказаний", "Получить ещё", "Добавить в избранные" -> {
+                if (checkUserBan(bot, chat, uid, "🔮 Предсказания")) return
+                RouterPredictions.handlePredictionAction(bot, chat, uid, text, predictions, users, session)
+            }
+            "📝 Тесты" -> {
+                if (checkUserBan(bot, chat, uid, "📝 Тесты")) return
+                RouterTests.handleTestAction(bot, chat, uid, text, tests, users, session)
+            }
+            "📅 События" -> {
+                if (checkUserBan(bot, chat, uid, "📅 События")) return
+                RouterEvents.handleEventAction(bot, chat, uid, text, events, users, session)
+            }
+            "🎮 Мини-игры" -> {
+                if (checkUserBan(bot, chat, uid, "🎮 Мини-игры")) return
+                RouterGames.handleGameAction(bot, chat, uid, text, games, users, session)
+            }
+            "🖼 Пиксель-арт" -> {
+                if (checkUserBan(bot, chat, uid, "🖼 Пиксель-арт")) return
+                RouterPixelArt.handlePixelAction(bot, chat, uid, text, users)
+            }
             "💬 Обратная связь" -> RouterFeedBack.handleFeedbackAction(bot, chat, uid, text, feedback, users, session)
             "💾 Сохранить" -> handleSaveAction(bot, chat, uid, session)
             "➡️ Ещё" -> handleMoreAction(bot, chat, uid, session)
@@ -231,6 +334,12 @@ class RouterCore(
             PendingAction.SEARCH_TYPE_SELECT, PendingAction.COLLECTION_QUERY, PendingAction.COLLECTION_RESULTS -> {
                 RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
             }
+            // Админские действия
+            PendingAction.ADMIN_USER_LIST, PendingAction.ADMIN_BANNED_LIST, 
+            PendingAction.ADMIN_SEARCH, PendingAction.ADMIN_SEARCH_RESULTS -> {
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                true
+            }
             else -> false
         }
     }
@@ -243,8 +352,12 @@ class RouterCore(
         val data = callback.data ?: return
 
         when {
+            // Админские функции
+            data.startsWith("admin_") -> {
+                RouterAdmin.handleCallback(bot, callback, users)
+            }
             // Подборки - сохранение/удаление избранного
-            data.startsWith("save_item_") || data.startsWith("delete_favorite_") || data.startsWith("nav_favorite_") -> {
+            data.startsWith("save_item_") || data.startsWith("delete_favorite_") || data.startsWith("nav_favorite_") || data.startsWith("nav_search_") || data.startsWith("save_single_") || data.startsWith("remove_item_") -> {
                 RouterCollections.handleCallback(bot, callback, users)
             }
             // Другие callback запросы можно добавить здесь по мере необходимости

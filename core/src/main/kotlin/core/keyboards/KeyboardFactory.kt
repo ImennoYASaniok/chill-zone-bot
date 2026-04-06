@@ -18,7 +18,7 @@ private fun kb(rows: List<List<String>>): KeyboardReplyMarkup {
 
 object KeyboardFactory {
     // Системные клавиатуры (основные меню)
-    fun mainMenu(): KeyboardReplyMarkup = kb(
+    fun mainMenu(isAdmin: Boolean = false): KeyboardReplyMarkup = kb(
         listOf(
             listOf("👤 Профиль", "🗂 Подборки"),
             listOf("😂 Мемы", "🔮 Предсказания"),

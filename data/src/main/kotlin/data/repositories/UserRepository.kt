@@ -63,9 +63,12 @@ class UserRepository {
         return try {
             Db.single(
                 """
-                select user_id, username, display_name, bio, hidden, show_media, rating, coalesce(hide_username, false) as hide_username
-                from users
-                where user_id = ?
+                select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating, 
+                       coalesce(u.hide_username, false) as hide_username,
+                       case when bu.user_id is not null then true else false end as is_banned
+                from users u
+                left join banned_users bu on u.user_id = bu.user_id
+                where u.user_id = ?
                 """,
                 bind = { stmt -> stmt.setLong(1, userId) },
                 map = { rs ->
@@ -77,9 +80,10 @@ class UserRepository {
                         hidden = rs.getBoolean("hidden"),
                         showMedia = rs.getBoolean("show_media"),
                         rating = rs.getInt("rating"),
-                        hideUsername = rs.getBoolean("hide_username")
+                        hideUsername = rs.getBoolean("hide_username"),
+                        isBanned = rs.getBoolean("is_banned")
                     )
-                    println("DEBUG: Получен профиль для пользователя $userId: displayName='${profile.displayName}', username='${profile.username}'")
+                    println("DEBUG: Получен профиль для пользователя $userId: displayName='${profile.displayName}', username='${profile.username}', isBanned=${profile.isBanned}")
                     profile
                 }
             )
