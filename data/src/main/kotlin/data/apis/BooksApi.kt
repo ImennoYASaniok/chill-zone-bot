@@ -54,6 +54,7 @@ object BookApi : ExternalApi {
                             .asObjectOrNull()
                             ?.get("thumbnail")
                             ?.asStringOrNull(),
+                        url = link ?: "",
                         source = "Google Books",
                         metadata = mapOf("url" to (link ?: ""))
                     )

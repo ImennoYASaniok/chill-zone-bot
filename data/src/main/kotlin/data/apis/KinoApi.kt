@@ -113,6 +113,11 @@ object KinoApi : ExternalApi {
                             description = obj.get("description")?.asStringOrNull() ?: "",
                             rating = rating,
                             posterUrl = posterUrl,
+                            url = if (typeText == "tv-series") {
+                                "https://www.kinopoisk.ru/series/$itemId/"
+                            } else {
+                                "https://www.kinopoisk.ru/film/$itemId/"
+                            },
                             source = "Кинопоиск",
                             metadata = mapOf(
                                 "url" to if (typeText == "tv-series") {

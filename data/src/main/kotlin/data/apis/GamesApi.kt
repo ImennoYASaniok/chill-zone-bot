@@ -62,6 +62,7 @@ object GameApi : ExternalApi {
                         description = description ?: "",
                         rating = itemObj.get("rating")?.asDoubleOrNull() ?: 0.0,
                         posterUrl = itemObj.get("background_image")?.asStringOrNull(),
+                        url = itemObj.get("website")?.asStringOrNull() ?: itemObj.get("background_image")?.asStringOrNull() ?: "",
                         source = "RAWG",
                         metadata = mapOf(
                             "url" to (itemObj.get("website")?.asStringOrNull() ?: itemObj.get("background_image")?.asStringOrNull() ?: "")

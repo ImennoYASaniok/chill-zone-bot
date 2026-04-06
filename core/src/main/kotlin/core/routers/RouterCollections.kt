@@ -72,13 +72,13 @@ object RouterCollections {
                 if (results.items.isNotEmpty()) {
                     val item = results.items.first()
                     FavoriteRepository.add(uid, item)
-                    bot.sendMessage(chat, "✅ Сохранено в избранное!", replyMarkup = KeyboardCollections.searchResultNavKeyboard())
+                    bot.sendMessage(chat, "✅ Сохранено в избранное!", replyMarkup = KeyboardCollections.searchResultNavKeyboard(false))
                 } else {
-                    bot.sendMessage(chat, "Нет элементов для сохранения.", replyMarkup = KeyboardCollections.searchResultNavKeyboard())
+                    bot.sendMessage(chat, "Нет элементов для сохранения.", replyMarkup = KeyboardCollections.searchResultNavKeyboard(false))
                 }
             } catch (e: Exception) {
                 println("Error saving to favorites: ${e.message}")
-                bot.sendMessage(chat, "Ошибка при сохранении.", replyMarkup = KeyboardCollections.searchResultNavKeyboard())
+                bot.sendMessage(chat, "Ошибка при сохранении.", replyMarkup = KeyboardCollections.searchResultNavKeyboard(false))
             }
         }
     }
@@ -152,7 +152,7 @@ object RouterCollections {
                     val result = RecommendationRepository.searchMultiple(type, query, 3, offset = offset)
                     
                     if (result.items.isEmpty()) {
-                        bot.sendMessage(chat, "Других вариантов не нашёл.", replyMarkup = KeyboardCollections.searchResultNavKeyboard())
+                        bot.sendMessage(chat, "Других вариантов не нашёл.", replyMarkup = KeyboardCollections.searchResultNavKeyboard(false))
                     } else {
                         // Получаем текущие результаты из сессии
                         val currentResultsData = session.data["search_results"] ?: ""
@@ -186,7 +186,7 @@ object RouterCollections {
                         session.data["collection_offset"] = offset.toString()
                         
                         // Показываем первый из новых результатов
-                        showSingleSearchResult(bot, chat, uid, allResults, offset)
+                        showSingleSearchResult(bot, chat, uid, allResults, offset, true) // Всегда показываем "➡️ Ещё" т.к. это подгрузка
                     }
                 }
                 return true
@@ -352,7 +352,7 @@ object RouterCollections {
                                     bot.sendMessage(chat, "$resultHeader\n\nИспользуйте стрелочки для навигации:", parseMode = ParseMode.HTML)
                                     
                                     // Показываем первый результат
-                                    showSingleSearchResult(bot, chat, uid, result.items, 0)
+                                    showSingleSearchResult(bot, chat, uid, result.items, 0, result.hasMore)
                                 }
                             } catch (e: Exception) {
                                 println("Error searching: ${e.message}")
@@ -367,7 +367,7 @@ object RouterCollections {
         }
     }
 
-    private fun showSingleSearchResult(bot: Bot, chat: ChatId, uid: Long, items: List<RecommendationItem>, index: Int) {
+    private fun showSingleSearchResult(bot: Bot, chat: ChatId, uid: Long, items: List<RecommendationItem>, index: Int, hasMore: Boolean = false) {
         if (index < 0 || index >= items.size) return
         
         val item = items[index]
@@ -389,13 +389,13 @@ object RouterCollections {
                 append("Описание: ${cleanDescription}\n")
             }
             
-            if (item.posterUrl != null) {
-                append("Ссылка: ${item.posterUrl}\n")
+            if (item.url != null) {
+                append("Ссылка: ${item.url}\n")
             }
         }
         
         val inlineKeyboard = KeyboardCollections.singleSearchResultKeyboard(item, index, items.size, isSaved)
-        val replyKeyboard = KeyboardCollections.searchResultNavKeyboard()
+        val replyKeyboard = KeyboardCollections.searchResultNavKeyboard(hasMore)
         
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML, replyMarkup = replyKeyboard)
         bot.sendMessage(chat, "Управление:", replyMarkup = inlineKeyboard)
@@ -494,22 +494,27 @@ object RouterCollections {
                     return
                 }
                 
+                // Восстанавливаем результаты из сессии
+                val resultsString = session.data["search_results"]
                 val type = session.data["search_type"]?.let { RecommendationType.valueOf(it) }
                 val query = session.data["search_query"]
                 
-                if (type != null && query != null) {
+                if (resultsString != null && type != null && query != null) {
                     GlobalScope.launch {
                         try {
-                            val result = RecommendationRepository.searchMultiple(type, query, 20, offset = 0)
-                            if (newIndex < result.items.size) {
+                            // Получаем все результаты заново для навигации (с большим лимитом)
+                            val allResults = RecommendationRepository.searchMultiple(type, query, 20, offset = 0).items
+                            if (newIndex < allResults.size) {
                                 session.data["search_current_index"] = newIndex.toString()
-                                showSingleSearchResult(bot, chat, uid, result.items, newIndex)
+                                showSingleSearchResult(bot, chat, uid, allResults, newIndex, false)
                             }
                         } catch (e: Exception) {
                             println("Error navigating search results: ${e.message}")
                             bot.answerCallbackQuery(callback.id, "Ошибка при навигации.")
                         }
                     }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "Ошибка: данные поиска не найдены.")
                 }
                 
                 bot.answerCallbackQuery(callback.id)
@@ -546,9 +551,11 @@ object RouterCollections {
                                     
                                     if (isAlreadyFavorite) {
                                         bot.answerCallbackQuery(callback.id, "Этот ${getTypeDisplayName(item.type).lowercase()} уже есть в избранных")
+                                        bot.sendMessage(chat, "⚠️ Этот ${getTypeDisplayName(item.type).lowercase()} уже есть в избранных")
                                     } else {
                                         FavoriteRepository.add(uid, item)
                                         bot.answerCallbackQuery(callback.id, "✅ Сохранено в избранное!")
+                                        bot.sendMessage(chat, "✅ Сохранено в избранное!")
                                     }
                                 } else {
                                     bot.answerCallbackQuery(callback.id, "Ошибка: элемент не найден.")
@@ -595,7 +602,7 @@ object RouterCollections {
                             try {
                                 val result = RecommendationRepository.searchMultiple(type, query, 20, offset = 0)
                                 if (currentIndex < result.items.size) {
-                                    showSingleSearchResult(bot, chat, uid, result.items, currentIndex)
+                                    showSingleSearchResult(bot, chat, uid, result.items, currentIndex, result.hasMore)
                                 }
                             } catch (e: Exception) {
                                 println("Error updating search result after removal: ${e.message}")

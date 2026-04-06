@@ -96,9 +96,14 @@ object KeyboardCollections {
         return InlineKeyboardMarkup.create(rows)
     }
 
-    fun searchResultNavKeyboard(): KeyboardReplyMarkup {
-        // Только кнопка "Обратно" в reply клавиатуре
-        return kb(listOf(listOf("⬅️ Обратно")))
+    fun searchResultNavKeyboard(hasMore: Boolean = false): KeyboardReplyMarkup {
+        // Кнопки навигации в reply клавиатуре
+        val rows = mutableListOf<List<String>>()
+        
+        // Показываем только "Новый запрос" и "Обратно", т.к. навигация по результатам в inline клавиатуре
+        rows.add(listOf("🔍 Новый запрос", "⬅️ Обратно"))
+        
+        return kb(rows)
     }
 
     fun favoritesInlineKeyboard(favorites: List<FavoriteItem>): InlineKeyboardMarkup {
