@@ -108,6 +108,7 @@ class RouterCore(
             "⬅️ Обратно" -> {
                 // Проверяем, находимся ли мы в админском контексте
                 if (session.action in listOf(
+                    PendingAction.ADMIN_USER_MANAGEMENT,
                     PendingAction.ADMIN_USER_LIST, 
                     PendingAction.ADMIN_BANNED_LIST, 
                     PendingAction.ADMIN_SEARCH, 
@@ -199,7 +200,7 @@ class RouterCore(
                 RouterProfile.handleProfileAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
             }
             // Админские кнопки
-            "👥 Список пользователей", "🚫 Забаненные пользователи", "🔍 Поиск пользователей", "📊 Статистика" -> {
+            "👥 Управление пользователями", "🚫 Забаненные пользователи", "📊 Статистика" -> {
                 RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
             }
             "⚙️ Настройки" -> RouterSettings.handleSettingsAction(bot, chat, uid, text, users)

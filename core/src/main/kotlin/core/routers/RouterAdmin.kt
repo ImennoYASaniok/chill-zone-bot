@@ -4,6 +4,7 @@ import data.*
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode
+import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import core.keyboards.KeyboardAdmin
 import core.keyboards.KeyboardFactory
 import core.SessionStore
@@ -46,16 +47,20 @@ object RouterAdmin {
                 showAdminPanel(bot, chat, uid)
             }
             
+            "👥 Управление пользователями" -> {
+                session.action = PendingAction.ADMIN_USER_MANAGEMENT
+                session.data.clear()
+                bot.sendMessage(chat, """👥 <b>Управление пользователями</b>
+
+Выберите действие:""", parseMode = ParseMode.HTML, 
+                    replyMarkup = KeyboardAdmin.adminUserManagementMenu())
+            }
+            
+            // Обработка кнопок из меню управления пользователями
             "👥 Список пользователей" -> {
                 session.action = PendingAction.ADMIN_USER_LIST
                 session.data.clear()
                 showUserList(bot, chat, uid)
-            }
-            
-            "🚫 Забаненные пользователи" -> {
-                session.action = PendingAction.ADMIN_BANNED_LIST
-                session.data.clear()
-                showBannedUsers(bot, chat, uid)
             }
             
             "🔍 Поиск пользователей" -> {
@@ -71,7 +76,13 @@ object RouterAdmin {
 • Иван (частичный поиск по имени)""", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu(isAdmin = true))
             }
             
-            "📊 Статистика" -> {
+            "🚫 Забаненные пользователи" -> {
+                session.action = PendingAction.ADMIN_BANNED_LIST
+                session.data.clear()
+                showBannedUsers(bot, chat, uid)
+            }
+            
+            " Статистика" -> {
                 val totalUsers = AdminService.getUsersCount()
                 val bannedUsers = AdminService.getBannedUsersCount()
                 val activeUsers = totalUsers - bannedUsers
@@ -92,8 +103,8 @@ object RouterAdmin {
             }
             
             "⬅️ Обратно" -> {
-                // Возвращаемся в профиль пользователя
-                RouterProfile.showProfile(bot, chat, uid, users, memes, predictions, tests, events, games)
+                // Возвращаемся в админскую панель
+                showAdminPanel(bot, chat, uid)
             }
             
             "⬅️ Предыдущий" -> {
@@ -145,27 +156,73 @@ object RouterAdmin {
         
         if (index >= allUsers.size) return
         
-        val user = allUsers[index]
         val session = SessionStore.get(uid)
+        session.action = PendingAction.ADMIN_USER_LIST
         session.data["admin_current_index"] = index.toString()
         session.data["admin_total_count"] = allUsers.size.toString()
         
-        val userStatus = if (user.isBanned) "🚫" else "✅"
-        val usernameDisplay = if (user.hideUsername) "скрыт" else "@${user.username}"
+        // Отображаем информацию о текущей странице
+        val startIndex = index + 1
+        val endIndex = minOf(index + 5, allUsers.size)
+        val pageUsers = allUsers.subList(startIndex - 1, endIndex)
         
-        val message = """👥 <b>Список пользователей</b> (${index + 1} из ${allUsers.size})
+        val message = """👥 <b>Список пользователей</b> ($startIndex-$endIndex из ${allUsers.size})
 
-$userStatus <b>${user.displayName}</b>
-🆔 ID: ${user.userId}
-👤 Username: $usernameDisplay
-⭐ Рейтинг: ${user.rating}
-📝 Био: ${user.bio.ifBlank { "не указано" }}
-👁️ Профиль: ${if (user.hidden) "скрыт" else "видимый"}"""
+${pageUsers.joinToString("\n") { user ->
+            val status = if (user.isBanned) "🚫" else "✅"
+            val usernameDisplay = if (user.hideUsername) "скрыт" else "@${user.username}"
+            
+            "$status | <b>${user.displayName}</b> | <code>$usernameDisplay</code> | ID: <code>${user.userId}</code>"
+        }}
+
+Выберите профиль для действий:"""
         
-        bot.sendMessage(chat, message, parseMode = ParseMode.HTML, 
-            replyMarkup = KeyboardAdmin.adminUserNav(index, allUsers.size))
+        bot.sendMessage(chat, message, parseMode = ParseMode.HTML)
         
-        bot.sendMessage(chat, "Действия:", replyMarkup = KeyboardAdmin.adminUserInline(user, user.isBanned))
+        // Отправляем inline клавиатуру с действиями для каждого профиля
+        val inlineRows = pageUsers.map { user ->
+            listOf(
+                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                    text = "👤 Профиль",
+                    callbackData = "admin_profile_${user.userId}"
+                ),
+                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                    text = if (user.isBanned) "✅ Разбанить" else "🚫 Забанить",
+                    callbackData = if (user.isBanned) "admin_unban_${user.userId}" else "admin_ban_${user.userId}"
+                )
+            )
+        }
+        
+        // Добавляем навигацию
+        val navRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
+        
+        if (index > 0) {
+            navRows.add(listOf(
+                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                    text = "⬅️ Предыдущая страница",
+                    callbackData = "admin_users_page_${index - 1}"
+                )
+            ))
+        }
+        
+        if (endIndex < allUsers.size) {
+            navRows.add(listOf(
+                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                    text = "➡️ Следующая страница",
+                    callbackData = "admin_users_page_${index + 5}"
+                )
+            ))
+        }
+        
+        navRows.add(listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "⬅️ Обратно",
+                callbackData = "admin_back"
+            )
+        ))
+        
+        val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(navRows + inlineRows)
+        bot.sendMessage(chat, "Действия:", replyMarkup = inlineKeyboard)
     }
     
     fun showBannedUsers(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
@@ -240,7 +297,35 @@ $userStatus <b>${targetUser.displayName}</b>
         
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML)
         
-        bot.sendMessage(chat, "Действия:", replyMarkup = KeyboardAdmin.adminUserInline(targetUser, targetUser.isBanned))
+        // Создаем inline клавиатуру с действиями и кнопкой возврата
+        val actionRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
+        
+        // Кнопка профиля
+        actionRows.add(listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "👤 Профиль",
+                callbackData = "admin_profile_${targetUser.userId}"
+            )
+        ))
+        
+        // Кнопка бана/разбана
+        actionRows.add(listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = if (targetUser.isBanned) "✅ Разбанить" else "🚫 Забанить",
+                callbackData = if (targetUser.isBanned) "admin_unban_${targetUser.userId}" else "admin_ban_${targetUser.userId}"
+            )
+        ))
+        
+        // Кнопка возврата в поиск
+        actionRows.add(listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "⬅️ Обратно в поиск",
+                callbackData = "admin_back_to_search"
+            )
+        ))
+        
+        val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(actionRows)
+        bot.sendMessage(chat, "Действия:", replyMarkup = inlineKeyboard)
     }
     
     fun handleCallback(bot: Bot, callback: com.github.kotlintelegrambot.entities.CallbackQuery, users: UserRepository) {
@@ -296,8 +381,10 @@ $userStatus <b>${targetUser.displayName}</b>
                         showUserProfile(bot, chat, uid, targetUser)
                         bot.answerCallbackQuery(callback.id)
                     } else {
-                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                        bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
                     }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Результаты поиска не найдены")
                 }
             }
             
@@ -307,17 +394,56 @@ $userStatus <b>${targetUser.displayName}</b>
                     val resultsString = session.data["admin_search_results"]
                     if (resultsString != null) {
                         val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
-                        val users = userIds.mapNotNull { users.profile(it) }
-                        if (newIndex < users.size) {
-                            showSearchResults(bot, chat, uid, users, newIndex)
+                        val searchUsers = userIds.mapNotNull { users.profile(it) }
+                        if (newIndex < searchUsers.size) {
+                            showSearchResults(bot, chat, uid, searchUsers, newIndex)
                             bot.answerCallbackQuery(callback.id)
                         } else {
                             bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
                         }
                     } else {
-                        bot.answerCallbackQuery(callback.id, "❌ Результаты поиска не найдены")
+                        // Это случай когда нет результатов поиска, но пользователь нажал навигацию
+                        // Создаем пустой список для предотвращения ошибки
+                        showUserList(bot, chat, uid, newIndex)
                     }
                 }
+            }
+            
+            data.startsWith("admin_users_page_") -> {
+                val newIndex = data.substringAfter("admin_users_page_").toIntOrNull()
+                if (newIndex != null) {
+                    val resultsString = session.data["admin_search_results"]
+                    if (resultsString != null) {
+                        val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                        val users = userIds.mapNotNull { users.profile(it) }
+                        if (newIndex < users.size) {
+                            showUserList(bot, chat, uid, newIndex)
+                        } else {
+                            bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
+                        }
+                    } else {
+                        showUserList(bot, chat, uid, newIndex)
+                    }
+                }
+            }
+            
+            data.startsWith("admin_back_to_search") -> {
+                session.action = PendingAction.ADMIN_SEARCH
+                session.data.clear()
+                bot.sendMessage(chat, """🔍 <b>Поиск пользователей</b>
+
+Введите ID, username или имя пользователя для поиска.
+
+Примеры:
+• 7266569446 (точный поиск по ID)
+• @username (частичный поиск по username)
+• Иван (частичный поиск по имени)""", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu(isAdmin = true))
+                bot.answerCallbackQuery(callback.id)
+            }
+            
+            data.startsWith("admin_back") -> {
+                showAdminPanel(bot, chat, uid)
+                bot.answerCallbackQuery(callback.id)
             }
             
             else -> {

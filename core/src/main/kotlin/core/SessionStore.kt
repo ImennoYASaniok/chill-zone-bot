@@ -27,6 +27,7 @@ enum class PendingAction {
     VIEW_FAVORITES,  // Новый action для просмотра избранных с навигацией
     
     // Админские действия
+    ADMIN_USER_MANAGEMENT,
     ADMIN_USER_LIST,
     ADMIN_BANNED_LIST,
     ADMIN_SEARCH,
