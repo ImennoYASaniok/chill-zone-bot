@@ -1,12 +1,17 @@
-FROM gradle:8.8-jdk17 AS build
-WORKDIR /home/gradle/project
-
-COPY --chown=gradle:gradle . .
-RUN gradle :app:installDist --no-daemon
-
-FROM eclipse-temurin:17-jre-jammy
+FROM amazoncorretto:17-alpine
 WORKDIR /app
 
-COPY --from=build /home/gradle/project/app/build/install/app/ /app/
+# Install curl and download gradle
+RUN apk add --no-cache curl unzip && \
+    curl -L https://services.gradle.org/distributions/gradle-8.5-bin.zip -o gradle.zip && \
+    unzip gradle.zip && \
+    rm gradle.zip
 
-CMD ["/app/bin/app"]
+ENV GRADLE_HOME=/app/gradle-8.5
+ENV PATH=$PATH:/app/gradle-8.5/bin
+
+COPY . .
+RUN gradle :app:installDist --no-daemon
+
+WORKDIR /app/app/build/install/app
+CMD ["./bin/app"]
