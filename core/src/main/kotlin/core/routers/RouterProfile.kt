@@ -35,23 +35,46 @@ object RouterProfile {
         bot.sendMessage(
             chat,
             buildString {
-                append("👤 Профиль\n")
-                append("Username: ")
+                append("👤 <b>Профиль пользователя</b>\n\n")
+                
+                // Блок основной информации
+                append("📋 <b>Основная информация</b>\n")
+                append("🔸 <i>Имя:</i> <b>${profile.displayName.ifBlank { "не указано" }}</b>\n")
+                
                 if (profile.hideUsername || profile.username.isBlank()) {
-                    append("скрыт\n")
+                    append("🔸 <i>Username:</i> <code>скрыт</code>\n")
                 } else {
-                    append("@").append(profile.username).append("\n")
+                    append("🔸 <i>Username:</i> <code>@${profile.username}</code>\n")
                 }
-                append("Имя: ").append(profile.displayName.ifBlank { "не указано" }).append("\n")
-                append("Рейтинг аккаунта: ").append(profile.rating).append("\n")
-                append("Био: ").append(profile.bio.ifBlank { "не заполнено" }).append("\n")
-                append("Профиль: ").append(if (profile.hidden) "скрыт" else "видим").append("\n\n")
-                append("Мемов в базе: ").append(memeCount).append("\n")
-                append("Предсказаний: ").append(predCount).append("\n")
-                append("Тестов: ").append(testCount).append("\n")
-                append("Событий создано: ").append(eventCount).append("\n")
-                append("Игровой рейтинг: ").append(gameStats.rating).append(" (побед ").append(gameStats.wins).append(", streak ").append(gameStats.streak).append(")")
+                
+                append("🔸 <i>Рейтинг:</i> ⭐ <b>${profile.rating}</b>\n")
+                append("🔸 <i>Статус:</i> ${if (profile.hidden) "🔒 <b>скрыт</b>" else "🌐 <b>видим</b>"}\n")
+                
+                if (profile.bio.isNotBlank()) {
+                    append("🔸 <i>О себе:</i> <em>${profile.bio}</em>\n")
+                }
+                
+                append("\n")
+                
+                // Блок статистики
+                append("📊 <b>Статистика активности</b>\n")
+                append("🎭 <i>Мемов в базе:</i> <b>$memeCount</b>\n")
+                append("🔮 <i>Предсказаний:</i> <b>$predCount</b>\n")
+                append("📝 <i>Тестов:</i> <b>$testCount</b>\n")
+                append("📅 <i>Событий создано:</i> <b>$eventCount</b>\n")
+                
+                // Игровая статистика
+                append("\n🎮 <b>Игровая статистика</b>\n")
+                append("🏆 <i>Рейтинг:</i> <b>${gameStats.rating}</b>\n")
+                append("🎯 <i>Побед:</i> <b>${gameStats.wins}</b>\n")
+                append("🔥 <i>Серия побед:</i> <b>${gameStats.streak}</b>\n")
+                
+                // Админский статус
+                if (AdminService.isAdmin(uid)) {
+                    append("\n🛡️ <b>Администратор</b>")
+                }
             },
+            parseMode = ParseMode.HTML,
             replyMarkup = KeyboardFactory.profileMenu(profile)
         )
     }
