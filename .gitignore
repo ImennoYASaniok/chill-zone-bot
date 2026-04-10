@@ -54,6 +54,6 @@ logs/
 
 # Videos
 .mp4
-.mov
+*.mov
 
-.zip
+*.zip
