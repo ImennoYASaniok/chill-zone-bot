@@ -1,6 +1,5 @@
 package data.schemas
 
-// Импортируем Db из родительского пакета
 import data.Db
 
 object FeedbackSchema {

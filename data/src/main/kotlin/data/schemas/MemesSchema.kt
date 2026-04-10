@@ -1,17 +1,13 @@
 package data.schemas
 
-// Импортируем Db из родительского пакета
 import data.Db
 
-object ContentSchema {
+object MemesSchema {
     fun ensure() {
         Db.raw(createMemesTable())
         Db.raw(createMemeHistoryTable())
         Db.raw(createMemeVotesTable())
         Db.raw(createMemeFavoritesTable())
-        Db.raw(createPredictionsTable())
-        Db.raw(createPredictionHistoryTable())
-        Db.raw(createRecommendationsTable())
     }
 
     fun createMemesTable(): String {
@@ -56,43 +52,6 @@ object ContentSchema {
                 meme_id bigint not null references memes(id) on delete cascade,
                 created_at timestamptz not null default now(),
                 primary key (user_id, meme_id)
-            )
-            """
-    }
-
-    fun createPredictionsTable(): String {
-        return """
-            create table if not exists predictions (
-                id bigserial primary key,
-                text text not null,
-                rarity text not null,
-                author_id bigint references users(user_id) on delete set null,
-                created_at timestamptz not null default now()
-            )
-            """
-    }
-
-    fun createPredictionHistoryTable(): String {
-        return """
-            create table if not exists prediction_history (
-                user_id bigint not null references users(user_id) on delete cascade,
-                prediction_id bigint not null references predictions(id) on delete cascade,
-                claimed_at timestamptz not null default now(),
-                primary key (user_id, prediction_id)
-            )
-            """
-    }
-
-    fun createRecommendationsTable(): String {
-        return """
-            create table if not exists recommendations (
-                id serial primary key,
-                type text not null,
-                title text not null,
-                genres text not null,
-                moods text not null,
-                year integer not null,
-                description text not null
             )
             """
     }

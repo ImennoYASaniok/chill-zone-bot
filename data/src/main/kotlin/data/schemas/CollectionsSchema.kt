@@ -1,12 +1,25 @@
 package data.schemas
 
-object FavoritesSchema {
-    // Эта схема уже включена в UserSchema как createUserFavoritesTable()
-    // Но оставим для совместимости и возможного расширения
-    
+import data.Db
+
+object CollectionsSchema {
     fun ensure() {
-        // Таблица user_favorites уже создается в UserSchema
-        // Но оставим метод для возможного расширения
+        Db.raw(createRecommendationsTable())
+        Db.raw(createUserFavoritesTable())
+    }
+
+    fun createRecommendationsTable(): String {
+        return """
+            create table if not exists recommendations (
+                id serial primary key,
+                type text not null,
+                title text not null,
+                genres text not null,
+                moods text not null,
+                year integer not null,
+                description text not null
+            )
+            """
     }
 
     fun createUserFavoritesTable(): String {
