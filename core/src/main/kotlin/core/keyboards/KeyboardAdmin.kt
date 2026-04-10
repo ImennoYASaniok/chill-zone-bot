@@ -19,15 +19,22 @@ private fun kb(rows: List<List<String>>): KeyboardReplyMarkup {
 object KeyboardAdmin {
     fun adminMenu(): KeyboardReplyMarkup = kb(
         listOf(
-            listOf("👥 Управление пользователями", "🚫 Забаненные пользователи"),
-            listOf("📊 Статистика", "⬅️ Обратно")
+            listOf("👥 Управление пользователями", "📊 Статистика"),
+            listOf("⬅️ Обратно")
         )
     )
     
-    fun adminUserManagementMenu(): KeyboardReplyMarkup = kb(
+    fun adminUserManagementMenu(filter: String = "Все"): KeyboardReplyMarkup = kb(
         listOf(
             listOf("👥 Список пользователей", "🔍 Поиск пользователей"),
-            listOf("⬅️ Обратно")
+            listOf("🔄 Фильтр: $filter", "⬅️ Обратно")
+        )
+    )
+    
+    fun adminFilterMenu(): KeyboardReplyMarkup = kb(
+        listOf(
+            listOf("🔄 Показать всех", "✅ Показать разбаненных"),
+            listOf("🚫 Показать забаненных", "⬅️ Обратно")
         )
     )
     

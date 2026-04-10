@@ -13,6 +13,26 @@ import core.PendingAction
 import core.Session
 
 object RouterAdmin {
+    fun showAdminStats(bot: Bot, chat: ChatId) {
+        val totalUsers = AdminService.getUsersCount()
+        val bannedUsers = AdminService.getBannedUsersCount()
+        val activeUsers = totalUsers - bannedUsers
+
+        val message = "📊 <b>Админская статистика</b>\n\n👥 <b>Пользователи:</b>\n• Всего пользователей: $totalUsers\n• Забаненных пользователей: $bannedUsers\n• Активных пользователей: $activeUsers\n\n📈 <b>Активность:</b>\n• Процент забаненных: ${if (totalUsers > 0) String.format("%.1f", (bannedUsers.toDouble() / totalUsers * 100)) else "0"}%\n• Процент активных: ${if (totalUsers > 0) String.format("%.1f", (activeUsers.toDouble() / totalUsers * 100)) else "0"}%"
+
+        val actionRows = listOf(
+            listOf(
+                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                    text = "⬅️ Обратно",
+                    callbackData = "admin_back_to_panel"
+                )
+            )
+        )
+
+        val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(actionRows)
+        bot.sendMessage(chat, message, parseMode = ParseMode.HTML, replyMarkup = inlineKeyboard)
+    }
+
     fun showAdminPanel(bot: Bot, chat: ChatId, uid: Long) {
         if (!AdminService.isAdmin(uid)) {
             bot.sendMessage(chat, "🚫 Доступ запрещен. У вас нет админских прав.")
@@ -30,6 +50,7 @@ object RouterAdmin {
         bot.sendMessage(chat, statsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminMenu())
     }
     
+    @Suppress("UNUSED_PARAMETER")
     fun handleAdminAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, memes: MemeRepository, predictions: PredictionRepository, tests: TestRepository, events: EventRepository, games: GameRepository, session: Session) {
         println("DEBUG: RouterAdmin.handleAdminAction вызван с text: '$text' для пользователя $uid")
         
@@ -50,16 +71,42 @@ object RouterAdmin {
             "👥 Управление пользователями" -> {
                 session.action = PendingAction.ADMIN_USER_MANAGEMENT
                 session.data.clear()
+                session.data["admin_filter"] = "Все" // Устанавливаем фильтр по умолчанию
                 bot.sendMessage(chat, """👥 <b>Управление пользователями</b>
 
 Выберите действие:""", parseMode = ParseMode.HTML, 
-                    replyMarkup = KeyboardAdmin.adminUserManagementMenu())
+                    replyMarkup = KeyboardAdmin.adminUserManagementMenu("Все"))
             }
             
             // Обработка кнопок из меню управления пользователями
             "👥 Список пользователей" -> {
                 session.action = PendingAction.ADMIN_USER_LIST
-                session.data.clear()
+                showUserList(bot, chat, uid)
+            }
+            
+            "🔄 Фильтр: Все" -> {
+                session.action = PendingAction.ADMIN_USER_MANAGEMENT
+                bot.sendMessage(chat, """🔄 <b>Фильтр пользователей</b>
+
+Выберите, каких пользователей показывать:""", parseMode = ParseMode.HTML, 
+                    replyMarkup = KeyboardAdmin.adminFilterMenu())
+            }
+            
+            "🔄 Показать всех" -> {
+                session.data["admin_filter"] = "Все"
+                session.action = PendingAction.ADMIN_USER_LIST
+                showUserList(bot, chat, uid)
+            }
+            
+            "✅ Показать разбаненных" -> {
+                session.data["admin_filter"] = "Разбаненные"
+                session.action = PendingAction.ADMIN_USER_LIST
+                showUserList(bot, chat, uid)
+            }
+            
+            "🚫 Показать забаненных" -> {
+                session.data["admin_filter"] = "Забаненные"
+                session.action = PendingAction.ADMIN_USER_LIST
                 showUserList(bot, chat, uid)
             }
             
@@ -86,20 +133,8 @@ object RouterAdmin {
                 val totalUsers = AdminService.getUsersCount()
                 val bannedUsers = AdminService.getBannedUsersCount()
                 val activeUsers = totalUsers - bannedUsers
-                
-                val statsMessage = """📊 <b>Статистика бота</b>
 
-👥 <b>Пользователи:</b>
-• Всего: $totalUsers
-• Активных: $activeUsers
-• Забанено: $bannedUsers
-• Процент забаненных: ${(bannedUsers.toDouble() / totalUsers * 100).toInt()}%
-
-🔗 <b>Администраторы:</b>
-• Всего: ${AdminService.adminIds.size}
-• Ваш ID: $uid"""
-                
-                bot.sendMessage(chat, statsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminMenu())
+                showAdminStats(bot, chat)
             }
             
             "⬅️ Обратно" -> {
@@ -143,30 +178,57 @@ object RouterAdmin {
                         showSearchResults(bot, chat, uid, searchResults, 0)
                     }
                 }
+                else {
+                    // Неизвестное действие
+                    bot.sendMessage(chat, "❌ Неизвестное действие", replyMarkup = KeyboardAdmin.adminMenu())
+                }
             }
         }
     }
     
     fun showUserList(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
+        val session = SessionStore.get(uid)
+        val filter = session.data["admin_filter"] ?: "Все"
+        
+        // Получаем всех пользователей и применяем фильтр
         val allUsers = AdminService.getAllUsers(50, 0)
-        if (allUsers.isEmpty()) {
-            bot.sendMessage(chat, "❌ Пользователи не найдены", replyMarkup = KeyboardAdmin.adminMenu())
+        val filteredUsers = when (filter) {
+            "Все" -> allUsers
+            "Разбаненные" -> allUsers.filter { !it.isBanned }
+            "Забаненные" -> allUsers.filter { it.isBanned }
+            else -> allUsers
+        }
+        
+        if (filteredUsers.isEmpty()) {
+            val filterMessage = when (filter) {
+                "Все" -> "пользователей"
+                "Разбаненные" -> "разбаненных пользователей"
+                "Забаненные" -> "забаненных пользователей"
+                else -> "пользователей"
+            }
+            bot.sendMessage(chat, "❌ $filterMessage не найдены", replyMarkup = KeyboardAdmin.adminMenu())
             return
         }
         
-        if (index >= allUsers.size) return
+        if (index >= filteredUsers.size) return
         
-        val session = SessionStore.get(uid)
         session.action = PendingAction.ADMIN_USER_LIST
         session.data["admin_current_index"] = index.toString()
-        session.data["admin_total_count"] = allUsers.size.toString()
+        session.data["admin_total_count"] = filteredUsers.size.toString()
         
         // Отображаем информацию о текущей странице
         val startIndex = index + 1
-        val endIndex = minOf(index + 5, allUsers.size)
-        val pageUsers = allUsers.subList(startIndex - 1, endIndex)
+        val endIndex = minOf(index + 5, filteredUsers.size)
+        val pageUsers = filteredUsers.subList(startIndex - 1, endIndex)
         
-        val message = """👥 <b>Список пользователей</b> ($startIndex-$endIndex из ${allUsers.size})
+        val filterText = when (filter) {
+            "Все" -> "всех пользователей"
+            "Разбаненные" -> "разбаненных пользователей"
+            "Забаненные" -> "забаненных пользователей"
+            else -> "пользователей"
+        }
+        
+        val message = """👥 <b>Список пользователей</b> ($startIndex-$endIndex из ${filteredUsers.size}) - $filterText
 
 ${pageUsers.joinToString("\n") { user ->
             val status = if (user.isBanned) "🚫" else "✅"
@@ -196,6 +258,23 @@ ${pageUsers.joinToString("\n") { user ->
         // Добавляем навигацию
         val navRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
         
+        // Кнопки фильтрации
+        val filterButtons = listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "🔄 Все",
+                callbackData = "admin_filter_Все"
+            ),
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "✅ Разбаненные",
+                callbackData = "admin_filter_Разбаненные"
+            ),
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "🚫 Забаненные",
+                callbackData = "admin_filter_Забаненные"
+            )
+        )
+        navRows.add(filterButtons)
+        
         if (index > 0) {
             navRows.add(listOf(
                 com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
@@ -205,7 +284,7 @@ ${pageUsers.joinToString("\n") { user ->
             ))
         }
         
-        if (endIndex < allUsers.size) {
+        if (endIndex < filteredUsers.size) {
             navRows.add(listOf(
                 com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
                     text = "➡️ Следующая страница",
@@ -281,7 +360,7 @@ $userStatus <b>${user.displayName}</b>
         bot.sendMessage(chat, "Действия:", replyMarkup = KeyboardAdmin.adminSearchResultsInline(users, index))
     }
     
-    fun showUserProfile(bot: Bot, chat: ChatId, uid: Long, targetUser: UserProfile) {
+    fun showUserProfile(bot: Bot, chat: ChatId, targetUser: UserProfile) {
         val userStatus = if (targetUser.isBanned) "🚫" else "✅"
         val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
         
@@ -297,14 +376,22 @@ $userStatus <b>${targetUser.displayName}</b>
         
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML)
         
-        // Создаем inline клавиатуру с действиями и кнопкой возврата
+        // Создаем inline клавиатуру с действиями
         val actionRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
         
-        // Кнопка профиля
+        // Кнопка изменения профиля
         actionRows.add(listOf(
             com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "👤 Профиль",
-                callbackData = "admin_profile_${targetUser.userId}"
+                text = "✏️ Изменить профиль",
+                callbackData = "admin_edit_profile_${targetUser.userId}"
+            )
+        ))
+        
+        // Кнопка статистики аккаунта
+        actionRows.add(listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "📊 Статистика аккаунта",
+                callbackData = "admin_account_stats_${targetUser.userId}"
             )
         ))
         
@@ -321,6 +408,14 @@ $userStatus <b>${targetUser.displayName}</b>
             com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
                 text = "⬅️ Обратно в поиск",
                 callbackData = "admin_back_to_search"
+            )
+        ))
+        
+        // Кнопка админ панели (в конце)
+        actionRows.add(listOf(
+            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                text = "🛡️ Админ панель",
+                callbackData = "admin_back"
             )
         ))
         
@@ -349,7 +444,7 @@ $userStatus <b>${targetUser.displayName}</b>
                         // Обновляем сообщение
                         val targetUser = users.profile(targetUserId)
                         if (targetUser != null) {
-                            showUserProfile(bot, chat, uid, targetUser)
+                            showUserProfile(bot, chat, targetUser)
                         }
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при бане")
@@ -365,7 +460,7 @@ $userStatus <b>${targetUser.displayName}</b>
                         // Обновляем сообщение
                         val targetUser = users.profile(targetUserId)
                         if (targetUser != null) {
-                            showUserProfile(bot, chat, uid, targetUser)
+                            showUserProfile(bot, chat, targetUser)
                         }
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при разбане")
@@ -378,7 +473,7 @@ $userStatus <b>${targetUser.displayName}</b>
                 if (targetUserId != null) {
                     val targetUser = users.profile(targetUserId)
                     if (targetUser != null) {
-                        showUserProfile(bot, chat, uid, targetUser)
+                        showUserProfile(bot, chat, targetUser)
                         bot.answerCallbackQuery(callback.id)
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
@@ -415,8 +510,8 @@ $userStatus <b>${targetUser.displayName}</b>
                     val resultsString = session.data["admin_search_results"]
                     if (resultsString != null) {
                         val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
-                        val users = userIds.mapNotNull { users.profile(it) }
-                        if (newIndex < users.size) {
+                        val userProfiles = userIds.mapNotNull { users.profile(it) }
+                        if (newIndex < userProfiles.size) {
                             showUserList(bot, chat, uid, newIndex)
                         } else {
                             bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
@@ -427,18 +522,167 @@ $userStatus <b>${targetUser.displayName}</b>
                 }
             }
             
+            data.startsWith("admin_filter_") -> {
+                val filterType = data.substringAfter("admin_filter_")
+                session.data["admin_filter"] = filterType
+                showUserList(bot, chat, uid, 0)
+                bot.answerCallbackQuery(callback.id, "🔄 Фильтр изменен на " + filterType)
+            }
+            
             data.startsWith("admin_back_to_search") -> {
                 session.action = PendingAction.ADMIN_SEARCH
                 session.data.clear()
-                bot.sendMessage(chat, """🔍 <b>Поиск пользователей</b>
-
-Введите ID, username или имя пользователя для поиска.
-
-Примеры:
-• 7266569446 (точный поиск по ID)
-• @username (частичный поиск по username)
-• Иван (частичный поиск по имени)""", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu(isAdmin = true))
+                bot.sendMessage(chat, "🔍 <b>Поиск пользователей</b>\n\nВведите ID, username или имя пользователя для поиска.\n\nПримеры:\n• 7266569446 (точный поиск по ID)\n• @username (частичный поиск по username)\n• Иван (частичный поиск по имени)", parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.mainMenu(isAdmin = true))
                 bot.answerCallbackQuery(callback.id)
+            }
+            
+            data.startsWith("admin_edit_profile_") -> {
+                val targetUserId = data.substringAfter("admin_edit_profile_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        RouterProfile.showAdminEditProfileForm(bot, chat, uid, targetUser)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_back_to_profile_") -> {
+                val targetUserId = data.substringAfter("admin_back_to_profile_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        showUserProfile(bot, chat, targetUser)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_account_stats_") -> {
+                val targetUserId = data.substringAfter("admin_account_stats_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        RouterProfile.showAccountStats(bot, chat, targetUser)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+
+            data == "admin_back_to_panel" -> {
+                showAdminPanel(bot, chat, uid)
+                bot.answerCallbackQuery(callback.id)
+            }
+            
+            data.startsWith("admin_edit_name_") -> {
+                val targetUserId = data.substringAfter("admin_edit_name_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        session.action = PendingAction.ADMIN_EDIT_NAME
+                        session.data["admin_edit_target_user"] = targetUserId.toString()
+                        bot.sendMessage(chat, "✏️ <b>Изменение имени</b>\n\n👤 <b>${targetUser.displayName}</b>\n🆔 ID: ${targetUser.userId}\n\nВведите новое имя:", parseMode = ParseMode.HTML)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_edit_username_") -> {
+                val targetUserId = data.substringAfter("admin_edit_username_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        session.action = PendingAction.ADMIN_EDIT_USERNAME
+                        session.data["admin_edit_target_user"] = targetUserId.toString()
+                        bot.sendMessage(chat, "✏️ <b>Изменение username</b>\n\n👤 <b>${targetUser.displayName}</b>\n🆔 ID: ${targetUser.userId}\n👤 Текущий username: ${if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"}\n\nВведите новый username (с @):", parseMode = ParseMode.HTML)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_edit_bio_") -> {
+                val targetUserId = data.substringAfter("admin_edit_bio_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        session.action = PendingAction.ADMIN_EDIT_BIO
+                        session.data["admin_edit_target_user"] = targetUserId.toString()
+                        bot.sendMessage(chat, "✏️ <b>Изменение био</b>\n\n👤 <b>${targetUser.displayName}</b>\n🆔 ID: ${targetUser.userId}\n📝 Текущее био: ${targetUser.bio.ifBlank { "не указано" }}\n\nВведите новое био:", parseMode = ParseMode.HTML)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_toggle_hidden_") -> {
+                val targetUserId = data.substringAfter("admin_toggle_hidden_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        users.toggleHidden(targetUserId)
+                        bot.answerCallbackQuery(callback.id, "👁️ Профиль ${if (!targetUser.hidden) "скрыт" else "открыт"}")
+                        RouterProfile.showAdminEditProfileForm(bot, chat, uid, targetUser.copy(hidden = !targetUser.hidden))
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_toggle_media_") -> {
+                val targetUserId = data.substringAfter("admin_toggle_media_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        users.toggleMedia(targetUserId)
+                        bot.answerCallbackQuery(callback.id, "🎬 Медиа ${if (!targetUser.showMedia) "выключено" else "включено"}")
+                        RouterProfile.showAdminEditProfileForm(bot, chat, uid, targetUser.copy(showMedia = !targetUser.showMedia))
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
+            
+            data.startsWith("admin_toggle_username_") -> {
+                val targetUserId = data.substringAfter("admin_toggle_username_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        users.toggleHideUsername(targetUserId)
+                        bot.answerCallbackQuery(callback.id, "👁️ Username ${if (!targetUser.hideUsername) "скрыт" else "открыт"}")
+                        RouterProfile.showAdminEditProfileForm(bot, chat, uid, targetUser.copy(hideUsername = !targetUser.hideUsername))
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Пользователь не найден")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
             }
             
             data.startsWith("admin_back") -> {

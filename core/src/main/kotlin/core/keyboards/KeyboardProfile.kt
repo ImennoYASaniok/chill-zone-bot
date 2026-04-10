@@ -7,8 +7,6 @@ import data.AdminService
 
 object KeyboardProfile {
     fun profileMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
-        val profileHidden = userProfile?.hidden ?: false
-        val usernameHidden = userProfile?.hideUsername ?: false
         val isAdmin = userProfile?.let { 
             val adminStatus = AdminService.isAdmin(it.userId)
             println("DEBUG: Проверка админских прав для пользователя ${it.userId}: $adminStatus")
@@ -18,23 +16,36 @@ object KeyboardProfile {
         println("DEBUG: profileMenu - userProfile: $userProfile, isAdmin: $isAdmin")
         
         val rows = mutableListOf<List<String>>()
-        
-        // Добавляем админскую кнопку в начало для администраторов
+
+        rows.addAll(
+            listOf(
+                listOf("✏️ Изменить профиль"),
+                listOf("📊 Статистика аккаунта")
+            )
+        )
+
         if (isAdmin) {
             rows.add(listOf("🛡️ Админ панель"))
             println("DEBUG: Админская кнопка добавлена")
         }
-        
-        rows.addAll(listOf(
-            listOf("Изменить имя", if (usernameHidden) "Показать username [👁️]" else "Скрыть username [🙈]"),
-            listOf("Изменить био"),
-            listOf(
-                if (profileHidden) "Показать профиль [👁️]" else "Скрыть профиль [🙈]"
-            ),
-            listOf("⬅️ Обратно")
-        ))
-        
+
+        rows.add(listOf("⬅️ Обратно"))
+
         return kb(rows)
+    }
+
+    fun editProfileMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
+        val profileHidden = userProfile?.hidden ?: false
+        val usernameHidden = userProfile?.hideUsername ?: false
+
+        return kb(
+            listOf(
+                listOf("Изменить имя"),
+                listOf("Изменить био"),
+                listOf(if (usernameHidden) "Показать username [👁️]" else "Скрыть username [🙈]", if (profileHidden) "Показать профиль [👁️]" else "Скрыть профиль [🙈]"),
+                listOf("⬅️ Назад")
+            )
+        )
     }
 
     fun settingsMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
