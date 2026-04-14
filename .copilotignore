@@ -1,0 +1,27 @@
+# Исключить файлы окружения и секреты
+.env
+secrets/
+
+# API ключи и учетные данные
+**/apikeys/**
+firebase.js
+google-services.json
+GoogleService-Info.plist
+
+# Приватные ключи и сертификаты
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Исключить системные папки и логи
+node_modules/
+dist/
+build/
+*.log
+
+# Исключить специфические данные (например, базу данных)
+*.db
+*.sqlite
+config/database.yml
+config/secrets.yml
