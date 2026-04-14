@@ -4,7 +4,7 @@ import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
-import data.UserProfile
+import data.models.UserProfile
 import data.FavoriteItem
 
 // Вспомогательная функция для создания клавиатур

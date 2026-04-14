@@ -2,7 +2,7 @@ package core.keyboards
 
 import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
-import data.UserProfile
+import data.models.UserProfile
 import data.AdminService
 
 object KeyboardProfile {
@@ -55,6 +55,14 @@ object KeyboardProfile {
             listOf(
                 listOf(if (mediaEnabled) "Выключить картинки [❌]" else "Включить картинки [✅]"),
                 listOf("⬅️ Обратно")
+            )
+        )
+    }
+
+    fun statsMenu(): KeyboardReplyMarkup {
+        return kb(
+            listOf(
+                listOf("⬅️ Назад")
             )
         )
     }

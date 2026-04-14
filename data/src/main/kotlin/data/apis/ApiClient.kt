@@ -3,7 +3,7 @@ package data.apis
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import data.RecommendationItem
+import data.models.RecommendationItem
 import io.github.cdimascio.dotenv.dotenv
 import okhttp3.OkHttpClient
 import okhttp3.Request

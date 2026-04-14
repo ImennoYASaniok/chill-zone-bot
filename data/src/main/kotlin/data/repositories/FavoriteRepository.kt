@@ -1,5 +1,7 @@
 package data
 
+import data.models.*
+
 data class FavoriteItem(
     val userId: Long,
     val itemId: Int,

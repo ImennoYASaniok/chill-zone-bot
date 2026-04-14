@@ -5,7 +5,7 @@ import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import data.FavoriteItem
-import data.RecommendationItem
+import data.models.RecommendationItem
 
 object KeyboardCollections {
     fun collectionsMenu(): KeyboardReplyMarkup = kb(

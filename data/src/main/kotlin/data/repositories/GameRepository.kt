@@ -1,5 +1,7 @@
 package data
 
+import data.models.*
+
 class GameRepository {
     fun stats(userId: Long): GameStats {
         return Db.single(

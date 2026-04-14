@@ -1,5 +1,7 @@
 package data
 
+import data.models.*
+
 class MemeRepository {
     fun addMeme(fileId: String, uploaderId: Long?, caption: String = ""): MemeItem {
         val id = Db.insertId(

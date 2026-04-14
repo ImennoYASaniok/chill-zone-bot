@@ -1,5 +1,7 @@
 package data
 
+import data.models.*
+
 class FeedbackRepository {
     fun save(userId: Long?, username: String, scope: String, text: String): Long {
         return Db.insertId(

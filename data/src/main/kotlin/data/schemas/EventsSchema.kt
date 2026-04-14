@@ -1,6 +1,7 @@
 package data.schemas
 
 import data.Db
+import data.models.*
 
 object EventsSchema {
     fun ensure() {

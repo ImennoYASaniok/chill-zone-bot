@@ -1,5 +1,7 @@
 package data
 
+import data.models.*
+
 class TestRepository {
     fun createTest(title: String, authorId: Long?): Long {
         return Db.insertId("insert into tests(title, author_id) values (?, ?)") { stmt ->

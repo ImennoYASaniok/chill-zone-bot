@@ -1,5 +1,7 @@
 package data
 
+import data.models.*
+
 class EventRepository {
     fun add(
         ownerId: Long,

@@ -1,6 +1,7 @@
 package data.schemas
 
 import data.Db
+import data.models.*
 
 object TestSchema {
     fun ensure() {
