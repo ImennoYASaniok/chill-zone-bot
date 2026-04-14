@@ -1,5 +1,9 @@
 package data
 
+import data.models.*
+import java.time.LocalDateTime
+import java.sql.Timestamp
+
 object SeedData {
     private val recommendations = listOf(
         RecommendationItem(1, RecommendationType.FILM, "Интерстеллар", listOf("sci-fi", "drama"), listOf("thoughtful", "epic"), 2014, "Фильм о выборе, времени и дальнем космосе."),
@@ -26,6 +30,110 @@ object SeedData {
         Triple("Мини-тест: логика", QuestionKind.SINGLE, "Продолжи последовательность: 2, 4, 8, ? | 10;12;14;16 | 4"),
         Triple("Мини-тест: настроение", QuestionKind.NUMBER, "Сколько минут нужно на короткий перерыв? | 5"),
         Triple("Мини-тест: ассоциации", QuestionKind.MATCH, "Соедини пары | кот=мяу;собака=гав")
+    )
+
+    // Моки пользователей для тестирования админ панели и других функций
+    private val mockUsers = listOf(
+        // Обычный пользователь
+        UserProfile(
+            userId = 1001L,
+            username = "testuser1",
+            displayName = "Тестовый Пользователь",
+            bio = "Люблю фильмы и игры",
+            hidden = false,
+            showMedia = true,
+            rating = 150,
+            hideUsername = false,
+            isBanned = false,
+            createdAt = LocalDateTime.now().minusDays(30),
+            isAdmin = false
+        ),
+        // Админ
+        UserProfile(
+            userId = 1002L,
+            username = "admin_test",
+            displayName = "Админ Тест",
+            bio = "Администратор бота",
+            hidden = false,
+            showMedia = true,
+            rating = 500,
+            hideUsername = false,
+            isBanned = false,
+            createdAt = LocalDateTime.now().minusDays(60),
+            isAdmin = true
+        ),
+        // Забаненный пользователь
+        UserProfile(
+            userId = 1003L,
+            username = "banned_user",
+            displayName = "Забаненный Пользователь",
+            bio = "Нарушил правила",
+            hidden = false,
+            showMedia = true,
+            rating = 50,
+            hideUsername = false,
+            isBanned = true,
+            createdAt = LocalDateTime.now().minusDays(90),
+            bannedAt = "2024-01-15 10:30",
+            reason = "Спам",
+            isAdmin = false
+        ),
+        // Пользователь со скрытым профилем
+        UserProfile(
+            userId = 1004L,
+            username = "hidden_user",
+            displayName = "Скрытый Пользователь",
+            bio = "Приватный профиль",
+            hidden = true,
+            showMedia = false,
+            rating = 200,
+            hideUsername = true,
+            isBanned = false,
+            createdAt = LocalDateTime.now().minusDays(45),
+            isAdmin = false
+        ),
+        // Пользователь с высоким рейтингом
+        UserProfile(
+            userId = 1005L,
+            username = "top_user",
+            displayName = "Топ Пользователь",
+            bio = "Активный участник",
+            hidden = false,
+            showMedia = true,
+            rating = 1000,
+            hideUsername = false,
+            isBanned = false,
+            createdAt = LocalDateTime.now().minusDays(120),
+            isAdmin = false
+        ),
+        // Пользователь без username
+        UserProfile(
+            userId = 1006L,
+            username = "",
+            displayName = "Пользователь Без Username",
+            bio = "Нет юзернейма",
+            hidden = false,
+            showMedia = true,
+            rating = 100,
+            hideUsername = false,
+            isBanned = false,
+            createdAt = LocalDateTime.now().minusDays(20),
+            isAdmin = false
+        ),
+        // Новый пользователь
+        UserProfile(
+            userId = 1007L,
+            username = "newbie",
+            displayName = "Новичок",
+            bio = "Только зарегистрировался",
+            hidden = false,
+            showMedia = true,
+            rating = 10,
+            hideUsername = false,
+            isBanned = false,
+            createdAt = LocalDateTime.now().minusDays(1),
+            isAdmin = false
+        )
     )
 
     fun ensure() {
@@ -79,6 +187,45 @@ object SeedData {
                     stmt.setString(4, prompt)
                     stmt.setString(5, opts)
                     stmt.setString(6, ans)
+                }
+            }
+        }
+
+        // Вставка мок-пользователей для тестирования
+        mockUsers.forEach { user ->
+            // Проверяем, существует ли пользователь
+            val existingUser = Db.single(
+                "select user_id from users where user_id = ?",
+                bind = { stmt -> stmt.setLong(1, user.userId) },
+                map = { it.getLong("user_id") }
+            )
+
+            if (existingUser == null) {
+                // Вставляем пользователя
+                Db.execute(
+                    """insert into users(user_id, username, display_name, bio, hidden, show_media, rating, hide_username, created_at)
+                       values (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+                ) { stmt ->
+                    stmt.setLong(1, user.userId)
+                    stmt.setString(2, user.username)
+                    stmt.setString(3, user.displayName)
+                    stmt.setString(4, user.bio)
+                    stmt.setBoolean(5, user.hidden)
+                    stmt.setBoolean(6, user.showMedia)
+                    stmt.setInt(7, user.rating)
+                    stmt.setBoolean(8, user.hideUsername)
+                    stmt.setTimestamp(9, user.createdAt?.let { Timestamp.valueOf(it) })
+                }
+
+                // Если пользователь забанен, вставляем запись в banned_users
+                if (user.isBanned) {
+                    Db.execute(
+                        """insert into banned_users(user_id, banned_at, reason) values (?, ?, ?)"""
+                    ) { stmt ->
+                        stmt.setLong(1, user.userId)
+                        stmt.setTimestamp(2, user.bannedAt?.let { Timestamp.valueOf(it.replace(" ", "T")) })
+                        stmt.setString(3, user.reason)
+                    }
                 }
             }
         }

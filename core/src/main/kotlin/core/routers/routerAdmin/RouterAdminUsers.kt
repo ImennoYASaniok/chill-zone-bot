@@ -10,6 +10,7 @@ import core.keyboards.KeyboardFactory
 import core.SessionStore
 import core.PendingAction
 import core.Session
+import core.FSMContext
 
 object RouterAdminUsers {
     fun showUserList(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
@@ -61,14 +62,13 @@ object RouterAdminUsers {
         // Создаем inline клавиатуру с действиями для каждого профиля
         val inlineRows = pageUsers.map { user ->
             val usernameButtonText = when {
-                user.hideUsername -> "👤 скрыт"
                 user.username.isBlank() -> "👤 не указан"
                 else -> "👤 @${user.username}"
             }
             listOf(
                 com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
                     text = usernameButtonText,
-                    callbackData = "admin_profile_${user.userId}"
+                    callbackData = "admin_profile_view_${user.userId}"
                 ),
                 com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
                     text = if (user.isBanned) "✅ Разбанить" else "🚫 Забанить",
@@ -80,26 +80,31 @@ object RouterAdminUsers {
         // Добавляем навигацию (стрелки) сверху в inline клавиатуру
         val navRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
 
-        val prevIndex = if (index - 5 < 0) 0 else index - 5
-        val nextIndex = if (endIndex < filteredUsers.size) index + 5 else index
+        // Стрелки показываем только если больше 5 пользователей
+        if (filteredUsers.size > 5) {
+            // Циклическая навигация: последняя страница -> первая, первая -> последняя
+            val lastPageIndex = ((filteredUsers.size - 1) / 5) * 5
+            val prevIndex = if (index == 0) lastPageIndex else index - 5
+            val nextIndex = if (index + 5 >= filteredUsers.size) 0 else index + 5
 
-        navRows.add(
-            listOf(
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = "⬅️",
-                    callbackData = "admin_users_page_$prevIndex"
-                ),
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = "➡️",
-                    callbackData = "admin_users_page_$nextIndex"
+            navRows.add(
+                listOf(
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = "⬅️",
+                        callbackData = "admin_users_page_$prevIndex"
+                    ),
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = "➡️",
+                        callbackData = "admin_users_page_$nextIndex"
+                    )
                 )
             )
-        )
+        }
 
         val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(navRows + inlineRows)
 
         bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminUserListMenu(filter))
-        bot.sendMessage(chatId = chat, text = " ", replyMarkup = inlineKeyboard)
+        bot.sendMessage(chatId = chat, text = "📌 Навигация и действия:", replyMarkup = inlineKeyboard)
     }
     
     fun showBannedUsers(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
@@ -125,7 +130,7 @@ object RouterAdminUsers {
 📝 Причина: ${bannedUser.reason ?: "не указана"}"""
         
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML,
-            replyMarkup = KeyboardAdmin.adminBannedNav(index, bannedUsers.size))
+            replyMarkup = KeyboardAdmin.adminBannedNav(bannedUsers.size))
         
         bot.sendMessage(chat, "Действия:", replyMarkup = KeyboardAdmin.adminBannedInline(bannedUser))
     }
@@ -135,23 +140,35 @@ object RouterAdminUsers {
 
         val session = SessionStore.get(uid)
         val query = session.data["admin_search_query"] ?: ""
-        val total = users.size
+        val filter = session.data["admin_search_filter"] ?: "Все"
+
+        // Применяем фильтр к результатам поиска
+        val filteredUsers = when (filter) {
+            "Все" -> users
+            "Разбаненные" -> users.filter { !it.isBanned }
+            "Забаненные" -> users.filter { it.isBanned }
+            else -> users
+        }
+
+        if (filteredUsers.isEmpty()) {
+            bot.sendMessage(chat, "❌ По вашему поиску и фильтру не найдено пользователей", replyMarkup = KeyboardAdmin.adminMenu())
+            return
+        }
 
         val startIndex = index + 1
-        val endIndex = minOf(index + 5, total)
-        val pageUsers = users.subList(startIndex - 1, endIndex)
+        val endIndex = minOf(index + 5, filteredUsers.size)
+        val pageUsers = filteredUsers.subList(startIndex - 1, endIndex)
 
-        session.data["admin_search_results"] = users.joinToString("|") { "${it.userId}" }
+        session.data["admin_search_results"] = filteredUsers.joinToString("|") { "${it.userId}" }
         session.data["admin_current_index"] = index.toString()
-        session.data["admin_total_count"] = total.toString()
+        session.data["admin_total_count"] = filteredUsers.size.toString()
 
-        val message = """🔍 <b>Поиск по</b> "$query" ($startIndex-$endIndex из $total)
+        val message = """🔍 <b>Поиск по</b> "$query" ($startIndex-$endIndex из ${filteredUsers.size})
 
 Выберите пользователя:"""
 
         val inlineRows = pageUsers.map { user ->
             val usernameButtonText = when {
-                user.hideUsername -> "👤 скрыт"
                 user.username.isBlank() -> "👤 не указан"
                 else -> "👤 @${user.username}"
             }
@@ -168,28 +185,121 @@ object RouterAdminUsers {
         }
 
         val navRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
-        val prevIndex = if (index - 5 < 0) 0 else index - 5
-        val nextIndex = if (endIndex < total) index + 5 else index
+        
+        // Стрелки показываем только если больше 5 пользователей
+        if (filteredUsers.size > 5) {
+            // Циклическая навигация: последняя страница -> первая, первая -> последняя
+            val lastPageIndex = ((filteredUsers.size - 1) / 5) * 5
+            val prevIndex = if (index == 0) lastPageIndex else index - 5
+            val nextIndex = if (index + 5 >= filteredUsers.size) 0 else index + 5
 
-        navRows.add(
+            navRows.add(
+                listOf(
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = "⬅️",
+                        callbackData = "admin_search_page_$prevIndex"
+                    ),
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = "➡️",
+                        callbackData = "admin_search_page_$nextIndex"
+                    )
+                )
+            )
+        }
+
+        val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(navRows + inlineRows)
+
+        bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminSearchMenu(filter))
+        bot.sendMessage(chatId = chat, text = " ", replyMarkup = inlineKeyboard)
+    }
+
+    fun showUserProfileView(bot: Bot, chat: ChatId, uid: Long, targetUser: UserProfile) {
+        val session = SessionStore.get(uid)
+        session.context = FSMContext.PROFILE_VIEW
+        session.data["admin_profile_view_user_id"] = targetUser.userId.toString()
+        
+        val usernameDisplay = "@${targetUser.username}"  // Админ видит все username
+
+        val nameValue = targetUser.displayName
+            .trim()
+            .removePrefix("@")
+            .ifBlank { "не указано" }
+            .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+
+        val registrationDate = targetUser.createdAt?.let { date: java.time.LocalDateTime ->
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+            date.format(formatter)
+        } ?: "неизвестно"
+
+        val statusText = if (targetUser.isBanned) {
+            """🚫 Забанен
+📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}
+📝 Причина: ${targetUser.reason ?: "не указана"}"""
+        } else {
+            "✅ Активен"
+        }
+
+        val adminText = if (targetUser.isAdmin) {
+            "\n\n🛡️ Администратор"
+        } else {
+            ""
+        }
+
+        val message = """👤 <b>Профиль пользователя</b>
+
+🏷️ Имя: $nameValue
+🆔 ID: ${targetUser.userId}
+👤 Username: $usernameDisplay
+
+📈 <b>Основная информация:</b>
+⭐ Рейтинг: ${targetUser.rating}
+📝 Био: ${targetUser.bio.ifBlank { "не указано" }}
+📅 Дата регистрации: $registrationDate
+
+<b>Статус:</b>
+$statusText$adminText"""
+
+        val currentAdmin = data.AdminService.isAdmin(uid)
+        val keyboard = if (currentAdmin) {
+            KeyboardAdmin.profileViewAdminMenu(targetUser.isBanned)
+        } else {
+            KeyboardAdmin.profileViewBackMenu()
+        }
+
+        bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML, replyMarkup = keyboard)
+    }
+
+    fun showUserProfileView(bot: Bot, chat: ChatId, targetUser: UserProfile) {
+        val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
+
+        val nameValue = targetUser.displayName
+            .trim()
+            .removePrefix("@")
+            .ifBlank { "не указано" }
+            .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+
+        val message = """👤 <b>Профиль пользователя</b>
+
+🏷️ Имя: $nameValue
+🆔 ID: ${targetUser.userId}
+👤 Username: $usernameDisplay
+⭐ Рейтинг: ${targetUser.rating}
+📝 Био: ${targetUser.bio.ifBlank { "не указано" }}
+👁️ Профиль: ${if (targetUser.hidden) "скрыт" else "видимый"}"""
+
+        val inlineButtons = listOf(
             listOf(
                 com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = "⬅️",
-                    callbackData = "admin_search_page_$prevIndex"
-                ),
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = "➡️",
-                    callbackData = "admin_search_page_$nextIndex"
+                    text = "⬅️ В список",
+                    callbackData = "admin_back_to_user_list"
                 )
             )
         )
 
-        val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(navRows + inlineRows)
-
-        bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminBackOnlyMenu())
-        bot.sendMessage(chatId = chat, text = " ", replyMarkup = inlineKeyboard)
+        bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML,
+            replyMarkup = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(inlineButtons))
     }
-    
+
     fun showUserProfile(bot: Bot, chat: ChatId, targetUser: UserProfile) {
         val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
 

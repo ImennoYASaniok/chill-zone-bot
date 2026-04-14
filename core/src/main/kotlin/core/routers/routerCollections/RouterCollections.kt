@@ -169,6 +169,10 @@ object RouterCollections {
                         RouterCollectionsFavorites.saveToFavorites(bot, chat, uid, session)
                         return true
                     }
+                    FSMContext.PROFILE_VIEW -> {
+                        // Профиль не сохраняется здесь
+                        return false
+                    }
                 }
             }
             "Мои избранные" -> {
@@ -181,6 +185,10 @@ object RouterCollections {
                         // Показать избранные подборки
                         RouterCollectionsFavorites.showCollectionFavorites(bot, chat, uid, users)
                         return true
+                    }
+                    FSMContext.PROFILE_VIEW -> {
+                        // В профиле нет избранного
+                        return false
                     }
                 }
             }
@@ -318,6 +326,7 @@ object RouterCollections {
                 val itemNumber = data.substringAfter("save_item_").toIntOrNull() ?: return
                 val type = session.data["collection_type"]?.let { RecommendationType.valueOf(it) }
                 val query = session.data["collection_query"]
+                return
                 val offset = session.data["collection_offset"]?.toIntOrNull() ?: 0
                 
                 if (type == null) {

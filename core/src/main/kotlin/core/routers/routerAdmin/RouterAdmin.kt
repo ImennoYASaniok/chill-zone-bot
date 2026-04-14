@@ -46,17 +46,44 @@ object RouterAdmin {
         
         println("DEBUG: Пользователь $uid является админом, обрабатываем команду")
 
+        // Обработка фильтра для списка или поиска
         if (text.startsWith("🔄 Фильтр:")) {
-            val current = session.data["admin_filter"] ?: "Все"
-            val next = when (current) {
-                "Все" -> "Забаненные"
-                "Забаненные" -> "Разбаненные"
-                "Разбаненные" -> "Все"
+            val currentSearchFilter = session.data["admin_search_filter"] ?: "Все"
+            val currentListFilter = session.data["admin_filter"] ?: "Все"
+            val next = when (session.action) {
+                PendingAction.ADMIN_SEARCH_RESULTS -> when (currentSearchFilter) {
+                    "Все" -> "Забаненные"
+                    "Забаненные" -> "Разбаненные"
+                    "Разбаненные" -> "Все"
+                    else -> "Все"
+                }
+                PendingAction.ADMIN_USER_LIST -> when (currentListFilter) {
+                    "Все" -> "Забаненные"
+                    "Забаненные" -> "Разбаненные"
+                    "Разбаненные" -> "Все"
+                    else -> "Все"
+                }
                 else -> "Все"
             }
-            session.data["admin_filter"] = next
-            session.action = PendingAction.ADMIN_USER_LIST
-            RouterAdminUsers.showUserList(bot, chat, uid, 0)
+
+            when (session.action) {
+                PendingAction.ADMIN_SEARCH_RESULTS -> {
+                    session.data["admin_search_filter"] = next
+                    val resultsString = session.data["admin_search_results"]
+                    if (resultsString != null) {
+                        val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                        val searchUsers = userIds.mapNotNull { users.profile(it) }
+                        RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, 0)
+                    }
+                }
+                PendingAction.ADMIN_USER_LIST -> {
+                    session.data["admin_filter"] = next
+                    RouterAdminUsers.showUserList(bot, chat, uid, 0)
+                }
+                else -> {
+                    bot.sendMessage(chat, "❌ Фильтр недоступен в текущем режиме", replyMarkup = KeyboardAdmin.adminMenu())
+                }
+            }
             return
         }
         
@@ -65,26 +92,19 @@ object RouterAdmin {
                 println("DEBUG: Показываем админскую панель для пользователя $uid")
                 showAdminPanel(bot, chat, uid)
             }
-            
-            "👥 Управление пользователями" -> {
-                session.action = PendingAction.ADMIN_USER_MANAGEMENT
-                session.data.clear()
-                session.data["admin_filter"] = "Все" // Устанавливаем фильтр по умолчанию
-                bot.sendMessage(chat, """👥 <b>Управление пользователями</b>
 
-Выберите действие:""", parseMode = ParseMode.HTML, 
-                    replyMarkup = KeyboardAdmin.adminUserManagementMenu("Все"))
-            }
-            
-            // Обработка кнопок из меню управления пользователями
             "👥 Список пользователей" -> {
                 session.action = PendingAction.ADMIN_USER_LIST
+                if (session.data["admin_filter"].isNullOrBlank()) {
+                    session.data["admin_filter"] = "Все"
+                }
                 RouterAdminUsers.showUserList(bot, chat, uid)
             }
             
             "🔍 Поиск пользователей" -> {
                 session.action = PendingAction.ADMIN_SEARCH
                 session.data.clear()
+                session.data["admin_search_filter"] = "Все"
                 bot.sendMessage(chat, """🔍 <b>Поиск пользователей</b>
 
 Введите ID, username или имя пользователя для поиска.
@@ -108,6 +128,55 @@ object RouterAdmin {
             "⬅️ Обратно" -> {
                 // Возвращаемся в админскую панель
                 showAdminPanel(bot, chat, uid)
+            }
+            
+            "⬅️ В список" -> {
+                val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
+                session.context = FSMContext.MEMES  // Сброс контекста ПРОФИЛЯ
+                when (session.action) {
+                    PendingAction.ADMIN_USER_LIST -> RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                    PendingAction.ADMIN_SEARCH_RESULTS -> {
+                        val resultsString = session.data["admin_search_results"]
+                        if (resultsString != null) {
+                            val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                            val searchUsers = userIds.mapNotNull { users.profile(it) }
+                            RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, currentIndex)
+                        } else {
+                            showAdminPanel(bot, chat, uid)
+                        }
+                    }
+                    else -> showAdminPanel(bot, chat, uid)
+                }
+            }
+            
+            "🚫 Забанить" -> {
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.banUser(targetUserId)) {
+                            bot.sendMessage(chat, "✅ Пользователь забанен", replyMarkup = KeyboardAdmin.adminMenu())
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            "✅ Разбанить" -> {
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.unbanUser(targetUserId)) {
+                            bot.sendMessage(chat, "✅ Пользователь разбанен", replyMarkup = KeyboardAdmin.adminMenu())
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
+                            }
+                        }
+                    }
+                }
             }
             
             "⬅️ Предыдущий" -> {
@@ -177,11 +246,6 @@ object RouterAdmin {
                 if (targetUserId != null) {
                     if (AdminService.banUser(targetUserId)) {
                         bot.answerCallbackQuery(callback.id, "✅ Пользователь забанен")
-                        // Обновляем сообщение
-                        val targetUser = users.profile(targetUserId)
-                        if (targetUser != null) {
-                            RouterAdminUsers.showUserProfile(bot, chat, targetUser)
-                        }
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при бане")
                     }
@@ -193,17 +257,26 @@ object RouterAdmin {
                 if (targetUserId != null) {
                     if (AdminService.unbanUser(targetUserId)) {
                         bot.answerCallbackQuery(callback.id, "✅ Пользователь разбанен")
-                        // Обновляем сообщение
-                        val targetUser = users.profile(targetUserId)
-                        if (targetUser != null) {
-                            RouterAdminUsers.showUserProfile(bot, chat, targetUser)
-                        }
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при разбане")
                     }
                 }
             }
 
+            data.startsWith("admin_profile_view_") -> {
+                val targetUserId = data.substringAfter("admin_profile_view_").toLongOrNull()
+                if (targetUserId != null) {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
+                        bot.answerCallbackQuery(callback.id)
+                    } else {
+                        bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Результаты поиска не найдены")
+                }
+            }
             data.startsWith("admin_profile_") -> {
                 val targetUserId = data.substringAfter("admin_profile_").toLongOrNull()
                 if (targetUserId != null) {
@@ -260,18 +333,8 @@ object RouterAdmin {
             data.startsWith("admin_users_page_") -> {
                 val newIndex = data.substringAfter("admin_users_page_").toIntOrNull()
                 if (newIndex != null) {
-                    val resultsString = session.data["admin_search_results"]
-                    if (resultsString != null) {
-                        val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
-                        val userProfiles = userIds.mapNotNull { users.profile(it) }
-                        if (newIndex < userProfiles.size) {
-                            RouterAdminUsers.showUserList(bot, chat, uid, newIndex)
-                        } else {
-                            bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
-                        }
-                    } else {
-                        RouterAdminUsers.showUserList(bot, chat, uid, newIndex)
-                    }
+                    RouterAdminUsers.showUserList(bot, chat, uid, newIndex)
+                    bot.answerCallbackQuery(callback.id)
                 }
             }
 
@@ -280,6 +343,13 @@ object RouterAdmin {
                 session.data["admin_filter"] = filterType
                 RouterAdminUsers.showUserList(bot, chat, uid, 0)
                 bot.answerCallbackQuery(callback.id, "🔄 Фильтр изменен на " + filterType)
+            }
+            
+            data == "admin_back_to_user_list" -> {
+                val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
+                session.context = FSMContext.MEMES  // Сброс контекста при выходе из профиля
+                RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                bot.answerCallbackQuery(callback.id)
             }
             
             data.startsWith("admin_back_to_search") -> {

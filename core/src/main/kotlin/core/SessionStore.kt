@@ -3,6 +3,7 @@ package core
 enum class PendingAction {
     NONE,
     EDIT_NAME,
+    EDIT_USERNAME,
     EDIT_BIO,
     ADD_MEME,
     FEEDBACK_TEXT,
@@ -31,7 +32,14 @@ enum class PendingAction {
     ADMIN_USER_LIST,
     ADMIN_BANNED_LIST,
     ADMIN_SEARCH,
-    ADMIN_SEARCH_RESULTS
+    ADMIN_SEARCH_RESULTS,
+    
+    // Новые состояния для редактирования профиля
+    ADMIN_EDIT_PROFILE,
+    ADMIN_EDIT_NAME,
+    ADMIN_EDIT_USERNAME,
+    ADMIN_EDIT_BIO,
+    ADMIN_FILTER
 }
 
 data class Session(
