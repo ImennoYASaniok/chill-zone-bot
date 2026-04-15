@@ -89,4 +89,24 @@ object KeyboardAdmin {
         
         return InlineKeyboardMarkup.create(rows)
     }
+    
+    fun adminBannedInline(userProfile: UserProfile): InlineKeyboardMarkup {
+        val rows = mutableListOf<List<InlineKeyboardButton>>()
+        
+        // Кнопка разбана
+        val unbanButton = InlineKeyboardButton.CallbackData(
+            text = "✅ Разбанить",
+            callbackData = "admin_unban_${userProfile.userId}"
+        )
+        rows.add(listOf(unbanButton))
+        
+        // Кнопка профиля
+        val profileButton = InlineKeyboardButton.CallbackData(
+            text = "👤 Профиль",
+            callbackData = "admin_profile_${userProfile.userId}"
+        )
+        rows.add(listOf(profileButton))
+        
+        return InlineKeyboardMarkup.create(rows)
+    }
 }

@@ -115,7 +115,7 @@ class RouterCore(
                     PendingAction.ADMIN_SEARCH_RESULTS
                 )) {
                     // Если в админском контексте - передаем в RouterAdmin
-                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 } else if (session.context == FSMContext.COLLECTIONS) {
                     // Для контекста COLLECTIONS проверяем текущее действие
                     when (session.action) {
@@ -168,22 +168,22 @@ class RouterCore(
     // Перенаправление в модули
     private fun handleModuleRoutes(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session) {
         when (text) {
-            "👤 Профиль" -> RouterProfile.showProfile(bot, chat, uid, users, memes, predictions, tests, events, games)
+            "👤 Профиль" -> RouterProfile.showProfile(bot, chat, uid, users)
             // Кнопки профиля
             "✏️ Изменить профиль", "📊 Статистика аккаунта", "🛡️ Админ панель", "Изменить имя", "Показать username [👁️]", "Скрыть username [🙈]", "Изменить био", "Показать профиль [👁️]", "Скрыть профиль [🙈]", "⬅️ Назад" -> {
-                RouterProfile.handleProfileAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                RouterProfile.handleProfileAction(bot, chat, uid, text, users, session)
             }
             // Админские кнопки
             "👥 Список пользователей", "🔍 Поиск пользователей", "🚫 Забаненные пользователи", "📊 Статистика",
             " Показать всех", "✅ Показать разбаненных", "🚫 Показать забаненных",
             "⬅️ Предыдущий", "➡️ Следующий" -> {
-                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
             }
             "⬅️ В список" -> {
                 if (session.context == FSMContext.PROFILE_VIEW) {
                     when (session.action) {
-                        PendingAction.ADMIN_USER_LIST -> RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
-                        PendingAction.ADMIN_SEARCH_RESULTS -> RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                        PendingAction.ADMIN_USER_LIST -> RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
+                        PendingAction.ADMIN_SEARCH_RESULTS -> RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                         else -> handleBack(bot, chat, uid)
                     }
                 } else {
@@ -192,7 +192,7 @@ class RouterCore(
             }
             "🚫 Забанить", "✅ Разбанить" -> {
                 if (session.context == FSMContext.PROFILE_VIEW && AdminService.isAdmin(uid)) {
-                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 } else {
                     handleBack(bot, chat, uid)
                 }
@@ -272,7 +272,7 @@ class RouterCore(
             else -> {
                 // Админские кнопки с динамическим текстом
                 if (text.startsWith("🔄 Фильтр:")) {
-                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                     return
                 }
                 bot.sendMessage(chat, "Не понял команду. Открой меню через /start.", replyMarkup = KeyboardFactory.mainMenu())
@@ -317,7 +317,7 @@ class RouterCore(
     private fun handlePending(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session): Boolean {
         return when (session.action) {
             PendingAction.EDIT_NAME, PendingAction.EDIT_BIO -> {
-                RouterProfile.handleProfileAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                RouterProfile.handleProfileAction(bot, chat, uid, text, users, session)
             }
             PendingAction.FEEDBACK_TEXT -> {
                 RouterFeedBack.handleFeedbackAction(bot, chat, uid, text, feedback, users, session)
@@ -339,7 +339,7 @@ class RouterCore(
             // Админские действия
             PendingAction.ADMIN_USER_MANAGEMENT, PendingAction.ADMIN_USER_LIST, PendingAction.ADMIN_BANNED_LIST, 
             PendingAction.ADMIN_SEARCH, PendingAction.ADMIN_SEARCH_RESULTS -> {
-                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 true
             }
             else -> false
@@ -353,7 +353,7 @@ class RouterCore(
         val dname = displayName(callback.from)
 
         users.ensure(uid, uname, dname)
-        val data = callback.data ?: return
+        val data = callback.data
 
         when {
             // Админские функции

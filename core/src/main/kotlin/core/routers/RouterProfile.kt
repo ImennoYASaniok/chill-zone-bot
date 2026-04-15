@@ -15,7 +15,7 @@ import data.AdminService
 import core.routers.routerAdmin.RouterAdmin
 
 object RouterProfile {
-    fun showProfile(bot: Bot, chat: ChatId, uid: Long, users: UserRepository, memes: MemeRepository, predictions: PredictionRepository, tests: TestRepository, events: EventRepository, games: GameRepository) {
+    fun showProfile(bot: Bot, chat: ChatId, uid: Long, users: UserRepository) {
         println("DEBUG: Вызов showProfile для пользователя $uid")
         val profile = users.profile(uid)
         println("DEBUG: Получен профиль в showProfile: displayName='${profile?.displayName}'")
@@ -30,6 +30,12 @@ object RouterProfile {
         println("DEBUG: Проверка админских прав для пользователя $uid: $isAdmin")
         println("DEBUG: AdminService.adminIds: ${AdminService.adminIds}")
         
+        val statusText = if (profile.isBanned) {
+            "🚫 Забанен\n📅 Дата бана: ${profile.bannedAt ?: "неизвестно"}\n📝 Причина: ${profile.reason ?: "не указана"}"
+        } else {
+            "✅ Активен"
+        }
+
         bot.sendMessage(
             chat,
             buildString {
@@ -48,8 +54,14 @@ object RouterProfile {
                     append("👤 Username: <code>@${profile.username}</code>\n")
                 }
 
-                append("⭐ Рейтинг: <b>${profile.rating}</b>\n")
-                append("👁️ Профиль: ${if (profile.hidden) "скрыт" else "видимый"}\n")
+                append("⭐ Рейтинг: ${profile.rating}\n")
+                append("👁️ Профиль: ${if (profile.hidden) "скрыт" else "видимый"}\n\n")
+                
+                append("📝 <b>Био:</b>\n")
+                append("${profile.bio.ifBlank { "не указано" }}\n\n")
+                
+                append("<b>Статус:</b>\n")
+                append("$statusText\n")
             },
             parseMode = ParseMode.HTML,
             replyMarkup = KeyboardFactory.profileMenu(profile)
@@ -141,51 +153,61 @@ object RouterProfile {
     }
 
     fun showAccountStats(bot: Bot, chat: ChatId, targetUser: UserProfile) {
-        val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
+        val message = """📊 <b>Дополнительная информация</b>
 
-        val nameValue = targetUser.displayName
-            .trim()
-            .removePrefix("@")
-            .ifBlank { "не указано" }
-            .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+😂 <b>Статистика мемов:</b>
+• Загружено мемов: 0
 
-        val registrationDate = targetUser.createdAt?.let { date: java.time.LocalDateTime ->
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-            date.format(formatter)
-        } ?: "неизвестно"
+🔮 <b>Статистика предсказаний:</b>
+• Всего выбитых предсказаний: 0
+  • Редкие: 0
+  • Эпические: 0
+  • Легендарные: 0
+• Добавлено предсказаний: 0
 
-        val statusText = if (targetUser.isBanned) {
-            """🚫 Забанен
-📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}
-📝 Причина: ${targetUser.reason ?: "не указана"}"""
-        } else {
-            "✅ Активен"
-        }
+📝 <b>Статистика тестов:</b>
+• Создано тестов: 0
+• Пройдено тестов: 0
+• Средний процент прохождения: 0%
 
-        val adminText = if (targetUser.isAdmin) {
-            "\n\n🛡️ Администратор"
-        } else {
-            ""
-        }
+🎮 <b>Статистика мини-игр:</b>
+• Общий рейтинг: ${targetUser.rating}
+• Общее количество побед: 0
+• Общее количество поражений: 0
 
-        val message = """📊 <b>Статистика аккаунта</b>
+⚽ <b>Футбол:</b>
+  • Рейтинг: 0
+  • Побед: 0
+  • Поражений: 0
+  • Текущая серия: 0
+  • Лучшая серия: 0
 
-🏷️ ИМЯ: $nameValue
-🆔 ID: ${targetUser.userId}
-👤 Username: $usernameDisplay
+🏀 <b>Баскетбол:</b>
+  • Рейтинг: 0
+  • Побед: 0
+  • Поражений: 0
+  • Текущая серия: 0
+  • Лучшая серия: 0
 
-📈 <b>Основная информация:</b>
-⭐ Рейтинг: ${targetUser.rating}
-📝 Био: ${targetUser.bio.ifBlank { "не указано" }}
-📅 Дата регистрации: $registrationDate
+🎡 <b>Колесо фортуны:</b>
+  • Рейтинг: 0
+  • Побед: 0
+  • Поражений: 0
+  • Текущая серия: 0
+  • Лучшая серия: 0
 
-<b>Статус:</b>
-$statusText$adminText"""
+✂️ <b>Камень-ножницы-бумага:</b>
+  • Рейтинг: 0
+  • Побед: 0
+  • Поражений: 0
+  • Ничьей: 0
+  • Текущая серия: 0
+  • Лучшая серия: 0"""
 
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML, replyMarkup = KeyboardProfile.statsMenu())
     }
 
-    fun handleProfileAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, memes: MemeRepository, predictions: PredictionRepository, tests: TestRepository, events: EventRepository, games: GameRepository, session: Session): Boolean {
+    fun handleProfileAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, session: Session): Boolean {
         println("DEBUG: handleProfileAction вызван с text: '$text' для пользователя $uid")
 
         when (text) {
@@ -205,7 +227,7 @@ $statusText$adminText"""
             }
             "🛡️ Админ панель" -> {
                 println("DEBUG: Нажата кнопка админской панели пользователем $uid")
-                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, memes, predictions, tests, events, games, session)
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 return true
             }
             "Изменить имя" -> {
@@ -230,7 +252,7 @@ $statusText$adminText"""
             }
             "⬅️ Назад", "⬅️ Обратно" -> {
                 session.action = PendingAction.NONE
-                showProfile(bot, chat, uid, users, memes, predictions, tests, events, games)
+                showProfile(bot, chat, uid, users)
                 return true
             }
             else -> {

@@ -6,6 +6,7 @@ import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
+import com.github.kotlintelegrambot.entities.CallbackQuery
 import core.keyboards.KeyboardAdmin
 import core.keyboards.KeyboardFactory
 import core.SessionStore
@@ -25,17 +26,13 @@ object RouterAdmin {
         
         val statsMessage = """🛡️ <b>Админ панель</b>
 
-📊 <b>Статистика:</b>
-• Всего пользователей: ${AdminService.getUsersCount()}
-• Забанено пользователей: ${AdminService.getBannedUsersCount()}
-
 Выберите действие:"""
         
         bot.sendMessage(chat, statsMessage, parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminMenu())
     }
     
     @Suppress("UNUSED_PARAMETER")
-    fun handleAdminAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, memes: MemeRepository, predictions: PredictionRepository, tests: TestRepository, events: EventRepository, games: GameRepository, session: Session) {
+    fun handleAdminAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, session: Session) {
         println("DEBUG: RouterAdmin.handleAdminAction вызван с text: '$text' для пользователя $uid")
         
         if (!AdminService.isAdmin(uid)) {
@@ -110,7 +107,7 @@ object RouterAdmin {
 Введите ID, username или имя пользователя для поиска.
 
 Примеры:
-• 7266569446 (точный поиск по ID)
+• xxxxxxxxxx (точный поиск по ID)
 • @username (частичный поиск по username)
 • Иван (частичный поиск по имени)""", parseMode = ParseMode.HTML, replyMarkup = KeyboardAdmin.adminBackOnlyMenu())
             }
@@ -118,7 +115,7 @@ object RouterAdmin {
             "🚫 Забаненные пользователи" -> {
                 session.action = PendingAction.ADMIN_BANNED_LIST
                 session.data.clear()
-                RouterAdminUsers.showBannedUsers(bot, chat, uid)
+                RouterAdminUsers.showBannedUsers(bot, chat, uid, users)
             }
             
             "📊 Статистика" -> {
@@ -154,7 +151,6 @@ object RouterAdmin {
                     val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
                     if (targetUserId != null) {
                         if (AdminService.banUser(targetUserId)) {
-                            bot.sendMessage(chat, "✅ Пользователь забанен", replyMarkup = KeyboardAdmin.adminMenu())
                             val targetUser = users.profile(targetUserId)
                             if (targetUser != null) {
                                 RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
@@ -169,7 +165,6 @@ object RouterAdmin {
                     val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
                     if (targetUserId != null) {
                         if (AdminService.unbanUser(targetUserId)) {
-                            bot.sendMessage(chat, "✅ Пользователь разбанен", replyMarkup = KeyboardAdmin.adminMenu())
                             val targetUser = users.profile(targetUserId)
                             if (targetUser != null) {
                                 RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
@@ -186,7 +181,7 @@ object RouterAdmin {
 
                 when (session.action) {
                     PendingAction.ADMIN_USER_LIST -> RouterAdminUsers.showUserList(bot, chat, uid, newIndex)
-                    PendingAction.ADMIN_BANNED_LIST -> RouterAdminUsers.showBannedUsers(bot, chat, uid, newIndex)
+                    PendingAction.ADMIN_BANNED_LIST -> RouterAdminUsers.showBannedUsers(bot, chat, uid, users, newIndex)
                     else -> showAdminPanel(bot, chat, uid)
                 }
             }
@@ -223,10 +218,10 @@ object RouterAdmin {
         }
     }
 
-    fun handleCallback(bot: Bot, callback: com.github.kotlintelegrambot.entities.CallbackQuery, users: UserRepository) {
+    fun handleCallback(bot: Bot, callback: CallbackQuery, users: UserRepository) {
         val chat = ChatId.fromId(callback.message!!.chat.id)
         val uid = callback.from.id
-        val data = callback.data ?: return
+        val data = callback.data
 
         println("DEBUG: RouterAdmin.handleCallback called with uid=$uid, data=$data")
         println("DEBUG: AdminService.isAdmin($uid) = ${AdminService.isAdmin(uid)}, adminIds = ${AdminService.adminIds}")
@@ -246,6 +241,21 @@ object RouterAdmin {
                 if (targetUserId != null) {
                     if (AdminService.banUser(targetUserId)) {
                         bot.answerCallbackQuery(callback.id, "✅ Пользователь забанен")
+                        
+                        // Обновляем список с переключенной кнопкой бана
+                        val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
+                        when (session.action) {
+                            PendingAction.ADMIN_USER_LIST -> RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                            PendingAction.ADMIN_SEARCH_RESULTS -> {
+                                val resultsString = session.data["admin_search_results"]
+                                if (resultsString != null) {
+                                    val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                                    val searchUsers = userIds.mapNotNull { users.profile(it) }
+                                    RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, currentIndex)
+                                }
+                            }
+                            else -> {}
+                        }
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при бане")
                     }
@@ -257,6 +267,21 @@ object RouterAdmin {
                 if (targetUserId != null) {
                     if (AdminService.unbanUser(targetUserId)) {
                         bot.answerCallbackQuery(callback.id, "✅ Пользователь разбанен")
+                        
+                        // Обновляем список с переключенной кнопкой разбана
+                        val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
+                        when (session.action) {
+                            PendingAction.ADMIN_USER_LIST -> RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                            PendingAction.ADMIN_SEARCH_RESULTS -> {
+                                val resultsString = session.data["admin_search_results"]
+                                if (resultsString != null) {
+                                    val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                                    val searchUsers = userIds.mapNotNull { users.profile(it) }
+                                    RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, currentIndex)
+                                }
+                            }
+                            else -> {}
+                        }
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при разбане")
                     }

@@ -33,7 +33,7 @@ object RouterAdminUsers {
                 "Забаненные" -> "забаненных пользователей"
                 else -> "пользователей"
             }
-            bot.sendMessage(chat, "❌ $filterMessage не найдены", replyMarkup = KeyboardAdmin.adminMenu())
+            bot.sendMessage(chat, "❌ $filterMessage не найдены", replyMarkup = KeyboardAdmin.adminBackOnlyMenu())
             return
         }
         
@@ -107,27 +107,50 @@ object RouterAdminUsers {
         bot.sendMessage(chatId = chat, text = "📌 Навигация и действия:", replyMarkup = inlineKeyboard)
     }
     
-    fun showBannedUsers(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
+    fun showBannedUsers(bot: Bot, chat: ChatId, uid: Long, users: UserRepository, index: Int = 0) {
         val bannedUsers = AdminService.getBannedUsers(50)
         if (bannedUsers.isEmpty()) {
-            bot.sendMessage(chat, "✅ Забаненных пользователей нет", replyMarkup = KeyboardAdmin.adminMenu())
+            bot.sendMessage(chat, "✅ Забаненных пользователей нет", replyMarkup = KeyboardAdmin.adminBackOnlyMenu())
             return
         }
         
         if (index >= bannedUsers.size) return
         
-        val bannedUser = bannedUsers[index]
+        val bannedUserInfo = bannedUsers[index]
+        val bannedUser = users.profile(bannedUserInfo.userId) // Загружаем полный профиль
+        if (bannedUser == null) {
+            bot.sendMessage(chat, "❌ Профиль не найден", replyMarkup = KeyboardAdmin.adminMenu())
+            return
+        }
+        
         val session = SessionStore.get(uid)
         session.data["admin_current_index"] = index.toString()
         session.data["admin_total_count"] = bannedUsers.size.toString()
         
-        val message = """🚫 <b>Забаненные пользователи</b> (${index + 1} из ${bannedUsers.size})
-
-👤 <b>${bannedUser.displayName}</b>
-🆔 ID: ${bannedUser.userId}
-👤 Username: @${bannedUser.username}
-⏰ Забанен: ${bannedUser.bannedAt}
+        val nameValue = bannedUser.displayName
+            .trim()
+            .removePrefix("@")
+            .ifBlank { "не указано" }
+            .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+        
+        val statusText = """🚫 Забанен
+📅 Дата бана: ${bannedUser.bannedAt ?: "неизвестно"}
 📝 Причина: ${bannedUser.reason ?: "не указана"}"""
+        
+        val message = buildString {
+            append("👤 <b>Профиль пользователя</b> (${index + 1} из ${bannedUsers.size})\n\n")
+            append("🏷️ Имя: $nameValue\n")
+            append("🆔 ID: ${bannedUser.userId}\n")
+            append("👤 Username: <code>@${bannedUser.username}</code>\n")
+            append("⭐ Рейтинг: ${bannedUser.rating}\n")
+            append("👁️ Профиль: ${if (bannedUser.hidden) "скрыт" else "видимый"}\n\n")
+            
+            append("<b>Статус:</b>\n")
+            append("$statusText\n\n")
+            
+            append("📝 <b>Био:</b>\n")
+            append("${bannedUser.bio.ifBlank { "не указано" }}\n")
+        }
         
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML,
             replyMarkup = KeyboardAdmin.adminBannedNav(bannedUsers.size))
@@ -218,18 +241,24 @@ object RouterAdminUsers {
         session.context = FSMContext.PROFILE_VIEW
         session.data["admin_profile_view_user_id"] = targetUser.userId.toString()
         
-        val usernameDisplay = "@${targetUser.username}"  // Админ видит все username
+        val currentAdmin = data.AdminService.isAdmin(uid)
+        
+        // Username видна только если не скрыта, или для админа
+        val usernameDisplay = if (currentAdmin) {
+            "@${targetUser.username}"
+        } else {
+            if (targetUser.hideUsername || targetUser.username.isBlank()) {
+                "<code>скрыт</code>"
+            } else {
+                "@${targetUser.username}"
+            }
+        }
 
         val nameValue = targetUser.displayName
             .trim()
             .removePrefix("@")
             .ifBlank { "не указано" }
             .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
-
-        val registrationDate = targetUser.createdAt?.let { date: java.time.LocalDateTime ->
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-            date.format(formatter)
-        } ?: "неизвестно"
 
         val statusText = if (targetUser.isBanned) {
             """🚫 Забанен
@@ -239,27 +268,25 @@ object RouterAdminUsers {
             "✅ Активен"
         }
 
-        val adminText = if (targetUser.isAdmin) {
-            "\n\n🛡️ Администратор"
-        } else {
-            ""
+        val message = buildString {
+            append("👤 <b>Профиль пользователя</b>\n\n")
+            append("🏷️ Имя: $nameValue\n")
+            
+            if (currentAdmin) {
+                append("🆔 ID: ${targetUser.userId}\n")
+            }
+            
+            append("👤 Username: <code>${usernameDisplay.replace("<code>", "").replace("</code>", "")}</code>\n")
+            append("⭐ Рейтинг: ${targetUser.rating}\n")
+            append("👁️ Профиль: ${if (targetUser.hidden) "скрыт" else "видимый"}\n\n")
+            
+            append("<b>Статус:</b>\n")
+            append("$statusText\n\n")
+            
+            append("📝 <b>Био:</b>\n")
+            append("${targetUser.bio.ifBlank { "не указано" }}\n")
         }
 
-        val message = """👤 <b>Профиль пользователя</b>
-
-🏷️ Имя: $nameValue
-🆔 ID: ${targetUser.userId}
-👤 Username: $usernameDisplay
-
-📈 <b>Основная информация:</b>
-⭐ Рейтинг: ${targetUser.rating}
-📝 Био: ${targetUser.bio.ifBlank { "не указано" }}
-📅 Дата регистрации: $registrationDate
-
-<b>Статус:</b>
-$statusText$adminText"""
-
-        val currentAdmin = data.AdminService.isAdmin(uid)
         val keyboard = if (currentAdmin) {
             KeyboardAdmin.profileViewAdminMenu(targetUser.isBanned)
         } else {
@@ -270,7 +297,11 @@ $statusText$adminText"""
     }
 
     fun showUserProfileView(bot: Bot, chat: ChatId, targetUser: UserProfile) {
-        val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
+        val usernameDisplay = if (targetUser.hideUsername || targetUser.username.isBlank()) {
+            "скрыт"
+        } else {
+            "@${targetUser.username}"
+        }
 
         val nameValue = targetUser.displayName
             .trim()
@@ -278,14 +309,27 @@ $statusText$adminText"""
             .ifBlank { "не указано" }
             .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
 
-        val message = """👤 <b>Профиль пользователя</b>
+        val statusText = if (targetUser.isBanned) {
+            """🚫 Забанен
+📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}
+📝 Причина: ${targetUser.reason ?: "не указана"}"""
+        } else {
+            "✅ Активен"
+        }
 
-🏷️ Имя: $nameValue
-🆔 ID: ${targetUser.userId}
-👤 Username: $usernameDisplay
-⭐ Рейтинг: ${targetUser.rating}
-📝 Био: ${targetUser.bio.ifBlank { "не указано" }}
-👁️ Профиль: ${if (targetUser.hidden) "скрыт" else "видимый"}"""
+        val message = buildString {
+            append("👤 <b>Профиль пользователя</b>\n\n")
+            append("🏷️ Имя: $nameValue\n")
+            append("👤 Username: <code>$usernameDisplay</code>\n")
+            append("⭐ Рейтинг: ${targetUser.rating}\n")
+            append("👁️ Профиль: ${if (targetUser.hidden) "скрыт" else "видимый"}\n\n")
+            
+            append("<b>Статус:</b>\n")
+            append("$statusText\n\n")
+            
+            append("📝 <b>Био:</b>\n")
+            append("${targetUser.bio.ifBlank { "не указано" }}\n")
+        }
 
         val inlineButtons = listOf(
             listOf(
@@ -301,7 +345,11 @@ $statusText$adminText"""
     }
 
     fun showUserProfile(bot: Bot, chat: ChatId, targetUser: UserProfile) {
-        val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
+        val usernameDisplay = if (targetUser.hideUsername || targetUser.username.isBlank()) {
+            "скрыт"
+        } else {
+            "@${targetUser.username}"
+        }
 
         val nameValue = targetUser.displayName
             .trim()
@@ -309,31 +357,36 @@ $statusText$adminText"""
             .ifBlank { "не указано" }
             .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
 
-        val message = """👤 <b>Профиль пользователя</b>
+        val statusText = if (targetUser.isBanned) {
+            """🚫 Забанен
+📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}
+📝 Причина: ${targetUser.reason ?: "не указана"}"""
+        } else {
+            "✅ Активен"
+        }
 
-🏷️ Имя: $nameValue
-🆔 ID: ${targetUser.userId}
-👤 Username: $usernameDisplay
-⭐ Рейтинг: ${targetUser.rating}
-📝 Био: ${targetUser.bio.ifBlank { "не указано" }}
-👁️ Профиль: ${if (targetUser.hidden) "скрыт" else "видимый"}"""
+        val message = buildString {
+            append("👤 <b>Профиль пользователя</b>\n\n")
+            append("🏷️ Имя: $nameValue\n")
+            append("👤 Username: <code>$usernameDisplay</code>\n")
+            append("⭐ Рейтинг: ${targetUser.rating}\n")
+            append("👁️ Профиль: ${if (targetUser.hidden) "скрыт" else "видимый"}\n\n")
+            
+            append("<b>Статус:</b>\n")
+            append("$statusText\n\n")
+            
+            append("📝 <b>Био:</b>\n")
+            append("${targetUser.bio.ifBlank { "не указано" }}\n")
+        }
 
         // Создаем inline клавиатуру с действиями
         val actionRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
 
-        // Кнопка изменения профиля
+        // Кнопка редактирования профиля
         actionRows.add(listOf(
             com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "✏️ Изменить профиль",
+                text = "✏️ Редактировать",
                 callbackData = "admin_edit_profile_${targetUser.userId}"
-            )
-        ))
-
-        // Кнопка статистики аккаунта
-        actionRows.add(listOf(
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "📊 Статистика аккаунта",
-                callbackData = "admin_account_stats_${targetUser.userId}"
             )
         ))
 
@@ -345,19 +398,11 @@ $statusText$adminText"""
             )
         ))
 
-        // Кнопка возврата в поиск
+        // Кнопка возврата
         actionRows.add(listOf(
             com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "⬅️ Обратно в поиск",
+                text = "⬅️ Обратно",
                 callbackData = "admin_back_to_search"
-            )
-        ))
-
-        // Кнопка админ панели (в конце)
-        actionRows.add(listOf(
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "🛡️ Админ панель",
-                callbackData = "admin_back"
             )
         ))
 

@@ -40,8 +40,7 @@ object KeyboardProfile {
 
         return kb(
             listOf(
-                listOf("Изменить имя"),
-                listOf("Изменить био"),
+                listOf("Изменить имя", "Изменить био"),
                 listOf(if (usernameHidden) "Показать username [👁️]" else "Скрыть username [🙈]", if (profileHidden) "Показать профиль [👁️]" else "Скрыть профиль [🙈]"),
                 listOf("⬅️ Назад")
             )
