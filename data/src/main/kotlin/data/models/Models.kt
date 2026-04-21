@@ -13,6 +13,9 @@ data class UserProfile(
     val createdAt: java.time.LocalDateTime? = null,
     val bannedAt: String? = null,
     val reason: String? = null,
-    val isAdmin: Boolean = false
+    val banExpiresAt: String? = null,
+    val isAdmin: Boolean = false,
+    val lastActivityAt: java.time.LocalDateTime? = null,
+    val avatarFileId: String? = null
 )
 

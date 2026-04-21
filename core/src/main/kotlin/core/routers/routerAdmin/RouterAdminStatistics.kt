@@ -10,8 +10,20 @@ object RouterAdminStatistics {
         val totalUsers = AdminService.getUsersCount()
         val bannedUsers = AdminService.getBannedUsersCount()
         val activeUsers = totalUsers - bannedUsers
+        val activeRightNow = AdminService.getActiveUsersCountNow()
 
-        val message = "📊 <b>Админская статистика</b>\n\n👥 <b>Пользователи:</b>\n• Всего пользователей: $totalUsers\n• Забаненных пользователей: $bannedUsers\n• Активных пользователей: $activeUsers\n\n📈 <b>Активность:</b>\n• Процент забаненных: ${if (totalUsers > 0) String.format("%.1f", (bannedUsers.toDouble() / totalUsers * 100)) else "0"}%\n• Процент активных: ${if (totalUsers > 0) String.format("%.1f", (activeUsers.toDouble() / totalUsers * 100)) else "0"}%"
+        val activePercentageNow = if (totalUsers > 0) String.format("%.1f", (activeRightNow.toDouble() / totalUsers * 100)) else "0"
+        val bannedPercentage = if (totalUsers > 0) String.format("%.1f", (bannedUsers.toDouble() / totalUsers * 100)) else "0"
+
+        val message = """📊 <b>Админская статистика</b>
+
+👥 <b>Пользователи:</b>
+• Всего пользователей: $totalUsers
+• Забаненных пользователей: $bannedUsers ($bannedPercentage%)
+• Активных пользователей: $activeUsers
+
+🟢 <b>Активность прямо сейчас:</b>
+• Активны в последние 3 минуты: <b>$activeRightNow пользователей</b> ($activePercentageNow%)"""
 
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML)
     }

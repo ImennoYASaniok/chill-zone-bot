@@ -81,6 +81,23 @@ object AdminService {
         }
     }
     
+    fun setBanReason(userId: Long, reason: String): Boolean {
+        return try {
+            Db.execute(
+                """
+                update banned_users set reason = ?, banned_at = now() where user_id = ?
+                """
+            ) { stmt ->
+                stmt.setString(1, reason)
+                stmt.setLong(2, userId)
+            }
+            true
+        } catch (e: Exception) {
+            println("Error setting ban reason for user $userId: ${e.message}")
+            false
+        }
+    }
+    
     fun isUserBanned(userId: Long): Boolean {
         return try {
             Db.single(
@@ -141,7 +158,7 @@ object AdminService {
         return try {
             Db.query(
                 """
-                select bu.user_id, u.username, u.display_name, bu.banned_at, bu.reason
+                select bu.user_id, u.username, u.display_name, bu.banned_at, bu.reason, bu.ban_expires_at
                 from banned_users bu
                 join users u on bu.user_id = u.user_id
                 order by bu.banned_at desc
@@ -154,7 +171,8 @@ object AdminService {
                         username = rs.getString("username") ?: "",
                         displayName = rs.getString("display_name") ?: "",
                         bannedAt = rs.getTimestamp("banned_at").toString(),
-                        reason = rs.getString("reason")
+                        reason = rs.getString("reason"),
+                        banExpiresAt = rs.getString("ban_expires_at")
                     )
                 }
             )
@@ -226,6 +244,76 @@ object AdminService {
         } catch (e: Exception) {
             println("Error getting banned users count: ${e.message}")
             0
+        }
+    }
+    
+    fun getActiveUsersCountNow(minutesThreshold: Int = 3): Int {
+        return try {
+            Db.single(
+                """
+                select count(*) as count from users 
+                where last_activity_at > now() - interval '$minutesThreshold minutes'
+                """,
+                bind = { },
+                map = { rs -> rs.getInt("count") }
+            ) ?: 0
+        } catch (e: Exception) {
+            println("Error getting active users count: ${e.message}")
+            0
+        }
+    }
+    
+    fun setBanExpiry(userId: Long, days: Int): Boolean {
+        return try {
+            Db.execute(
+                """
+                update banned_users 
+                set ban_expires_at = now() + interval '$days days'
+                where user_id = ?
+                """
+            ) { stmt ->
+                stmt.setLong(1, userId)
+            }
+            true
+        } catch (e: Exception) {
+            println("Error setting ban expiry for user $userId: ${e.message}")
+            false
+        }
+    }
+    
+    fun addBanDays(userId: Long, days: Int): Boolean {
+        return try {
+            Db.execute(
+                """
+                update banned_users 
+                set ban_expires_at = coalesce(ban_expires_at, now()) + interval '$days days'
+                where user_id = ?
+                """
+            ) { stmt ->
+                stmt.setLong(1, userId)
+            }
+            true
+        } catch (e: Exception) {
+            println("Error adding ban days for user $userId: ${e.message}")
+            false
+        }
+    }
+    
+    fun removeBanExpiry(userId: Long): Boolean {
+        return try {
+            Db.execute(
+                """
+                update banned_users 
+                set ban_expires_at = null
+                where user_id = ?
+                """
+            ) { stmt ->
+                stmt.setLong(1, userId)
+            }
+            true
+        } catch (e: Exception) {
+            println("Error removing ban expiry for user $userId: ${e.message}")
+            false
         }
     }
 }

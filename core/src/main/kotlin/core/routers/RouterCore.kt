@@ -9,12 +9,16 @@ import com.github.kotlintelegrambot.entities.User
 import com.github.kotlintelegrambot.entities.ParseMode
 import kotlinx.coroutines.*
 import core.keyboards.KeyboardFactory
+import core.keyboards.KeyboardProfile
 import core.ImageManager
 import core.SessionStore
 import core.FSMContext
 import core.PendingAction
 import core.Session
+import core.FileValidator
+import data.AvatarService
 import core.routers.routerAdmin.RouterAdmin
+import core.routers.routerAdmin.RouterAdminUsers
 import core.routers.routerCollections.RouterCollections
 
 class RouterCore(
@@ -63,11 +67,70 @@ class RouterCore(
         val dname = displayName(user)
 
         users.ensure(uid, uname, dname)
+        users.updateLastActivity(uid)  // Обновляем время последней активности
         val session = SessionStore.get(uid)
         val text = message.text?.trim()
 
+        // Обработка фото для аватарки профиля
+        if (session.action == PendingAction.EDIT_AVATAR && 
+            (message.photo != null || message.document != null || message.video != null || 
+             message.audio != null || message.voice != null || message.animation != null || message.sticker != null)) {
+            
+            val (isValid, errorMessage) = FileValidator.validateAvatarImage(message)
+            
+            if (!isValid) {
+                bot.sendMessage(chat, errorMessage ?: "❌ Невозможно установить эту картинку на аватарку.")
+                return
+            }
+            
+            val photo = message.photo!!.lastOrNull() ?: return
+            val (width, height) = Pair(photo.width, photo.height)
+            
+            // Проверяем, квадратное ли изображение
+            if (FileValidator.isSquareImage(width, height)) {
+                // Изображение квадратное - сразу сохраняем
+                users.setAvatar(uid, photo.fileId)
+                session.action = PendingAction.NONE
+                session.data.clear()
+                bot.sendMessage(chat, "✅ Аватарка сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+            } else {
+                // Изображение не квадратное - предлагаем варианты обработки
+                val (minSize, dimension) = FileValidator.getImageProcessingInfo(width, height)
+                
+                session.action = PendingAction.AVATAR_PROCESSING
+                session.data["avatar_file_id"] = photo.fileId
+                session.data["avatar_width"] = width.toString()
+                session.data["avatar_height"] = height.toString()
+                
+                val messageText = """📐 <b>Изображение не квадратное</b>
+
+Размеры: ${width}x${height}
+По ${dimension} больше на ${maxOf(width, height) - minOf(width, height)}px
+
+Выберите, как установить аватарку:"""
+                
+                bot.sendMessage(
+                    chat, 
+                    messageText, 
+                    parseMode = ParseMode.HTML,
+                    replyMarkup = KeyboardProfile.avatarProcessingMenu(minSize)
+                )
+            }
+            return
+        }
+
         // Обработка фото для добавления мема (системная функция)
-        if (message.photo != null && session.action == PendingAction.ADD_MEME) {
+        if (session.action == PendingAction.ADD_MEME && 
+            (message.photo != null || message.document != null || message.video != null || 
+             message.audio != null || message.voice != null || message.animation != null || message.sticker != null)) {
+            
+            val (isValid, errorMessage) = FileValidator.validateMemeImage(message)
+            
+            if (!isValid) {
+                bot.sendMessage(chat, errorMessage ?: "❌ Невозможно добавить этот файл как мем.")
+                return
+            }
+            
             val photo = message.photo!!.lastOrNull() ?: return
             val caption = message.caption ?: session.data["caption"].orEmpty()
             memes.addMeme(photo.fileId, uid, caption)
@@ -106,28 +169,74 @@ class RouterCore(
                 bot.sendMessage(chat, reloadMessage, parseMode = ParseMode.HTML)
             }
             "⬅️ Обратно" -> {
-                // Проверяем, находимся ли мы в админском контексте
-                if (session.action in listOf(
+                // Сначала проверяем контекст просмотра профиля
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    // Если просматривали профиль пользователя - возвращаемся в предыдущий список/действие
+                    val prevActionName = session.data["admin_profile_view_prev_action"]
+                    val prevAction = if (prevActionName != null) {
+                        try {
+                            PendingAction.valueOf(prevActionName)
+                        } catch (e: Exception) {
+                            PendingAction.NONE
+                        }
+                    } else {
+                        PendingAction.NONE
+                    }
+
+                    session.context = FSMContext.MEMES
+                    session.action = PendingAction.NONE
+
+                    // Восстанавливаем соответствующий список на основе предыдущего action
+                    when (prevAction) {
+                        PendingAction.ADMIN_USER_LIST -> {
+                            session.action = PendingAction.ADMIN_USER_LIST
+                            session.data.remove("admin_profile_view_prev_action")
+                            RouterAdminUsers.showUserList(bot, chat, uid, session.data["admin_current_index"]?.toIntOrNull() ?: 0)
+                        }
+                        PendingAction.ADMIN_BANNED_LIST -> {
+                            session.action = PendingAction.ADMIN_BANNED_LIST
+                            session.data.remove("admin_profile_view_prev_action")
+                            RouterAdminUsers.showBannedUsers(bot, chat, uid, users, session.data["admin_current_index"]?.toIntOrNull() ?: 0)
+                        }
+                        PendingAction.ADMIN_SEARCH_RESULTS -> {
+                            session.action = PendingAction.ADMIN_SEARCH_RESULTS
+                            session.data.remove("admin_profile_view_prev_action")
+                            val resultsString = session.data["admin_search_results"]
+                            if (resultsString != null) {
+                                val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                                val searchUsers = userIds.mapNotNull { users.profile(it) }
+                                RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, session.data["admin_current_index"]?.toIntOrNull() ?: 0)
+                            } else {
+                                RouterAdmin.showAdminPanel(bot, chat, uid)
+                            }
+                        }
+                        else -> {
+                            // Если не удалось восстановить - возвращаем в админ меню
+                            RouterAdmin.showAdminPanel(bot, chat, uid)
+                        }
+                    }
+                }
+                // Проверяем, находимся ли мы в контексте редактирования профиля
+                else if (session.action in listOf(
+                    PendingAction.EDIT_PROFILE,
+                    PendingAction.EDIT_NAME,
+                    PendingAction.EDIT_BIO,
+                    PendingAction.EDIT_AVATAR,
+                    PendingAction.AVATAR_PROCESSING
+                )) {
+                    // Если в контексте редактирования профиля - возвращаемся в меню профиля
+                    session.action = PendingAction.NONE
+                    session.data.clear()
+                    RouterProfile.showProfile(bot, chat, uid, users)
+                } else if (session.action in listOf(
                     PendingAction.ADMIN_USER_MANAGEMENT,
-                    PendingAction.ADMIN_USER_LIST, 
-                    PendingAction.ADMIN_BANNED_LIST, 
-                    PendingAction.ADMIN_SEARCH, 
+                    PendingAction.ADMIN_USER_LIST,
+                    PendingAction.ADMIN_BANNED_LIST,
+                    PendingAction.ADMIN_SEARCH,
                     PendingAction.ADMIN_SEARCH_RESULTS
                 )) {
                     // Если в админском контексте - передаем в RouterAdmin
                     RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
-                } else if (session.context == FSMContext.COLLECTIONS) {
-                    // Для контекста COLLECTIONS проверяем текущее действие
-                    when (session.action) {
-                        PendingAction.NONE -> {
-                            // В основном меню подборок - возвращаем в главное меню
-                            handleBack(bot, chat, uid)
-                        }
-                        else -> {
-                            // В поиске, избранном, результатах и т.д. - передаем в RouterCollections для правильной обработки
-                            RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
-                        }
-                    }
                 } else {
                     // Для остальных контекстов - обычная логика
                     handleBack(bot, chat, uid)
@@ -190,7 +299,14 @@ class RouterCore(
                     handleBack(bot, chat, uid)
                 }
             }
-            "🚫 Забанить", "✅ Разбанить" -> {
+            "⬅️ Отмена" -> {
+                if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
+                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
+                } else {
+                    handleBack(bot, chat, uid)
+                }
+            }
+            "🚫 Забанить", "✅ Разбанить", "📝 Написать причину бана" -> {
                 if (session.context == FSMContext.PROFILE_VIEW && AdminService.isAdmin(uid)) {
                     RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 } else {
@@ -316,8 +432,31 @@ class RouterCore(
     // Обработка pending actions - перенаправление в модули
     private fun handlePending(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session): Boolean {
         return when (session.action) {
-            PendingAction.EDIT_NAME, PendingAction.EDIT_BIO -> {
+            PendingAction.AVATAR_PROCESSING -> handleAvatarProcessing(bot, chat, uid, text, session)
+            PendingAction.EDIT_PROFILE, PendingAction.EDIT_NAME, PendingAction.EDIT_BIO -> {
                 RouterProfile.handleProfileAction(bot, chat, uid, text, users, session)
+            }
+            PendingAction.ADMIN_EDIT_BAN_REASON -> {
+                // Обработка ввода причины бана
+                val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                if (targetUserId != null) {
+                    if (AdminService.setBanReason(targetUserId, text)) {
+                        val targetUser = users.profile(targetUserId)
+                        if (targetUser != null) {
+                            bot.sendMessage(chat, "✅ Причина бана установлена: \"<b>$text</b>\"", parseMode = ParseMode.HTML)
+                            session.action = PendingAction.NONE
+                            session.data.remove("admin_edit_target_user")
+                            RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                        } else {
+                            bot.sendMessage(chat, "❌ Ошибка: пользователь не найден")
+                        }
+                    } else {
+                        bot.sendMessage(chat, "❌ Ошибка при сохранении причины бана")
+                    }
+                } else {
+                    bot.sendMessage(chat, "❌ Ошибка: не указан пользователь")
+                }
+                true
             }
             PendingAction.FEEDBACK_TEXT -> {
                 RouterFeedBack.handleFeedbackAction(bot, chat, uid, text, feedback, users, session)
@@ -346,6 +485,44 @@ class RouterCore(
         }
     }
     
+    private fun handleAvatarProcessing(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session): Boolean {
+        return when {
+            text.startsWith("✂️ Обрезать") -> {
+                val fileId = session.data["avatar_file_id"] ?: return true
+                val success = AvatarService.processAvatarImage(fileId, "crop")
+                if (success) {
+                    users.setAvatar(uid, fileId)
+                    session.action = PendingAction.NONE
+                    session.data.clear()
+                    bot.sendMessage(chat, "✅ Аватарка обрезана и сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+                } else {
+                    bot.sendMessage(chat, "❌ Ошибка при обработке изображения")
+                }
+                true
+            }
+            text == "📦 Добавить границы до квадрата" -> {
+                val fileId = session.data["avatar_file_id"] ?: return true
+                val success = AvatarService.processAvatarImage(fileId, "letterbox")
+                if (success) {
+                    users.setAvatar(uid, fileId)
+                    session.action = PendingAction.NONE
+                    session.data.clear()
+                    bot.sendMessage(chat, "✅ Аватарка с границами сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+                } else {
+                    bot.sendMessage(chat, "❌ Ошибка при обработке изображения")
+                }
+                true
+            }
+            text == "⬅️ Отмена" -> {
+                session.action = PendingAction.NONE
+                session.data.clear()
+                RouterProfile.showProfile(bot, chat, uid, users)
+                true
+            }
+            else -> false
+        }
+    }
+    
     // Обработка callback запросов - перенаправление в соответствующие модули
     fun handleCallback(bot: Bot, callback: com.github.kotlintelegrambot.entities.CallbackQuery) {
         val uid = callback.from.id
@@ -353,6 +530,7 @@ class RouterCore(
         val dname = displayName(callback.from)
 
         users.ensure(uid, uname, dname)
+        users.updateLastActivity(uid)  // Обновляем время последней активности
         val data = callback.data
 
         when {

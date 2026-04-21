@@ -5,7 +5,8 @@ data class BannedUser(
     val username: String,
     val displayName: String,
     val bannedAt: String,
-    val reason: String?
+    val reason: String?,
+    val banExpiresAt: String? = null
 )
 
 data class AdminSearchResult(

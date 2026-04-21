@@ -44,18 +44,25 @@ object KeyboardAdmin {
             listOf("⬅️ Обратно")
         )
     )
+    
+    fun banReasonInputMenu(): KeyboardReplyMarkup = kb(
+        listOf(
+            listOf("⬅️ Отмена")
+        )
+    )
 
     fun profileViewBackMenu(): KeyboardReplyMarkup = kb(
         listOf(
-            listOf("⬅️ В список")
+            listOf("⬅️ Обратно")
         )
     )
 
     fun profileViewAdminMenu(isBanned: Boolean): KeyboardReplyMarkup = kb(
         listOf(
             listOf(if (isBanned) "✅ Разбанить" else "🚫 Забанить"),
-            listOf("⬅️ В список")
-        )
+            listOf(if (isBanned) "📝 Написать причину бана" else ""),
+            listOf("⬅️ Обратно")
+        ).filter { row -> row.isNotEmpty() }
     )
     
     fun adminBannedNav(totalCount: Int): KeyboardReplyMarkup {
@@ -109,4 +116,23 @@ object KeyboardAdmin {
         
         return InlineKeyboardMarkup.create(rows)
     }
+    
+    fun profileViewAdminBanMenu(isBanned: Boolean, hasBanExpiry: Boolean): KeyboardReplyMarkup = kb(
+        listOf(
+            listOf(if (isBanned) "✅ Разбанить" else "🚫 Забанить"),
+            listOf(if (isBanned) "📝 Написать причину бана" else ""),
+            listOf(if (isBanned) "⏰ Окончание бана: ${if (hasBanExpiry) "есть" else "нет"}" else ""),
+            listOf(if (isBanned && hasBanExpiry) "🔧 Изменить окончание бана" else ""),
+            listOf("⬅️ Обратно")
+        ).filter { row -> row.isNotEmpty() }
+    )
+    
+    fun banExpiryDaysMenu(): KeyboardReplyMarkup = kb(
+        listOf(
+            listOf("➕ +1 день", "➕ +3 дня", "➕ +5 дней"),
+            listOf("➕ +10 дней"),
+            listOf("⬅️ Отмена")
+        )
+    )
 }
+

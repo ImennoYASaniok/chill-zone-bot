@@ -46,5 +46,29 @@ object Schema {
             // Игнорируем ошибку, если колонка уже существует
             println("Migration for hide_username column in users: ${e.message}")
         }
+        
+        // Миграция для добавления last_activity_at в users
+        try {
+            Db.raw("alter table users add column if not exists last_activity_at timestamptz not null default now()")
+        } catch (e: Exception) {
+            // Игнорируем ошибку, если колонка уже существует
+            println("Migration for last_activity_at column in users: ${e.message}")
+        }
+        
+        // Миграция для добавления avatar_file_id в users
+        try {
+            Db.raw("alter table users add column if not exists avatar_file_id text")
+        } catch (e: Exception) {
+            // Игнорируем ошибку, если колонка уже существует
+            println("Migration for avatar_file_id column in users: ${e.message}")
+        }
+        
+        // Миграция для добавления ban_expires_at в banned_users
+        try {
+            Db.raw("alter table banned_users add column if not exists ban_expires_at timestamptz")
+        } catch (e: Exception) {
+            // Игнорируем ошибку, если колонка уже существует
+            println("Migration for ban_expires_at column in banned_users: ${e.message}")
+        }
     }
 }

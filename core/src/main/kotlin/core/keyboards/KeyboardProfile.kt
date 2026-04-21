@@ -37,12 +37,14 @@ object KeyboardProfile {
     fun editProfileMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
         val profileHidden = userProfile?.hidden ?: false
         val usernameHidden = userProfile?.hideUsername ?: false
+        val hasAvatar = userProfile?.avatarFileId != null
 
         return kb(
             listOf(
                 listOf("Изменить имя", "Изменить био"),
+                listOf(if (hasAvatar) "🖼️ Изменить аватарку" else "🖼️ Добавить аватарку"),
                 listOf(if (usernameHidden) "Показать username [👁️]" else "Скрыть username [🙈]", if (profileHidden) "Показать профиль [👁️]" else "Скрыть профиль [🙈]"),
-                listOf("⬅️ Назад")
+                listOf("⬅️ Обратно")
             )
         )
     }
@@ -61,7 +63,16 @@ object KeyboardProfile {
     fun statsMenu(): KeyboardReplyMarkup {
         return kb(
             listOf(
-                listOf("⬅️ Назад")
+                listOf("⬅️ Обратно")
+            )
+        )
+    }
+
+    fun avatarProcessingMenu(minSize: Int): KeyboardReplyMarkup {
+        return kb(
+            listOf(
+                listOf("✂️ Обрезать до ${minSize}x${minSize}", "📦 Добавить границы до квадрата"),
+                listOf("⬅️ Отмена")
             )
         )
     }

@@ -36,36 +36,50 @@ object RouterProfile {
             "✅ Активен"
         }
 
-        bot.sendMessage(
-            chat,
-            buildString {
-                append("👤 <b>Профиль пользователя</b>\n\n")
+        val messageText = buildString {
+            append("👤 <b>Профиль пользователя</b>\n\n")
 
-                val nameValue = profile.displayName
-                    .trim()
-                    .removePrefix("@")
-                    .ifBlank { "не указано" }
-                    .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
-                append("🏷️ Имя: $nameValue\n")
+            val nameValue = profile.displayName
+                .trim()
+                .removePrefix("@")
+                .ifBlank { "не указано" }
+                .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+            append("🏷️ Имя: $nameValue\n")
 
-                if (profile.hideUsername || profile.username.isBlank()) {
-                    append("👤 Username: <code>скрыт</code>\n")
-                } else {
-                    append("👤 Username: <code>@${profile.username}</code>\n")
-                }
+            if (profile.hideUsername || profile.username.isBlank()) {
+                append("👤 Username: <code>скрыт</code>\n")
+            } else {
+                append("👤 Username: <code>@${profile.username}</code>\n")
+            }
 
-                append("⭐ Рейтинг: ${profile.rating}\n")
-                append("👁️ Профиль: ${if (profile.hidden) "скрыт" else "видимый"}\n\n")
-                
-                append("📝 <b>Био:</b>\n")
-                append("${profile.bio.ifBlank { "не указано" }}\n\n")
-                
-                append("<b>Статус:</b>\n")
-                append("$statusText\n")
-            },
-            parseMode = ParseMode.HTML,
-            replyMarkup = KeyboardFactory.profileMenu(profile)
-        )
+            append("⭐ Рейтинг: ${profile.rating}\n")
+            append("👁️ Профиль: ${if (profile.hidden) "скрыт" else "видимый"}\n\n")
+            
+            append("📝 <b>Био:</b>\n")
+            append("${profile.bio.ifBlank { "не указано" }}\n\n")
+            
+            append("<b>Статус:</b>\n")
+            append("$statusText\n")
+        }
+
+        // Если есть аватарка, отправляем фото с подписью
+        profile.avatarFileId?.let { fileId ->
+            bot.sendPhoto(
+                chat,
+                fileId,
+                caption = messageText,
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardFactory.profileMenu(profile)
+            )
+        } ?: run {
+            // Если нет аватарки, отправляем просто сообщение
+            bot.sendMessage(
+                chat,
+                messageText,
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardFactory.profileMenu(profile)
+            )
+        }
     }
 
     private fun showEditProfileForm(bot: Bot, chat: ChatId, uid: Long, users: UserRepository) {
@@ -212,7 +226,7 @@ object RouterProfile {
 
         when (text) {
             "✏️ Изменить профиль" -> {
-                session.action = PendingAction.NONE
+                session.action = PendingAction.EDIT_PROFILE
                 showEditProfileForm(bot, chat, uid, users)
                 return true
             }
@@ -248,6 +262,11 @@ object RouterProfile {
             "Показать профиль [👁️]", "Скрыть профиль [🙈]" -> {
                 users.toggleHidden(uid)
                 showEditProfileForm(bot, chat, uid, users)
+                return true
+            }
+            "🖼️ Добавить аватарку", "🖼️ Изменить аватарку" -> {
+                session.action = PendingAction.EDIT_AVATAR
+                bot.sendMessage(chat, "Отправь фотографию для аватарки профиля.", replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid)))
                 return true
             }
             "⬅️ Назад", "⬅️ Обратно" -> {

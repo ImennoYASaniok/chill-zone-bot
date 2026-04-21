@@ -33,15 +33,10 @@ object RouterAdmin {
     
     @Suppress("UNUSED_PARAMETER")
     fun handleAdminAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, session: Session) {
-        println("DEBUG: RouterAdmin.handleAdminAction вызван с text: '$text' для пользователя $uid")
-        
         if (!AdminService.isAdmin(uid)) {
-            println("DEBUG: Пользователь $uid не является админом")
             bot.sendMessage(chat, "🚫 Доступ запрещен. У вас нет админских прав.")
             return
         }
-        
-        println("DEBUG: Пользователь $uid является админом, обрабатываем команду")
 
         // Обработка фильтра для списка или поиска
         if (text.startsWith("🔄 Фильтр:")) {
@@ -123,8 +118,29 @@ object RouterAdmin {
             }
             
             "⬅️ Обратно" -> {
-                // Возвращаемся в админскую панель
-                showAdminPanel(bot, chat, uid)
+                // Проверяем, находимся ли мы в режиме редактирования профиля
+                if (session.action in listOf(
+                    PendingAction.ADMIN_EDIT_NAME,
+                    PendingAction.ADMIN_EDIT_USERNAME,
+                    PendingAction.ADMIN_EDIT_BIO,
+                    PendingAction.ADMIN_EDIT_BAN_REASON
+                )) {
+                    // Возвращаемся в меню редактирования профиля
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        val targetUser = users.profile(targetUserId)
+                        if (targetUser != null) {
+                            RouterProfile.showAdminEditProfileForm(bot, chat, uid, targetUser)
+                        } else {
+                            showAdminPanel(bot, chat, uid)
+                        }
+                    } else {
+                        showAdminPanel(bot, chat, uid)
+                    }
+                } else {
+                    // Возвращаемся в админскую панель
+                    showAdminPanel(bot, chat, uid)
+                }
             }
             
             "⬅️ В список" -> {
@@ -153,7 +169,7 @@ object RouterAdmin {
                         if (AdminService.banUser(targetUserId)) {
                             val targetUser = users.profile(targetUserId)
                             if (targetUser != null) {
-                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
                             }
                         }
                     }
@@ -167,10 +183,46 @@ object RouterAdmin {
                         if (AdminService.unbanUser(targetUserId)) {
                             val targetUser = users.profile(targetUserId)
                             if (targetUser != null) {
-                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
                             }
                         }
                     }
+                }
+            }
+            
+            "📝 Написать причину бана" -> {
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        session.action = PendingAction.ADMIN_EDIT_BAN_REASON
+                        session.data["admin_edit_target_user"] = targetUserId.toString()
+                        bot.sendMessage(chat, "📝 Введите причину бана для пользователя:", replyMarkup = KeyboardAdmin.banReasonInputMenu())
+                    } else {
+                        bot.sendMessage(chat, "❌ Ошибка: пользователь не найден")
+                    }
+                } else {
+                    bot.sendMessage(chat, "❌ Эта кнопка доступна только при просмотре профиля пользователя")
+                }
+            }
+            
+            "⬅️ Отмена" -> {
+                // Отмена ввода причины бана - возвращаемся в профиль пользователя
+                if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        val targetUser = users.profile(targetUserId)
+                        if (targetUser != null) {
+                            session.action = PendingAction.NONE
+                            RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                        } else {
+                            showAdminPanel(bot, chat, uid)
+                        }
+                    } else {
+                        showAdminPanel(bot, chat, uid)
+                    }
+                } else {
+                    // Для других контекстов - обычная отмена
+                    showAdminPanel(bot, chat, uid)
                 }
             }
             
@@ -193,8 +245,119 @@ object RouterAdmin {
 
                 when (session.action) {
                     PendingAction.ADMIN_USER_LIST -> RouterAdminUsers.showUserList(bot, chat, uid, newIndex)
-                    PendingAction.ADMIN_BANNED_LIST -> RouterAdminUsers.showBannedUsers(bot, chat, uid, newIndex)
+                    PendingAction.ADMIN_BANNED_LIST -> RouterAdminUsers.showBannedUsers(bot, chat, uid, users, newIndex)
                     else -> showAdminPanel(bot, chat, uid)
+                }
+            }
+            
+            "⏰ Окончание бана: есть" -> {
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.setBanExpiry(targetUserId, 5)) {
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                bot.sendMessage(chat, "✅ Установлено окончание бана: +5 дней", parseMode = ParseMode.HTML)
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            }
+                        } else {
+                            bot.sendMessage(chat, "❌ Ошибка при установке времени бана")
+                        }
+                    }
+                }
+            }
+            
+            "⏰ Окончание бана: нет" -> {
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.removeBanExpiry(targetUserId)) {
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                bot.sendMessage(chat, "✅ Окончание бана удалено", parseMode = ParseMode.HTML)
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            }
+                        } else {
+                            bot.sendMessage(chat, "❌ Ошибка при удалении времени бана")
+                        }
+                    }
+                }
+            }
+            
+            "🔧 Изменить окончание бана" -> {
+                if (session.context == FSMContext.PROFILE_VIEW) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        session.action = PendingAction.ADMIN_EDIT_BAN_EXPIRY
+                        session.data["admin_edit_target_user"] = targetUserId.toString()
+                        bot.sendMessage(chat, "📅 Выберите количество дней для добавления к времени бана:", replyMarkup = KeyboardAdmin.banExpiryDaysMenu())
+                    } else {
+                        bot.sendMessage(chat, "❌ Ошибка: пользователь не найден")
+                    }
+                }
+            }
+            
+            "➕ +1 день" -> {
+                if (session.action == PendingAction.ADMIN_EDIT_BAN_EXPIRY) {
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.addBanDays(targetUserId, 1)) {
+                            bot.sendMessage(chat, "✅ Добавлено 1 день к времени бана", parseMode = ParseMode.HTML)
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                session.action = PendingAction.NONE
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            "➕ +3 дня" -> {
+                if (session.action == PendingAction.ADMIN_EDIT_BAN_EXPIRY) {
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.addBanDays(targetUserId, 3)) {
+                            bot.sendMessage(chat, "✅ Добавлено 3 дня к времени бана", parseMode = ParseMode.HTML)
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                session.action = PendingAction.NONE
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            "➕ +5 дней" -> {
+                if (session.action == PendingAction.ADMIN_EDIT_BAN_EXPIRY) {
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.addBanDays(targetUserId, 5)) {
+                            bot.sendMessage(chat, "✅ Добавлено 5 дней к времени бана", parseMode = ParseMode.HTML)
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                session.action = PendingAction.NONE
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            "➕ +10 дней" -> {
+                if (session.action == PendingAction.ADMIN_EDIT_BAN_EXPIRY) {
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.addBanDays(targetUserId, 10)) {
+                            bot.sendMessage(chat, "✅ Добавлено 10 дней к времени бана", parseMode = ParseMode.HTML)
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                session.action = PendingAction.NONE
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            }
+                        }
+                    }
                 }
             }
             
@@ -208,6 +371,28 @@ object RouterAdmin {
                         session.action = PendingAction.ADMIN_SEARCH_RESULTS
                         session.data["admin_search_query"] = text
                         RouterAdminUsers.showSearchResults(bot, chat, uid, searchResults, 0)
+                    }
+                }
+                else if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
+                    // Эта обработка больше не нужна - должна быть в RouterCore.handlePending()
+                    // но оставляю на случай если message попадет сюда
+                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        if (AdminService.setBanReason(targetUserId, text)) {
+                            val targetUser = users.profile(targetUserId)
+                            if (targetUser != null) {
+                                bot.sendMessage(chat, "✅ Причина бана установлена: \"<b>$text</b>\"", parseMode = ParseMode.HTML)
+                                session.action = PendingAction.NONE
+                                session.data.clear()
+                                RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                            } else {
+                                bot.sendMessage(chat, "❌ Ошибка: пользователь не найден")
+                            }
+                        } else {
+                            bot.sendMessage(chat, "❌ Ошибка при сохранении причины бана")
+                        }
+                    } else {
+                        bot.sendMessage(chat, "❌ Ошибка: не указан пользователь")
                     }
                 }
                 else {
@@ -239,7 +424,10 @@ object RouterAdmin {
             data.startsWith("admin_ban_") -> {
                 val targetUserId = data.substringAfter("admin_ban_").toLongOrNull()
                 if (targetUserId != null) {
-                    if (AdminService.banUser(targetUserId)) {
+                    // Проверяем, что админ не пытается забанить себя
+                    if (targetUserId == uid) {
+                        bot.answerCallbackQuery(callback.id, "❌ Нельзя забанить себя")
+                    } else if (AdminService.banUser(targetUserId)) {
                         bot.answerCallbackQuery(callback.id, "✅ Пользователь забанен")
                         
                         // Обновляем список с переключенной кнопкой бана
@@ -265,7 +453,10 @@ object RouterAdmin {
             data.startsWith("admin_unban_") -> {
                 val targetUserId = data.substringAfter("admin_unban_").toLongOrNull()
                 if (targetUserId != null) {
-                    if (AdminService.unbanUser(targetUserId)) {
+                    // Проверяем, что админ не пытается разбанить себя (на случай если будет попытка отправить callback вручную)
+                    if (targetUserId == uid) {
+                        bot.answerCallbackQuery(callback.id, "❌ Нельзя разбанить себя (не забанены)")
+                    } else if (AdminService.unbanUser(targetUserId)) {
                         bot.answerCallbackQuery(callback.id, "✅ Пользователь разбанен")
                         
                         // Обновляем список с переключенной кнопкой разбана
@@ -293,7 +484,7 @@ object RouterAdmin {
                 if (targetUserId != null) {
                     val targetUser = users.profile(targetUserId)
                     if (targetUser != null) {
-                        RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser)
+                        RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
                         bot.answerCallbackQuery(callback.id)
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Неверный индекс")
@@ -417,6 +608,18 @@ object RouterAdmin {
             data == "admin_back_to_panel" -> {
                 showAdminPanel(bot, chat, uid)
                 bot.answerCallbackQuery(callback.id)
+            }
+            
+            data.startsWith("admin_ban_reason_") -> {
+                val targetUserId = data.substringAfter("admin_ban_reason_").toLongOrNull()
+                if (targetUserId != null) {
+                    session.action = PendingAction.ADMIN_EDIT_BAN_REASON
+                    session.data["admin_edit_target_user"] = targetUserId.toString()
+                    bot.sendMessage(chat, "📝 Введите причину бана для пользователя:", replyMarkup = KeyboardAdmin.banReasonInputMenu())
+                    bot.answerCallbackQuery(callback.id)
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
             }
             
             data.startsWith("admin_edit_name_") -> {

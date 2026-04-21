@@ -31,14 +31,16 @@ object ProfileSchema {
             create table if not exists banned_users (
                 user_id bigint primary key references users(user_id) on delete cascade,
                 banned_at timestamptz not null default now(),
-                reason text
+                reason text,
+                ban_expires_at timestamptz
             )
             """
     }
 
     fun getMigrations(): List<String> {
         return listOf(
-            "alter table users add column if not exists hide_username boolean not null default false"
+            "alter table users add column if not exists hide_username boolean not null default false",
+            "alter table banned_users add column if not exists ban_expires_at timestamptz"
         )
     }
 }
