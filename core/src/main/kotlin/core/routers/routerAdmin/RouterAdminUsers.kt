@@ -11,6 +11,7 @@ import core.SessionStore
 import core.PendingAction
 import core.Session
 import core.FSMContext
+import core.routers.RouterProfile
 
 object RouterAdminUsers {
     fun showUserList(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
@@ -33,7 +34,7 @@ object RouterAdminUsers {
                 "Забаненные" -> "забаненных пользователей"
                 else -> "пользователей"
             }
-            bot.sendMessage(chat, "❌ $filterMessage не найдены", replyMarkup = KeyboardAdmin.adminBackOnlyMenu())
+            bot.sendMessage(chat, "❌ $filterMessage не найдены", replyMarkup = KeyboardAdmin.adminUserListMenu(filter))
             return
         }
         
@@ -65,16 +66,27 @@ object RouterAdminUsers {
                 user.username.isBlank() -> "👤 не указан"
                 else -> "👤 @${user.username}"
             }
-            listOf(
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = usernameButtonText,
-                    callbackData = "admin_profile_view_${user.userId}"
-                ),
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = if (user.isBanned) "✅ Разбанить" else "🚫 Забанить",
-                    callbackData = if (user.isBanned) "admin_unban_${user.userId}" else "admin_ban_${user.userId}"
+            // Если это сам админ, показываем только кнопку профиля в один ряд
+            if (uid == user.userId) {
+                listOf(
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = usernameButtonText,
+                        callbackData = "admin_profile_view_${user.userId}"
+                    )
                 )
-            )
+            } else {
+                // Для других пользователей показываем кнопку профиля и действие бана
+                listOf(
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = usernameButtonText,
+                        callbackData = "admin_profile_view_${user.userId}"
+                    ),
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = if (user.isBanned) "✅ Разбанить" else "🚫 Забанить",
+                        callbackData = if (user.isBanned) "admin_unban_${user.userId}" else "admin_ban_${user.userId}"
+                    )
+                )
+            }
         }
 
         // Добавляем навигацию (стрелки) сверху в inline клавиатуру
@@ -135,7 +147,7 @@ object RouterAdminUsers {
         
         val statusText = """🚫 Забанен
 📅 Дата бана: ${bannedUser.bannedAt ?: "неизвестно"}
-📝 Причина: ${bannedUser.reason ?: "не указана"}"""
+📝 Причина: ${bannedUser.reason ?: "не указана"}${if (!bannedUser.banExpiresAt.isNullOrBlank()) "\n⏰ Окончание бана: ${bannedUser.banExpiresAt}" else ""}"""
         
         val message = buildString {
             append("👤 <b>Профиль пользователя</b> (${index + 1} из ${bannedUsers.size})\n\n")
@@ -174,7 +186,7 @@ object RouterAdminUsers {
         }
 
         if (filteredUsers.isEmpty()) {
-            bot.sendMessage(chat, "❌ По вашему поиску и фильтру не найдено пользователей", replyMarkup = KeyboardAdmin.adminMenu())
+            bot.sendMessage(chat, "❌ По вашему поиску и фильтру не найдено пользователей", replyMarkup = KeyboardAdmin.adminSearchMenu(filter))
             return
         }
 
@@ -195,16 +207,27 @@ object RouterAdminUsers {
                 user.username.isBlank() -> "👤 не указан"
                 else -> "👤 @${user.username}"
             }
-            listOf(
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = usernameButtonText,
-                    callbackData = "admin_profile_${user.userId}"
-                ),
-                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = if (user.isBanned) "✅ Разбанить" else "🚫 Забанить",
-                    callbackData = if (user.isBanned) "admin_unban_${user.userId}" else "admin_ban_${user.userId}"
+            // Если это сам админ, показываем только кнопку профиля в один ряд
+            if (uid == user.userId) {
+                listOf(
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = usernameButtonText,
+                        callbackData = "admin_profile_${user.userId}"
+                    )
                 )
-            )
+            } else {
+                // Для других пользователей показываем кнопку профиля и действие бана
+                listOf(
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = usernameButtonText,
+                        callbackData = "admin_profile_${user.userId}"
+                    ),
+                    com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                        text = if (user.isBanned) "✅ Разбанить" else "🚫 Забанить",
+                        callbackData = if (user.isBanned) "admin_unban_${user.userId}" else "admin_ban_${user.userId}"
+                    )
+                )
+            }
         }
 
         val navRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
@@ -236,8 +259,16 @@ object RouterAdminUsers {
         bot.sendMessage(chatId = chat, text = " ", replyMarkup = inlineKeyboard)
     }
 
-    fun showUserProfileView(bot: Bot, chat: ChatId, uid: Long, targetUser: UserProfile) {
+    fun showUserProfileView(bot: Bot, chat: ChatId, uid: Long, targetUser: UserProfile, users: UserRepository) {
+        // Если это свой профиль, то показываем как обычный профиль с полным доступом
+        if (uid == targetUser.userId) {
+            RouterProfile.showProfile(bot, chat, uid, users)
+            return
+        }
+        
         val session = SessionStore.get(uid)
+        // Сохраняем текущий action чтобы вернуться в нужный список
+        session.data["admin_profile_view_prev_action"] = session.action.name
         session.context = FSMContext.PROFILE_VIEW
         session.data["admin_profile_view_user_id"] = targetUser.userId.toString()
         
@@ -261,9 +292,15 @@ object RouterAdminUsers {
             .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
 
         val statusText = if (targetUser.isBanned) {
-            """🚫 Забанен
-📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}
-📝 Причина: ${targetUser.reason ?: "не указана"}"""
+            val banInfo = buildString {
+                append("🚫 Забанен\n")
+                append("📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}\n")
+                append("📝 Причина: ${targetUser.reason ?: "не указана"}\n")
+                if (!targetUser.banExpiresAt.isNullOrBlank()) {
+                    append("⏰ Окончание бана: ${targetUser.banExpiresAt}")
+                }
+            }
+            banInfo
         } else {
             "✅ Активен"
         }
@@ -288,7 +325,7 @@ object RouterAdminUsers {
         }
 
         val keyboard = if (currentAdmin) {
-            KeyboardAdmin.profileViewAdminMenu(targetUser.isBanned)
+            KeyboardAdmin.profileViewAdminBanMenu(targetUser.isBanned, !targetUser.banExpiresAt.isNullOrBlank())
         } else {
             KeyboardAdmin.profileViewBackMenu()
         }
@@ -334,7 +371,7 @@ object RouterAdminUsers {
         val inlineButtons = listOf(
             listOf(
                 com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                    text = "⬅️ В список",
+                    text = "⬅️ Обратно",
                     callbackData = "admin_back_to_user_list"
                 )
             )
@@ -397,6 +434,16 @@ object RouterAdminUsers {
                 callbackData = if (targetUser.isBanned) "admin_unban_${targetUser.userId}" else "admin_ban_${targetUser.userId}"
             )
         ))
+        
+        // Кнопка написания причины бана (только если забанен)
+        if (targetUser.isBanned) {
+            actionRows.add(listOf(
+                com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
+                    text = "📝 Написать причину бана",
+                    callbackData = "admin_ban_reason_${targetUser.userId}"
+                )
+            ))
+        }
 
         // Кнопка возврата
         actionRows.add(listOf(

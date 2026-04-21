@@ -5,6 +5,9 @@ enum class PendingAction {
     EDIT_NAME,
     EDIT_USERNAME,
     EDIT_BIO,
+    EDIT_AVATAR,
+    EDIT_PROFILE,
+    AVATAR_PROCESSING,  // Обработка неквадратного изображения для аватарки
     ADD_MEME,
     FEEDBACK_TEXT,
     ADD_PREDICTION_TEXT,
@@ -39,6 +42,8 @@ enum class PendingAction {
     ADMIN_EDIT_NAME,
     ADMIN_EDIT_USERNAME,
     ADMIN_EDIT_BIO,
+    ADMIN_EDIT_BAN_REASON,
+    ADMIN_EDIT_BAN_EXPIRY,
     ADMIN_FILTER
 }
 

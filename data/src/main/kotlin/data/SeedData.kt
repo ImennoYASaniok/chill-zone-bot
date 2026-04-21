@@ -1,8 +1,10 @@
 package data
 
 import data.models.*
+import data.processes.ImageAvatarProcess
 import java.time.LocalDateTime
 import java.sql.Timestamp
+import java.io.File
 
 object SeedData {
     private val recommendations = listOf(
@@ -137,6 +139,52 @@ object SeedData {
     )
 
     fun ensure() {
+        // Получение путей к аватаркам мок пользователей
+        val mockAvatarPaths = mutableMapOf<Long, String>()
+        try {
+            val resource = javaClass.classLoader.getResource("mocks/avatars")
+            if (resource != null) {
+                val resourceUrl = resource.toString()
+
+                // Если ресурс находится внутри JAR (в Docker), пропускаем обработку
+                if (!resourceUrl.contains(".jar!")) {
+                    var avatarPath = resource.path
+                    // Обработка Windows путей (file:/C:/...)
+                    if (avatarPath.startsWith("/") && avatarPath.length > 2 && avatarPath[2] == ':') {
+                        avatarPath = avatarPath.substring(1)
+                    }
+
+                    val avatarDir = File(avatarPath)
+                    if (avatarDir.exists() && avatarDir.isDirectory) {
+                        println("🖼️ Обработка аватарок в: $avatarPath")
+                        ImageAvatarProcess.processAvatarDirectory(avatarPath)
+
+                        // Собираем пути к обработанным аватаркам
+                        avatarDir.listFiles()?.forEach { file ->
+                            if (file.isFile && file.name.endsWith(".jpg", ignoreCase = true)) {
+                                val userId = when (file.name) {
+                                    "avatar_1.jpg" -> 1001L
+                                    "avatar_2.jpg" -> 1002L
+                                    "avatar_3.jpg" -> 1003L
+                                    else -> null
+                                }
+                                if (userId != null) {
+                                    mockAvatarPaths[userId] = file.absolutePath
+                                    println("✅ Аватарка для пользователя $userId: ${file.name}")
+                                }
+                            }
+                        }
+                    } else {
+                        println("ℹ️ Директория с мок аватарками не найдена: $avatarPath")
+                    }
+                } else {
+                    println("ℹ️ Ресурсы мок аватарок находятся внутри JAR архива (нормально для production)")
+                }
+            }
+        } catch (e: Exception) {
+            println("⚠️ Ошибка при обработке мок аватарок: ${e.message}")
+        }
+        
         if (Db.single("select id from recommendations limit 1", map = { it.getInt("id") }) == null) {
             recommendations.forEach {
                 Db.execute(
@@ -201,10 +249,13 @@ object SeedData {
             )
 
             if (existingUser == null) {
+                // Используем путь к локальному файлу как avatarFileId для мок пользователей
+                val avatarFileId = mockAvatarPaths[user.userId] ?: user.avatarFileId
+
                 // Вставляем пользователя
                 Db.execute(
-                    """insert into users(user_id, username, display_name, bio, hidden, show_media, rating, hide_username, created_at)
-                       values (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+                    """insert into users(user_id, username, display_name, bio, hidden, show_media, rating, hide_username, created_at, avatar_file_id)
+                       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
                 ) { stmt ->
                     stmt.setLong(1, user.userId)
                     stmt.setString(2, user.username)
@@ -215,6 +266,7 @@ object SeedData {
                     stmt.setInt(7, user.rating)
                     stmt.setBoolean(8, user.hideUsername)
                     stmt.setTimestamp(9, user.createdAt?.let { Timestamp.valueOf(it) })
+                    stmt.setString(10, avatarFileId)
                 }
 
                 // Если пользователь забанен, вставляем запись в banned_users

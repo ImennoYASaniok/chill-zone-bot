@@ -46,7 +46,10 @@ class UserRepository {
                        case when bu.user_id is not null then true else false end as is_banned,
                        bu.banned_at,
                        bu.reason,
-                       coalesce(u.created_at, now()) as created_at
+                       bu.ban_expires_at,
+                       coalesce(u.created_at, now()) as created_at,
+                       coalesce(u.last_activity_at, now()) as last_activity_at,
+                       u.avatar_file_id
                 from users u
                 left join banned_users bu on u.user_id = bu.user_id
                 where u.user_id = ?
@@ -75,7 +78,10 @@ class UserRepository {
                         createdAt = rs.getTimestamp("created_at")?.toLocalDateTime(),
                         bannedAt = rs.getString("banned_at"),
                         reason = rs.getString("reason"),
-                        isAdmin = AdminService.isAdmin(rs.getLong("user_id"))
+                        banExpiresAt = rs.getString("ban_expires_at"),
+                        isAdmin = AdminService.isAdmin(rs.getLong("user_id")),
+                        lastActivityAt = rs.getTimestamp("last_activity_at")?.toLocalDateTime(),
+                        avatarFileId = rs.getString("avatar_file_id")
                     )
                 }
             )
@@ -135,5 +141,52 @@ class UserRepository {
             bind = { stmt -> stmt.setLong(1, userId) },
             map = { rs -> rs.getBoolean(1) }
         ) ?: false
+    }
+
+    fun updateLastActivity(userId: Long) {
+        try {
+            Db.execute("update users set last_activity_at = now() where user_id = ?") { stmt ->
+                stmt.setLong(1, userId)
+            }
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при обновлении last_activity_at для пользователя $userId: ${e.message}")
+        }
+    }
+
+    fun getActiveUsersCount(minutesThreshold: Int = 3): Int {
+        return try {
+            Db.single(
+                """
+                select count(*) as count from users 
+                where last_activity_at > now() - interval '${minutesThreshold} minutes'
+                """,
+                bind = { },
+                map = { rs -> rs.getInt("count") }
+            ) ?: 0
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при получении количества активных пользователей: ${e.message}")
+            0
+        }
+    }
+
+    fun setAvatar(userId: Long, avatarFileId: String) {
+        try {
+            Db.execute("update users set avatar_file_id = ?, updated_at = now() where user_id = ?") { stmt ->
+                stmt.setString(1, avatarFileId)
+                stmt.setLong(2, userId)
+            }
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при сохранении аватарки для пользователя $userId: ${e.message}")
+        }
+    }
+
+    fun deleteAvatar(userId: Long) {
+        try {
+            Db.execute("update users set avatar_file_id = null, updated_at = now() where user_id = ?") { stmt ->
+                stmt.setLong(1, userId)
+            }
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при удалении аватарки для пользователя $userId: ${e.message}")
+        }
     }
 }
