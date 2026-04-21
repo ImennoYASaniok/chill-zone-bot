@@ -243,9 +243,9 @@ object SeedData {
         mockUsers.forEach { user ->
             // Проверяем, существует ли пользователь
             val existingUser = Db.single(
-                "select user_id from users where user_id = ?",
+                "select user_id, avatar_file_id from users where user_id = ?",
                 bind = { stmt -> stmt.setLong(1, user.userId) },
-                map = { it.getLong("user_id") }
+                map = { Pair(it.getLong("user_id"), it.getString("avatar_file_id")) }
             )
 
             if (existingUser == null) {
@@ -268,16 +268,30 @@ object SeedData {
                     stmt.setTimestamp(9, user.createdAt?.let { Timestamp.valueOf(it) })
                     stmt.setString(10, avatarFileId)
                 }
+            } else {
+                // Пользователь существует - обновляем avatarFileId если есть путь к аватарке
+                val (userId, currentAvatarFileId) = existingUser
+                val newAvatarFileId = mockAvatarPaths[user.userId]
 
-                // Если пользователь забанен, вставляем запись в banned_users
-                if (user.isBanned) {
+                if (newAvatarFileId != null && (currentAvatarFileId == null || currentAvatarFileId != newAvatarFileId)) {
                     Db.execute(
-                        """insert into banned_users(user_id, banned_at, reason) values (?, ?, ?)"""
+                        "update users set avatar_file_id = ? where user_id = ?"
                     ) { stmt ->
-                        stmt.setLong(1, user.userId)
-                        stmt.setTimestamp(2, user.bannedAt?.let { Timestamp.valueOf(it.replace(" ", "T")) })
-                        stmt.setString(3, user.reason)
+                        stmt.setString(1, newAvatarFileId)
+                        stmt.setLong(2, user.userId)
                     }
+                    println("✅ Обновлена аватарка для пользователя $userId")
+                }
+            }
+
+            // Если пользователь забанен, вставляем запись в banned_users
+            if (user.isBanned) {
+                Db.execute(
+                    """insert into banned_users(user_id, banned_at, reason) values (?, ?, ?)"""
+                ) { stmt ->
+                    stmt.setLong(1, user.userId)
+                    stmt.setTimestamp(2, user.bannedAt?.let { Timestamp.valueOf(it) })
+                    stmt.setString(3, user.reason)
                 }
             }
         }

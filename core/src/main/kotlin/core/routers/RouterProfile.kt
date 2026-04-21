@@ -64,13 +64,47 @@ object RouterProfile {
 
         // Если есть аватарка, отправляем фото с подписью
         profile.avatarFileId?.let { fileId ->
-            bot.sendPhoto(
-                chat,
-                fileId,
-                caption = messageText,
-                parseMode = ParseMode.HTML,
-                replyMarkup = KeyboardFactory.profileMenu(profile)
-            )
+            // Проверяем, является ли это локальным файлом (для мок пользователей)
+            if (fileId.contains(":\\") || fileId.contains("/") || java.io.File(fileId).exists()) {
+                try {
+                    val photo = java.io.File(fileId)
+                    if (photo.exists()) {
+                        bot.sendPhoto(
+                            chatId = chat,
+                            photo = photo,
+                            caption = messageText,
+                            parseMode = ParseMode.HTML,
+                            replyMarkup = KeyboardFactory.profileMenu(profile)
+                        )
+                    } else {
+                        // Файл не существует, отправляем только текст
+                        bot.sendMessage(
+                            chat,
+                            messageText,
+                            parseMode = ParseMode.HTML,
+                            replyMarkup = KeyboardFactory.profileMenu(profile)
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Ошибка при чтении файла, отправляем только текст
+                    println("❌ Ошибка при отправке локального файла аватарки: ${e.message}")
+                    bot.sendMessage(
+                        chat,
+                        messageText,
+                        parseMode = ParseMode.HTML,
+                        replyMarkup = KeyboardFactory.profileMenu(profile)
+                    )
+                }
+            } else {
+                // Это file_id из Telegram
+                bot.sendPhoto(
+                    chatId = chat,
+                    photo = fileId,
+                    caption = messageText,
+                    parseMode = ParseMode.HTML,
+                    replyMarkup = KeyboardFactory.profileMenu(profile)
+                )
+            }
         } ?: run {
             // Если нет аватарки, отправляем просто сообщение
             bot.sendMessage(
