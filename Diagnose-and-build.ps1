@@ -1,16 +1,21 @@
 # Diagnose-and-build.ps1
 Set-StrictMode -Version Latest
 
-# Определяем корень проекта (скрипт обычно лежит в корне репозитория)
+# Определяем корень проекта корректно (одна строка)
 $Root = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+# Ensure $Root is a single string (not an array)
+if ($Root -is [System.Array]) {
+    $Root = $Root[0]
+}
+$Root = [string]$Root
 
 # Пути к кэшу Gradle и каталогам сборки
 $gradleCache = "$env:USERPROFILE\.gradle\caches"
 $gradleDists = "$env:USERPROFILE\.gradle\wrapper\dists"
 $buildDirs = @(
-  Join-Path $Root "data\build",
-  Join-Path $Root "core\build",
-  Join-Path $Root "app\build"
+  Join-Path $Root "data/build",
+  Join-Path $Root "core/build",
+  Join-Path $Root "app/build"
 )
 
 Write-Host "`n[Step 1] Очистка кэшей Gradle..."
@@ -58,12 +63,12 @@ $dockerLog = Join-Path $Root "docker-build.log"
 Write-Host "`n[Step 3] Docker сборка (docker-compose) с логами..."
 docker-compose build --progress=plain 2>&1 | Tee-Object -FilePath $dockerLog -Append
 
-# 6: Вывод последних логов
+# Вывод последних логов
 Write-Host "`n=== Последние строки логов ==="
 Get-Content -Tail 300 $gradleLogLocal -ErrorAction SilentlyContinue
 Get-Content -Tail 300 $gradleAppLog -ErrorAction SilentlyContinue
 Get-Content -Tail 300 $dockerLog -ErrorAction SilentlyContinue
 
-# 7: Быстрые подсказки по ошибкам
+# Быстрые подсказки по ошибкам
 Write-Host "`n=== Подсказки ==="
 Write-Host "Поиск ошибок Unresolved reference или Cannot find symbol в логах: (копируйте фрагменты логов и пришлите сюда)"
