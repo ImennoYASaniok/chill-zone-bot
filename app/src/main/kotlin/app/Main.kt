@@ -2,21 +2,42 @@ package app
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.dispatcher.callbackQuery
+import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.dispatcher.telegramError
 import com.github.kotlintelegrambot.entities.ChatId
 import core.Entry
-import data.schemas.Schema
 import data.SeedData
+import data.schemas.Schema
+import data.services.AdminService
 import io.github.cdimascio.dotenv.dotenv
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 fun main() {
-    println("Chill Zone Bot: initializing database schema")
+    fun log(level: String, component: String, msg: String, t: Throwable? = null) {
+        val ts = OffsetDateTime.now(ZoneOffset.UTC).toString()
+        val base = "$ts [$level] [$component] $msg"
+        if (t == null) {
+            println(base)
+        } else {
+            println("$base | ${t::class.simpleName}: ${t.message}")
+        }
+    }
+
+    fun info(component: String, msg: String) = log("INFO", component, msg)
+    fun warn(component: String, msg: String) = log("WARN", component, msg)
+    fun error(component: String, msg: String, t: Throwable? = null) =
+            log("ERROR", component, msg, t)
+
+    info("boot", "initializing database schema")
     Schema.ensure()
-    println("Chill Zone Bot: seeding default data")
+    info("boot", "seeding default data")
     SeedData.ensure()
-    println("Chill Zone Bot: database is ready")
+    info("boot", "database is ready")
 
     val env = dotenv()
     val token = env["BOT_TOKEN"] ?: env["TELEGRAM_TOKEN"] ?: error("BOT_TOKEN is not set")
@@ -32,34 +53,45 @@ fun main() {
 
         dispatch {
             message {
-                val preview = when {
-                    !message.text.isNullOrBlank() -> message.text!!.trim().replace(Regex("\\s+"), " ").take(80)
-                    message.photo != null -> "<photo>"
-                    else -> "<non-text>"
-                }
+                val preview =
+                        when {
+                            !message.text.isNullOrBlank() ->
+                                    message.text!!.trim().replace(Regex("\\s+"), " ").take(80)
+                            message.photo != null -> "<photo>"
+                            else -> "<non-text>"
+                        }
 
-                println("Chill Zone Bot: incoming message chat=${message.chat.id} user=${message.from?.id} payload=$preview")
+                info(
+                        "update",
+                        "incoming message chat=${message.chat.id} user=${message.from?.id} payload=$preview"
+                )
 
                 try {
                     router.handle(telegramBot, message)
                 } catch (e: java.lang.Exception) {
-                    println("Chill Zone Bot: message handling error")
+                    error("update", "message handling error", e)
                     telegramBot.sendMessage(
-                        chatId = ChatId.fromId(message.chat.id),
-                        text = "Внутренняя ошибка при обработке сообщения."
+                            chatId = ChatId.fromId(message.chat.id),
+                            text = "Внутренняя ошибка при обработке сообщения."
                     )
                 }
             }
-            
+
             callbackQuery {
                 val callbackQuery = this.callbackQuery
-                println("Chill Zone Bot: incoming callback chat=${callbackQuery.message?.chat?.id} user=${callbackQuery.from.id} data=${callbackQuery.data}")
-                
+                info(
+                        "update",
+                        "incoming callback chat=${callbackQuery.message?.chat?.id} user=${callbackQuery.from.id} data=${callbackQuery.data}"
+                )
+
                 try {
                     router.handleCallback(telegramBot, callbackQuery)
                 } catch (e: java.lang.Exception) {
-                    println("Chill Zone Bot: callback handling error: ${e.message}")
-                    telegramBot.answerCallbackQuery(callbackQuery.id, "Ошибка при обработке запроса.")
+                    error("update", "callback handling error", e)
+                    telegramBot.answerCallbackQuery(
+                            callbackQuery.id,
+                            "Ошибка при обработке запроса."
+                    )
                 }
             }
 
@@ -75,19 +107,50 @@ fun main() {
                     return@telegramError
                 }
                 if (suppressedPollingErrors > 0) {
-                    println("Chill Zone Bot: suppressed polling errors x$suppressedPollingErrors")
+                    warn("polling", "suppressed polling errors x$suppressedPollingErrors")
                     suppressedPollingErrors = 0
                 }
                 lastPollingErrorKey = key
                 lastPollingErrorAt = now
-                println("Chill Zone Bot: Telegram polling error [$type] $message")
+                warn("polling", "Telegram polling error [$type] $message")
                 if (type == "RETRIEVE_UPDATES") {
-                    println("Chill Zone Bot: проверьте доступ контейнера к api.telegram.org, корректность BOT_TOKEN и отсутствие блокировок сети/VPN/DNS.")
+                    warn(
+                            "polling",
+                            "check api.telegram.org access, BOT_TOKEN correctness, and networking/VPN/DNS blocks"
+                    )
                 }
             }
         }
     }
 
-    println("Chill Zone Bot: polling started")
+    info("boot", "polling started")
     telegramBot.startPolling()
+
+    runBlocking {
+        launch {
+            while (true) {
+                delay(60000)
+                try {
+                    val expiredBans = AdminService.getExpiredBans()
+                    for (ban in expiredBans) {
+                        if (AdminService.unbanUser(ban.userId)) {
+                            val displayName = ban.displayName.ifBlank { ban.username }
+                            telegramBot.sendMessage(
+                                    chatId = ChatId.fromId(ban.userId),
+                                    text =
+                                            "✅ <b>Ваш временный бан истёк!</b>\n\nВы снова можете использовать бота.\n\nС уважением, команда Chill Zone Bot.",
+                                    parseMode = com.github.kotlintelegrambot.entities.ParseMode.HTML
+                            )
+                            info(
+                                    "ban",
+                                    "auto-unbanned user ${ban.userId} ($displayName), ban expired"
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    error("ban", "error checking expired bans", e)
+                }
+            }
+        }
+    }
 }

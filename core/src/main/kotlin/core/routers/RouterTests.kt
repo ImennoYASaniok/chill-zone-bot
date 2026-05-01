@@ -1,7 +1,9 @@
 package core.routers
 
-import data.*
 import data.models.*
+import data.repositories.TestRepository
+import data.repositories.UserRepository
+import data.services.ModerationService
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
@@ -63,7 +65,70 @@ object RouterTests {
                 }
                 return true
             }
-            else -> return false
+            else -> {
+                when (session.action) {
+                    PendingAction.CREATE_TEST_TITLE, PendingAction.CREATE_TEST_KIND,
+                    PendingAction.CREATE_TEST_PROMPT, PendingAction.CREATE_TEST_MORE -> {
+                        val moderationResult = ModerationService.checkText(uid, text)
+                        if (!moderationResult.isAllowed) {
+                            if (moderationResult.shouldBan) {
+                                ModerationService.banForViolation(uid, "Использование ненормативной лексики")
+                                ModerationService.clearWarnings(uid)
+                                bot.sendMessage(chat, "🚫 Вы были заблокированы за использование ненормативной лексики.")
+                                session.action = PendingAction.NONE
+                                session.data.clear()
+                            } else {
+                                ModerationService.addWarning(uid)
+                                bot.sendMessage(chat, "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.", parseMode = ParseMode.HTML)
+                            }
+                            return true
+                        }
+                    }
+                    else -> {}
+                }
+
+                when (session.action) {
+                    PendingAction.CREATE_TEST_TITLE -> {
+                        session.data["test_title"] = text
+                        session.action = PendingAction.CREATE_TEST_KIND
+                        bot.sendMessage(chat, "Какой тип теста? (single, multi, number, match)")
+                        return true
+                    }
+                    PendingAction.CREATE_TEST_KIND -> {
+                        val kind = text.lowercase()
+                        if (kind !in listOf("single", "multi", "number", "match")) {
+                            bot.sendMessage(chat, "Неверный тип. Используй: single, multi, number, match")
+                            return true
+                        }
+                        session.data["test_kind"] = kind
+                        session.action = PendingAction.CREATE_TEST_PROMPT
+                        bot.sendMessage(chat, "Напиши вопрос:")
+                        return true
+                    }
+                    PendingAction.CREATE_TEST_PROMPT -> {
+                        session.data["test_prompt"] = text
+                        session.action = PendingAction.CREATE_TEST_MORE
+                        bot.sendMessage(chat, "Напиши варианты ответа (через |) и правильный ответ после |:\nПример: Вариант1 | Вариант2 | Вариант3 | 1")
+                        return true
+                    }
+                    PendingAction.CREATE_TEST_MORE -> {
+                        val title = session.data["test_title"] ?: ""
+                        val kind = session.data["test_kind"] ?: "single"
+                        val prompt = session.data["test_prompt"] ?: ""
+
+                        val parts = text.split("|").map { it.trim() }
+                        val options = parts.dropLast(1)
+                        val answer = parts.last()
+
+                        tests.createTestFull(title, prompt, kind, answer, options)
+                        session.action = PendingAction.NONE
+                        session.data.clear()
+                        bot.sendMessage(chat, "✅ Тест создан!\n\n📌 $title", replyMarkup = KeyboardFactory.testsMenu())
+                        return true
+                    }
+                    else -> return false
+                }
+            }
         }
     }
 

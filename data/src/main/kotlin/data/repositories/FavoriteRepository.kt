@@ -1,5 +1,6 @@
-package data
+package data.repositories
 
+import data.Db
 import data.models.*
 
 data class FavoriteItem(

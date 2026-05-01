@@ -1,7 +1,8 @@
-package data
+package data.repositories
 
-import kotlin.random.Random
+import data.Db
 import data.models.*
+import kotlin.random.Random
 
 class PredictionRepository {
     fun add(text: String, rarity: String, authorId: Long?): PredictionItem {

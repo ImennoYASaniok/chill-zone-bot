@@ -1,6 +1,6 @@
 package core
 
-import data.*
+import data.repositories.*
 import core.routers.RouterCore
 
 object Entry {

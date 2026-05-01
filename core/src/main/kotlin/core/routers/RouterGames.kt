@@ -1,7 +1,8 @@
 package core.routers
 
-import data.*
 import data.models.*
+import data.repositories.GameRepository
+import data.repositories.UserRepository
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message

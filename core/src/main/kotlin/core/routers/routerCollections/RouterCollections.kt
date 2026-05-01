@@ -1,7 +1,9 @@
 package core.routers.routerCollections
 
-import data.*
 import data.models.*
+import data.repositories.RecommendationRepository
+import data.repositories.FavoriteRepository
+import data.repositories.UserRepository
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode
@@ -15,10 +17,6 @@ import core.Session
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import com.github.kotlintelegrambot.entities.CallbackQuery
-import com.github.kotlintelegrambot.entities.User
-import data.RecommendationRepository
-import data.FavoriteRepository
-import data.UserRepository
 import core.routers.routerCollections.RouterCollectionsFavorites
 import core.routers.routerCollections.RouterCollectionsSearch
 

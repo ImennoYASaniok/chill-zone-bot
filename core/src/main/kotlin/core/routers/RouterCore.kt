@@ -1,7 +1,8 @@
 package core.routers
 
-import data.*
 import data.models.*
+import data.services.AdminService
+import data.services.AvatarService
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
@@ -16,10 +17,16 @@ import core.FSMContext
 import core.PendingAction
 import core.Session
 import core.FileValidator
-import data.AvatarService
 import core.routers.routerAdmin.RouterAdmin
 import core.routers.routerAdmin.RouterAdminUsers
 import core.routers.routerCollections.RouterCollections
+import data.repositories.UserRepository
+import data.repositories.MemeRepository
+import data.repositories.PredictionRepository
+import data.repositories.GameRepository
+import data.repositories.TestRepository
+import data.repositories.EventRepository
+import data.repositories.FeedbackRepository
 
 class RouterCore(
     private val users: UserRepository,
@@ -477,7 +484,7 @@ class RouterCore(
             }
             // Админские действия
             PendingAction.ADMIN_USER_MANAGEMENT, PendingAction.ADMIN_USER_LIST, PendingAction.ADMIN_BANNED_LIST, 
-            PendingAction.ADMIN_SEARCH, PendingAction.ADMIN_SEARCH_RESULTS -> {
+            PendingAction.ADMIN_SEARCH, PendingAction.ADMIN_SEARCH_RESULTS, PendingAction.ADMIN_EDIT_BAN_EXPIRY -> {
                 RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 true
             }
@@ -489,12 +496,12 @@ class RouterCore(
         return when {
             text.startsWith("✂️ Обрезать") -> {
                 val fileId = session.data["avatar_file_id"] ?: return true
-                val success = AvatarService.processAvatarImage(fileId, "crop")
-                if (success) {
-                    users.setAvatar(uid, fileId)
+                val processedFilePath = AvatarService.processAvatarImage(fileId, "crop")
+                if (processedFilePath != null) {
+                    users.setAvatar(uid, processedFilePath)
                     session.action = PendingAction.NONE
                     session.data.clear()
-                    bot.sendMessage(chat, "✅ Аватарка обрезана и сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+                    RouterProfile.showProfile(bot, chat, uid, users)
                 } else {
                     bot.sendMessage(chat, "❌ Ошибка при обработке изображения")
                 }
@@ -502,12 +509,12 @@ class RouterCore(
             }
             text == "📦 Добавить границы до квадрата" -> {
                 val fileId = session.data["avatar_file_id"] ?: return true
-                val success = AvatarService.processAvatarImage(fileId, "letterbox")
-                if (success) {
-                    users.setAvatar(uid, fileId)
+                val processedFilePath = AvatarService.processAvatarImage(fileId, "letterbox")
+                if (processedFilePath != null) {
+                    users.setAvatar(uid, processedFilePath)
                     session.action = PendingAction.NONE
                     session.data.clear()
-                    bot.sendMessage(chat, "✅ Аватарка с границами сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+                    RouterProfile.showProfile(bot, chat, uid, users)
                 } else {
                     bot.sendMessage(chat, "❌ Ошибка при обработке изображения")
                 }
@@ -535,7 +542,7 @@ class RouterCore(
 
         when {
             // Админские функции
-            data.startsWith("admin_") -> {
+            data.startsWith("admin_") || data.startsWith("ban_add_") || data.startsWith("ban_sub_") || data == "ban_add_cancel" -> {
                 RouterAdmin.handleCallback(bot, callback, users)
             }
             // Подборки - сохранение/удаление избранного

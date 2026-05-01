@@ -1,49 +1,96 @@
 package core.routers
 
-import data.*
-import data.models.*
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
+import core.PendingAction
+import core.Session
+import core.SessionStore
 import core.keyboards.KeyboardFactory
 import core.keyboards.KeyboardProfile
-import core.SessionStore
-import core.Session
-import core.PendingAction
-import data.AdminService
 import core.routers.routerAdmin.RouterAdmin
+import data.*
+import data.models.*
+import data.repositories.UserRepository
+import data.services.AdminService
+import data.services.ModerationService
+import java.io.File
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 object RouterProfile {
+    private val dbDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]")
+
+    private fun parseBanExpiry(value: String): OffsetDateTime {
+        return try {
+            OffsetDateTime.parse(value)
+        } catch (_: Exception) {
+            try {
+                LocalDateTime.parse(value).atOffset(ZoneOffset.UTC)
+            } catch (_: Exception) {
+                try {
+                    LocalDateTime.parse(value.replace(' ', 'T')).atOffset(ZoneOffset.UTC)
+                } catch (_: Exception) {
+                    LocalDateTime.parse(value, dbDateTimeFormatter).atOffset(ZoneOffset.UTC)
+                }
+            }
+        }
+    }
+
+    private fun formatRemainingBanTime(banExpiresAt: String?): String {
+        if (banExpiresAt.isNullOrBlank()) return "0 дней, 0 часов"
+        return try {
+            val expires = parseBanExpiry(banExpiresAt)
+            val now = OffsetDateTime.now(expires.offset)
+            val duration = Duration.between(now, expires)
+            val totalHours = duration.toHours().coerceAtLeast(0)
+            val days = (totalHours / 24)
+            val hours = (totalHours % 24)
+            "${days} дней, ${hours} часов"
+        } catch (_: Exception) {
+            "0 дней, 0 часов"
+        }
+    }
+
     fun showProfile(bot: Bot, chat: ChatId, uid: Long, users: UserRepository) {
-        println("DEBUG: Вызов showProfile для пользователя $uid")
         val profile = users.profile(uid)
-        println("DEBUG: Получен профиль в showProfile: displayName='${profile?.displayName}'")
-        
+
         if (profile == null) {
             println("ERROR: Профиль пользователя $uid не найден")
+            bot.sendMessage(chat, "❌ Профиль не найден")
             return
         }
-        
-        // Проверяем админские права
+
         val isAdmin = AdminService.isAdmin(uid)
-        println("DEBUG: Проверка админских прав для пользователя $uid: $isAdmin")
-        println("DEBUG: AdminService.adminIds: ${AdminService.adminIds}")
-        
-        val statusText = if (profile.isBanned) {
-            "🚫 Забанен\n📅 Дата бана: ${profile.bannedAt ?: "неизвестно"}\n📝 Причина: ${profile.reason ?: "не указана"}"
-        } else {
-            "✅ Активен"
-        }
+
+        val statusText =
+                if (profile.isBanned) {
+                    val banLine =
+                            if (profile.banExpiresAt.isNullOrBlank()) {
+                                "Время бана: навсегда"
+                            } else {
+                                val remainingText = formatRemainingBanTime(profile.banExpiresAt)
+                                "Время бана: осталось $remainingText"
+                            }
+                    "🚫 Забанен\n$banLine\n📝 Причина: ${profile.reason ?: "не указана"}"
+                } else {
+                    "✅ Активен"
+                }
 
         val messageText = buildString {
             append("👤 <b>Профиль пользователя</b>\n\n")
 
-            val nameValue = profile.displayName
-                .trim()
-                .removePrefix("@")
-                .ifBlank { "не указано" }
-                .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+            val nameValue =
+                    profile.displayName
+                            .trim()
+                            .removePrefix("@")
+                            .ifBlank { "не указано" }
+                            .replaceFirstChar { ch ->
+                                if (ch.isLowerCase()) ch.titlecase() else ch.toString()
+                            }
             append("🏷️ Имя: $nameValue\n")
 
             if (profile.hideUsername || profile.username.isBlank()) {
@@ -54,66 +101,73 @@ object RouterProfile {
 
             append("⭐ Рейтинг: ${profile.rating}\n")
             append("👁️ Профиль: ${if (profile.hidden) "скрыт" else "видимый"}\n\n")
-            
+
             append("📝 <b>Био:</b>\n")
             append("${profile.bio.ifBlank { "не указано" }}\n\n")
-            
+
             append("<b>Статус:</b>\n")
             append("$statusText\n")
         }
 
-        // Если есть аватарка, отправляем фото с подписью
         profile.avatarFileId?.let { fileId ->
-            // Проверяем, является ли это локальным файлом (для мок пользователей)
-            if (fileId.contains(":\\") || fileId.contains("/") || java.io.File(fileId).exists()) {
-                try {
-                    val photo = java.io.File(fileId)
-                    if (photo.exists()) {
-                        bot.sendPhoto(
+            try {
+                val file = File(fileId)
+                val photoFile: File? =
+                        when {
+                            file.exists() -> file
+                            else -> {
+                                val stream =
+                                        RouterProfile::class.java.classLoader.getResourceAsStream(
+                                                fileId
+                                        )
+                                if (stream != null) {
+                                    val tmp = File.createTempFile("mock_avatar_", ".jpg")
+                                    tmp.deleteOnExit()
+                                    stream.use { input ->
+                                        tmp.outputStream().use { out -> input.copyTo(out) }
+                                    }
+                                    tmp
+                                } else {
+                                    null
+                                }
+                            }
+                        }
+
+                if (photoFile != null && photoFile.exists()) {
+                    bot.sendPhoto(
                             chatId = chat,
-                            photo = photo,
+                            photo = photoFile,
                             caption = messageText,
                             parseMode = ParseMode.HTML,
                             replyMarkup = KeyboardFactory.profileMenu(profile)
-                        )
-                    } else {
-                        // Файл не существует, отправляем только текст
-                        bot.sendMessage(
-                            chat,
-                            messageText,
+                    )
+                } else {
+                    bot.sendPhoto(
+                            chatId = chat,
+                            photo = fileId,
+                            caption = messageText,
                             parseMode = ParseMode.HTML,
                             replyMarkup = KeyboardFactory.profileMenu(profile)
-                        )
-                    }
-                } catch (e: Exception) {
-                    // Ошибка при чтении файла, отправляем только текст
-                    println("❌ Ошибка при отправке локального файла аватарки: ${e.message}")
-                    bot.sendMessage(
+                    )
+                }
+            } catch (e: Exception) {
+                println("❌ Ошибка при отправке аватарки: ${e.message}")
+                bot.sendMessage(
                         chat,
                         messageText,
                         parseMode = ParseMode.HTML,
                         replyMarkup = KeyboardFactory.profileMenu(profile)
-                    )
-                }
-            } else {
-                // Это file_id из Telegram
-                bot.sendPhoto(
-                    chatId = chat,
-                    photo = fileId,
-                    caption = messageText,
-                    parseMode = ParseMode.HTML,
-                    replyMarkup = KeyboardFactory.profileMenu(profile)
                 )
             }
-        } ?: run {
-            // Если нет аватарки, отправляем просто сообщение
-            bot.sendMessage(
-                chat,
-                messageText,
-                parseMode = ParseMode.HTML,
-                replyMarkup = KeyboardFactory.profileMenu(profile)
-            )
         }
+                ?: run {
+                    bot.sendMessage(
+                            chat,
+                            messageText,
+                            parseMode = ParseMode.HTML,
+                            replyMarkup = KeyboardFactory.profileMenu(profile)
+                    )
+                }
     }
 
     private fun showEditProfileForm(bot: Bot, chat: ChatId, uid: Long, users: UserRepository) {
@@ -125,18 +179,22 @@ object RouterProfile {
 
         val message = buildString {
             append("✏️ <b>Редактирование профиля</b>\n\n")
-            append("🏷️ <i>ИМЯ:</i> <b>${profile.displayName.removePrefix("@").ifBlank { "не указано" }.replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }}</b>\n")
-            append("🔸 <i>Username:</i> <code>${if (profile.username.isBlank()) "не указан" else "@${profile.username}"}</code>\n")
+            append(
+                    "🏷️ <i>ИМЯ:</i> <b>${profile.displayName.removePrefix("@").ifBlank { "не указано" }.replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }}</b>\n"
+            )
+            append(
+                    "🔸 <i>Username:</i> <code>${if (profile.username.isBlank()) "не указан" else "@${profile.username}"}</code>\n"
+            )
             append("📝 <i>Био:</i> <em>${profile.bio.ifBlank { "не указано" }}</em>\n\n")
             append("👁️ <i>Профиль:</i> ${if (profile.hidden) "скрыт" else "видим"}\n")
             append("👤 <i>Username:</i> ${if (profile.hideUsername) "скрыт" else "показывается"}\n")
         }
 
         bot.sendMessage(
-            chat,
-            message,
-            parseMode = ParseMode.HTML,
-            replyMarkup = KeyboardProfile.editProfileMenu(profile)
+                chat,
+                message,
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardProfile.editProfileMenu(profile)
         )
     }
 
@@ -147,13 +205,18 @@ object RouterProfile {
 
         val usernameDisplay = if (targetUser.hideUsername) "скрыт" else "@${targetUser.username}"
 
-        val nameValue = targetUser.displayName
-            .trim()
-            .removePrefix("@")
-            .ifBlank { "не указано" }
-            .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
+        val nameValue =
+                targetUser
+                        .displayName
+                        .trim()
+                        .removePrefix("@")
+                        .ifBlank { "не указано" }
+                        .replaceFirstChar { ch ->
+                            if (ch.isLowerCase()) ch.titlecase() else ch.toString()
+                        }
 
-        val message = """✏️ <b>Редактирование профиля</b>
+        val message =
+                """✏️ <b>Редактирование профиля</b>
 
 🏷️ ИМЯ: $nameValue
 🆔 ID: ${targetUser.userId}
@@ -161,47 +224,63 @@ object RouterProfile {
 
 Выберите, что хотите изменить:"""
 
-        val actionRows = mutableListOf<List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
+        val actionRows =
+                mutableListOf<
+                        List<com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton>>()
 
-        actionRows.add(listOf(
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "📝 Имя",
-                callbackData = "admin_edit_name_${targetUser.userId}"
-            ),
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "👤 Username",
-                callbackData = "admin_edit_username_${targetUser.userId}"
-            )
-        ))
+        actionRows.add(
+                listOf(
+                        com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+                                .CallbackData(
+                                        text = "📝 Имя",
+                                        callbackData = "admin_edit_name_${targetUser.userId}"
+                                ),
+                        com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+                                .CallbackData(
+                                        text = "👤 Username",
+                                        callbackData = "admin_edit_username_${targetUser.userId}"
+                                )
+                )
+        )
 
-        actionRows.add(listOf(
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "📄 Био",
-                callbackData = "admin_edit_bio_${targetUser.userId}"
-            ),
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "👁️ Скрыть профиль",
-                callbackData = "admin_toggle_hidden_${targetUser.userId}"
-            )
-        ))
+        actionRows.add(
+                listOf(
+                        com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+                                .CallbackData(
+                                        text = "📄 Био",
+                                        callbackData = "admin_edit_bio_${targetUser.userId}"
+                                ),
+                        com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+                                .CallbackData(
+                                        text = "👁️ Скрыть профиль",
+                                        callbackData = "admin_toggle_hidden_${targetUser.userId}"
+                                )
+                )
+        )
 
-        actionRows.add(listOf(
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "🎬 Медиа",
-                callbackData = "admin_toggle_media_${targetUser.userId}"
-            ),
-            com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton.CallbackData(
-                text = "👁️ Username",
-                callbackData = "admin_toggle_username_${targetUser.userId}"
-            )
-        ))
+        actionRows.add(
+                listOf(
+                        com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+                                .CallbackData(
+                                        text = "🎬 Медиа",
+                                        callbackData = "admin_toggle_media_${targetUser.userId}"
+                                ),
+                        com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+                                .CallbackData(
+                                        text = "👁️ Username",
+                                        callbackData = "admin_toggle_username_${targetUser.userId}"
+                                )
+                )
+        )
 
-        val inlineKeyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(actionRows)
+        val inlineKeyboard =
+                com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(actionRows)
         bot.sendMessage(chat, message, parseMode = ParseMode.HTML, replyMarkup = inlineKeyboard)
     }
 
     fun showAccountStats(bot: Bot, chat: ChatId, targetUser: UserProfile) {
-        val message = """📊 <b>Дополнительная информация</b>
+        val message =
+                """📊 <b>Дополнительная информация</b>
 
 😂 <b>Статистика мемов:</b>
 • Загружено мемов: 0
@@ -252,15 +331,24 @@ object RouterProfile {
   • Текущая серия: 0
   • Лучшая серия: 0"""
 
-        bot.sendMessage(chat, message, parseMode = ParseMode.HTML, replyMarkup = KeyboardProfile.statsMenu())
+        bot.sendMessage(
+                chat,
+                message,
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardProfile.statsMenu()
+        )
     }
 
-    fun handleProfileAction(bot: Bot, chat: ChatId, uid: Long, text: String, users: UserRepository, session: Session): Boolean {
-        println("DEBUG: handleProfileAction вызван с text: '$text' для пользователя $uid")
-
+    fun handleProfileAction(
+            bot: Bot,
+            chat: ChatId,
+            uid: Long,
+            text: String,
+            users: UserRepository,
+            session: Session
+    ): Boolean {
         when (text) {
             "✏️ Изменить профиль" -> {
-                session.action = PendingAction.EDIT_PROFILE
                 showEditProfileForm(bot, chat, uid, users)
                 return true
             }
@@ -274,13 +362,16 @@ object RouterProfile {
                 return true
             }
             "🛡️ Админ панель" -> {
-                println("DEBUG: Нажата кнопка админской панели пользователем $uid")
                 RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 return true
             }
             "Изменить имя" -> {
                 session.action = PendingAction.EDIT_NAME
-                bot.sendMessage(chat, "Напиши новое имя.", replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid)))
+                bot.sendMessage(
+                        chat,
+                        "Напиши новое имя.",
+                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid))
+                )
                 return true
             }
             "Показать username [👁️]", "Скрыть username [🙈]" -> {
@@ -290,7 +381,11 @@ object RouterProfile {
             }
             "Изменить био" -> {
                 session.action = PendingAction.EDIT_BIO
-                bot.sendMessage(chat, "Напиши новое описание профиля.", replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid)))
+                bot.sendMessage(
+                        chat,
+                        "Напиши новое описание профиля.",
+                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid))
+                )
                 return true
             }
             "Показать профиль [👁️]", "Скрыть профиль [🙈]" -> {
@@ -300,7 +395,11 @@ object RouterProfile {
             }
             "🖼️ Добавить аватарку", "🖼️ Изменить аватарку" -> {
                 session.action = PendingAction.EDIT_AVATAR
-                bot.sendMessage(chat, "Отправь фотографию для аватарки профиля.", replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid)))
+                bot.sendMessage(
+                        chat,
+                        "Отправь фотографию для аватарки профиля.",
+                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid))
+                )
                 return true
             }
             "⬅️ Назад", "⬅️ Обратно" -> {
@@ -310,6 +409,28 @@ object RouterProfile {
             }
             else -> {
                 if (session.action == PendingAction.EDIT_NAME) {
+                    val moderationResult = ModerationService.checkText(uid, text)
+                    if (!moderationResult.isAllowed) {
+                        if (moderationResult.shouldBan) {
+                            ModerationService.banForViolation(
+                                    uid,
+                                    "Использование ненормативной лексики"
+                            )
+                            ModerationService.clearWarnings(uid)
+                            bot.sendMessage(
+                                    chat,
+                                    "🚫 Вы были заблокированы за использование ненормативной лексики."
+                            )
+                        } else {
+                            ModerationService.addWarning(uid)
+                            bot.sendMessage(
+                                    chat,
+                                    "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
+                                    parseMode = ParseMode.HTML
+                            )
+                        }
+                        return true
+                    }
                     users.updateName(uid, text)
                     session.action = PendingAction.NONE
                     showEditProfileForm(bot, chat, uid, users)
@@ -317,6 +438,28 @@ object RouterProfile {
                 }
 
                 if (session.action == PendingAction.EDIT_BIO) {
+                    val moderationResult = ModerationService.checkText(uid, text)
+                    if (!moderationResult.isAllowed) {
+                        if (moderationResult.shouldBan) {
+                            ModerationService.banForViolation(
+                                    uid,
+                                    "Использование ненормативной лексики"
+                            )
+                            ModerationService.clearWarnings(uid)
+                            bot.sendMessage(
+                                    chat,
+                                    "🚫 Вы были заблокированы за использование ненормативной лексики."
+                            )
+                        } else {
+                            ModerationService.addWarning(uid)
+                            bot.sendMessage(
+                                    chat,
+                                    "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
+                                    parseMode = ParseMode.HTML
+                            )
+                        }
+                        return true
+                    }
                     users.updateBio(uid, text)
                     session.action = PendingAction.NONE
                     showEditProfileForm(bot, chat, uid, users)
@@ -329,10 +472,37 @@ object RouterProfile {
                     if (targetUserId != null) {
                         val targetUser = users.profile(targetUserId)
                         if (targetUser != null) {
+                            val moderationResult = ModerationService.checkText(targetUserId, text)
+                            if (!moderationResult.isAllowed) {
+                                if (moderationResult.shouldBan) {
+                                    ModerationService.banForViolation(
+                                            targetUserId,
+                                            "Использование ненормативной лексики"
+                                    )
+                                    ModerationService.clearWarnings(targetUserId)
+                                    bot.sendMessage(
+                                            chat,
+                                            "🚫 Пользователь заблокирован за использование ненормативной лексики."
+                                    )
+                                } else {
+                                    ModerationService.addWarning(targetUserId)
+                                    bot.sendMessage(
+                                            chat,
+                                            "⚠️ <b>Предупреждение пользователю!</b>\n\nЕго сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
+                                            parseMode = ParseMode.HTML
+                                    )
+                                }
+                                return true
+                            }
                             users.updateName(targetUserId, text)
                             session.action = PendingAction.NONE
                             bot.sendMessage(chat, "✅ Имя пользователя изменено на: \"$text\"")
-                            showAdminEditProfileForm(bot, chat, uid, targetUser.copy(displayName = text))
+                            showAdminEditProfileForm(
+                                    bot,
+                                    chat,
+                                    uid,
+                                    targetUser.copy(displayName = text)
+                            )
                         } else {
                             bot.sendMessage(chat, "❌ Пользователь не найден")
                         }
@@ -345,11 +515,38 @@ object RouterProfile {
                     if (targetUserId != null) {
                         val targetUser = users.profile(targetUserId)
                         if (targetUser != null) {
+                            val moderationResult = ModerationService.checkText(targetUserId, text)
+                            if (!moderationResult.isAllowed) {
+                                if (moderationResult.shouldBan) {
+                                    ModerationService.banForViolation(
+                                            targetUserId,
+                                            "Использование ненормативной лексики"
+                                    )
+                                    ModerationService.clearWarnings(targetUserId)
+                                    bot.sendMessage(
+                                            chat,
+                                            "🚫 Пользователь заблокирован за использование ненормативной лексики."
+                                    )
+                                } else {
+                                    ModerationService.addWarning(targetUserId)
+                                    bot.sendMessage(
+                                            chat,
+                                            "⚠️ <b>Предупреждение пользователю!</b>\n\nЕго сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
+                                            parseMode = ParseMode.HTML
+                                    )
+                                }
+                                return true
+                            }
                             val newUsername = text.trim().removePrefix("@")
                             users.updateUsername(targetUserId, newUsername)
                             session.action = PendingAction.NONE
                             bot.sendMessage(chat, "✅ Username изменен на: \"@$newUsername\"")
-                            showAdminEditProfileForm(bot, chat, uid, targetUser.copy(username = newUsername))
+                            showAdminEditProfileForm(
+                                    bot,
+                                    chat,
+                                    uid,
+                                    targetUser.copy(username = newUsername)
+                            )
                         } else {
                             bot.sendMessage(chat, "❌ Пользователь не найден")
                         }
@@ -362,6 +559,28 @@ object RouterProfile {
                     if (targetUserId != null) {
                         val targetUser = users.profile(targetUserId)
                         if (targetUser != null) {
+                            val moderationResult = ModerationService.checkText(targetUserId, text)
+                            if (!moderationResult.isAllowed) {
+                                if (moderationResult.shouldBan) {
+                                    ModerationService.banForViolation(
+                                            targetUserId,
+                                            "Использование ненормативной лексики"
+                                    )
+                                    ModerationService.clearWarnings(targetUserId)
+                                    bot.sendMessage(
+                                            chat,
+                                            "🚫 Пользователь заблокирован за использование ненормативной лексики."
+                                    )
+                                } else {
+                                    ModerationService.addWarning(targetUserId)
+                                    bot.sendMessage(
+                                            chat,
+                                            "⚠️ <b>Предупреждение пользователю!</b>\n\nЕго сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
+                                            parseMode = ParseMode.HTML
+                                    )
+                                }
+                                return true
+                            }
                             users.updateBio(targetUserId, text)
                             session.action = PendingAction.NONE
                             bot.sendMessage(chat, "✅ Био изменено")

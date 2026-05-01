@@ -1,5 +1,6 @@
-package data
+package data.repositories
 
+import data.Db
 import data.models.*
 
 class TestRepository {
@@ -8,6 +9,12 @@ class TestRepository {
             stmt.setString(1, title)
             if (authorId == null) stmt.setObject(2, null) else stmt.setLong(2, authorId)
         }
+    }
+    
+    fun createTestFull(title: String, prompt: String, kind: String, answer: String, options: List<String>, authorId: Long? = null): Long {
+        val testId = createTest(title, authorId)
+        addQuestion(testId, 0, QuestionKind.valueOf(kind.uppercase()), prompt, options, answer)
+        return testId
     }
 
     fun addQuestion(testId: Long, position: Int, kind: QuestionKind, prompt: String, options: List<String>, answer: String) {

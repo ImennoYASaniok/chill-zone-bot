@@ -70,5 +70,25 @@ object Schema {
             // Игнорируем ошибку, если колонка уже существует
             println("Migration for ban_expires_at column in banned_users: ${e.message}")
         }
+        
+        // Миграция для создания таблицы предупреждений
+        try {
+            Db.raw("""
+                create table if not exists moderation_warnings (
+                    id serial primary key,
+                    user_id bigint not null,
+                    warned_at timestamptz not null default now()
+                )
+            """)
+        } catch (e: Exception) {
+            println("Migration for moderation_warnings table: ${e.message}")
+        }
+        
+        // Миграция для добавления индекса на user_id в moderation_warnings
+        try {
+            Db.raw("create index if not exists idx_moderation_warnings_user_id on moderation_warnings(user_id)")
+        } catch (e: Exception) {
+            println("Migration for index on moderation_warnings: ${e.message}")
+        }
     }
 }

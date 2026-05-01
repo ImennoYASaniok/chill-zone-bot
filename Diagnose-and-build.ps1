@@ -1,74 +1,72 @@
 # Diagnose-and-build.ps1
 Set-StrictMode -Version Latest
 
-# Определяем корень проекта корректно (одна строка)
+# Determine project root
 $Root = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
-# Ensure $Root is a single string (not an array)
-if ($Root -is [System.Array]) {
-    $Root = $Root[0]
-}
+if ($Root -is [System.Array]) { $Root = $Root[0] }
 $Root = [string]$Root
 
-# Пути к кэшу Gradle и каталогам сборки
+# Logs folder
+$LogsDir = Join-Path $Root "logs"
+if (-not (Test-Path $LogsDir)) {
+  New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null
+}
+
+# Paths
 $gradleCache = "$env:USERPROFILE\.gradle\caches"
 $gradleDists = "$env:USERPROFILE\.gradle\wrapper\dists"
 $buildDirs = @(
-  Join-Path $Root "data/build",
-  Join-Path $Root "core/build",
-  Join-Path $Root "app/build"
+  "$Root\data\build",
+  "$Root\core\build",
+  "$Root\app\build"
 )
 
-Write-Host "`n[Step 1] Очистка кэшей Gradle..."
-foreach ($p in @($gradleCache, $gradleDists)) {
-  if (Test-Path $p) {
-    Remove-Item -Recurse -Force $p -ErrorAction SilentlyContinue
-    Write-Host "Cleared: $p"
-  } else {
-    Write-Host "Not found: $p"
-  }
-}
+Write-Host "=== Diagnose-and-build started ===" -ForegroundColor Cyan
+Write-Host "Root: $Root"
 
-Write-Host "`n[Step 1] Очистка сборочных директорий..."
-foreach ($d in $buildDirs) {
-  if (Test-Path $d) {
-    Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue
-    Write-Host "Cleared: $d"
-  } else {
-    Write-Host "Not found: $d"
-  }
-}
-
-# Локальная компиляция с логами
+# Stop Gradle daemon completely
+Write-Host "[1] Stopping Gradle daemon..."
 $gradlewBat = Join-Path $Root "gradlew.bat"
-$gradleLogLocal = Join-Path $Root "gradle-local.log"
-$gradleAppLog = Join-Path $Root "gradle-app-install.log"
-
-Write-Host "`n[Step 2] Локальная сборка (core & data) с stacktrace и info..."
 if (Test-Path $gradlewBat) {
-  Push-Location $Root
-  & $gradlewBat clean
-  & $gradlewBat :core:compileKotlin :data:compileKotlin --stacktrace --info 2>&1 | Tee-Object -FilePath $gradleLogLocal
-  & $gradlewBat :app:installDist --no-daemon --stacktrace --info 2>&1 | Tee-Object -FilePath $gradleAppLog
-  Pop-Location
+  & $gradlewBat --stop 2>$null
 } else {
-  Push-Location $Root
-  gradle clean
-  gradle :core:compileKotlin :data:compileKotlin --stacktrace --info 2>&1 | Tee-Object -FilePath $gradleLogLocal
-  gradle :app:installDist --no-daemon --stacktrace --info 2>&1 | Tee-Object -FilePath $gradleAppLog
-  Pop-Location
+  gradle --stop 2>$null
 }
+# Kill any remaining Gradle processes
+Get-Process -Name "GradleDaemon" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "java" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*gradle*" } | Stop-Process -Force -ErrorAction SilentlyContinue
 
-# Docker сборка с логами
-$dockerLog = Join-Path $Root "docker-build.log"
-Write-Host "`n[Step 3] Docker сборка (docker-compose) с логами..."
-docker-compose build --progress=plain 2>&1 | Tee-Object -FilePath $dockerLog -Append
+# Full Gradle cache cleanup
+Write-Host "[2] Full cleanup Gradle caches..."
+$gradleCacheRoot = "$env:USERPROFILE\.gradle"
+if (Test-Path $gradleCacheRoot) {
+  Remove-Item -Recurse -Force $gradleCacheRoot -ErrorAction SilentlyContinue
+  Write-Host "   Removed: $gradleCacheRoot"
+}
+Write-Host "[3] Build started..."
 
-# Вывод последних логов
-Write-Host "`n=== Последние строки логов ==="
-Get-Content -Tail 300 $gradleLogLocal -ErrorAction SilentlyContinue
-Get-Content -Tail 300 $gradleAppLog -ErrorAction SilentlyContinue
-Get-Content -Tail 300 $dockerLog -ErrorAction SilentlyContinue
+# Build locally
+Push-Location $Root
+if (Test-Path $gradlewBat) {
+  & $gradlewBat :core:compileKotlin :data:compileKotlin --stacktrace 2>&1 | Tee-Object -FilePath "$LogsDir\gradle-local.log"
+  & $gradlewBat :app:installDist --no-daemon --stacktrace 2>&1 | Tee-Object -FilePath "$LogsDir\gradle-app.log"
+} else {
+  gradle :core:compileKotlin :data:compileKotlin --stacktrace 2>&1 | Tee-Object -FilePath "$LogsDir\gradle-local.log"
+  gradle :app:installDist --no-daemon --stacktrace 2>&1 | Tee-Object -FilePath "$LogsDir\gradle-app.log"
+}
+Pop-Location
 
-# Быстрые подсказки по ошибкам
-Write-Host "`n=== Подсказки ==="
-Write-Host "Поиск ошибок Unresolved reference или Cannot find symbol в логах: (копируйте фрагменты логов и пришлите сюда)"
+# Docker build
+Write-Host "[4] Docker build started..."
+docker-compose build --progress=plain 2>&1 | Tee-Object -FilePath "$LogsDir\docker-build.log"
+
+# Show errors only
+Write-Host "`n=== Build Errors ===" -ForegroundColor Red
+Select-String -Path "$LogsDir\gradle-local.log" -Pattern "FAILURE|ERROR|Unresolved reference|Cannot find" -ErrorAction SilentlyContinue | Select-Object -First 20
+Select-String -Path "$LogsDir\gradle-app.log" -Pattern "FAILURE|ERROR|Unresolved reference|Cannot find" -ErrorAction SilentlyContinue | Select-Object -First 20
+Select-String -Path "$LogsDir\docker-build.log" -Pattern "FAILURE|ERROR|Cannot|Error" -ErrorAction SilentlyContinue | Select-Object -First 20
+
+Write-Host "`n=== Logs saved to ===" -ForegroundColor Cyan
+Write-Host "   logs/gradle-local.log"
+Write-Host "   logs/gradle-app.log"
+Write-Host "   logs/docker-build.log"

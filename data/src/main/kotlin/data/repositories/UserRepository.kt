@@ -1,18 +1,17 @@
-package data
+package data.repositories
 
+import data.Db
 import data.models.UserProfile
+import data.services.AdminService
+import java.time.ZoneOffset
 
 class UserRepository {
     fun ensure(userId: Long, username: String, displayName: String) {
         // Если имя не указано, берем username без символа @
-        val finalDisplayName = if (displayName.isBlank()) {
-            username.removePrefix("@")
-        } else {
-            displayName
-        }
+        val finalDisplayName = displayName.ifBlank { username.removePrefix("@") }
 
         Db.execute(
-            """
+                """
             insert into users(user_id, username, display_name)
             values (?, ?, ?)
             on conflict (user_id)
@@ -27,23 +26,21 @@ class UserRepository {
         }
 
         Db.execute(
-            """
+                """
             insert into game_stats(user_id)
             values (?)
             on conflict (user_id) do nothing
             """
-        ) { stmt ->
-            stmt.setLong(1, userId)
-        }
+        ) { stmt -> stmt.setLong(1, userId) }
     }
 
     fun profile(userId: Long): UserProfile? {
         return try {
             Db.single(
-                """
+                    """
                 select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating,
                        coalesce(u.hide_username, false) as hide_username,
-                       case when bu.user_id is not null then true else false end as is_banned,
+                       case when bu.user_id is not null and (bu.ban_expires_at is null or bu.ban_expires_at > now()) then true else false end as is_banned,
                        bu.banned_at,
                        bu.reason,
                        bu.ban_expires_at,
@@ -54,36 +51,37 @@ class UserRepository {
                 left join banned_users bu on u.user_id = bu.user_id
                 where u.user_id = ?
                 """,
-                bind = { stmt -> stmt.setLong(1, userId) },
-                map = { rs ->
-                    val displayName = rs.getString("display_name") ?: ""
-                    val username = rs.getString("username") ?: ""
-                    // Если имя не указано, используем username без @
-                    val finalDisplayName = if (displayName.isBlank()) {
-                        username.removePrefix("@")
-                    } else {
-                        displayName
-                    }
+                    bind = { stmt -> stmt.setLong(1, userId) },
+                    map = { rs ->
+                        val displayName = rs.getString("display_name") ?: ""
+                        val username = rs.getString("username") ?: ""
+                        // Если имя не указано, используем username без @
+                        val finalDisplayName = displayName.ifBlank { username.removePrefix("@") }
 
-                    UserProfile(
-                        userId = rs.getLong("user_id"),
-                        username = username,
-                        displayName = finalDisplayName,
-                        bio = rs.getString("bio") ?: "",
-                        hidden = rs.getBoolean("hidden"),
-                        showMedia = rs.getBoolean("show_media"),
-                        rating = rs.getInt("rating"),
-                        hideUsername = rs.getBoolean("hide_username"),
-                        isBanned = rs.getBoolean("is_banned"),
-                        createdAt = rs.getTimestamp("created_at")?.toLocalDateTime(),
-                        bannedAt = rs.getString("banned_at"),
-                        reason = rs.getString("reason"),
-                        banExpiresAt = rs.getString("ban_expires_at"),
-                        isAdmin = AdminService.isAdmin(rs.getLong("user_id")),
-                        lastActivityAt = rs.getTimestamp("last_activity_at")?.toLocalDateTime(),
-                        avatarFileId = rs.getString("avatar_file_id")
-                    )
-                }
+                        UserProfile(
+                                userId = rs.getLong("user_id"),
+                                username = username,
+                                displayName = finalDisplayName,
+                                bio = rs.getString("bio") ?: "",
+                                hidden = rs.getBoolean("hidden"),
+                                showMedia = rs.getBoolean("show_media"),
+                                rating = rs.getInt("rating"),
+                                hideUsername = rs.getBoolean("hide_username"),
+                                isBanned = rs.getBoolean("is_banned"),
+                                createdAt = rs.getTimestamp("created_at")?.toLocalDateTime(),
+                                bannedAt = rs.getString("banned_at"),
+                                reason = rs.getString("reason"),
+                                banExpiresAt =
+                                        rs.getTimestamp("ban_expires_at")
+                                                ?.toInstant()
+                                                ?.atOffset(ZoneOffset.UTC)
+                                                ?.toString(),
+                                isAdmin = AdminService.isAdmin(rs.getLong("user_id")),
+                                lastActivityAt =
+                                        rs.getTimestamp("last_activity_at")?.toLocalDateTime(),
+                                avatarFileId = rs.getString("avatar_file_id")
+                        )
+                    }
             )
         } catch (e: Exception) {
             println("ERROR: Ошибка при получении профиля пользователя $userId: ${e.message}")
@@ -92,7 +90,8 @@ class UserRepository {
     }
 
     fun updateName(userId: Long, name: String) {
-        Db.execute("update users set display_name = ?, updated_at = now() where user_id = ?") { stmt ->
+        Db.execute("update users set display_name = ?, updated_at = now() where user_id = ?") { stmt
+            ->
             stmt.setString(1, name)
             stmt.setLong(2, userId)
         }
@@ -114,14 +113,16 @@ class UserRepository {
 
     fun toggleHidden(userId: Long): Boolean {
         return Db.single(
-            "update users set hidden = not hidden, updated_at = now() where user_id = ? returning hidden",
-            bind = { stmt -> stmt.setLong(1, userId) },
-            map = { rs -> rs.getBoolean("hidden") }
-        ) ?: false
+                "update users set hidden = not hidden, updated_at = now() where user_id = ? returning hidden",
+                bind = { stmt -> stmt.setLong(1, userId) },
+                map = { rs -> rs.getBoolean("hidden") }
+        )
+                ?: false
     }
 
     fun addRating(userId: Long, delta: Int) {
-        Db.execute("update users set rating = rating + ?, updated_at = now() where user_id = ?") { stmt ->
+        Db.execute("update users set rating = rating + ?, updated_at = now() where user_id = ?") {
+                stmt ->
             stmt.setInt(1, delta)
             stmt.setLong(2, userId)
         }
@@ -129,18 +130,20 @@ class UserRepository {
 
     fun toggleMedia(userId: Long): Boolean {
         return Db.single(
-            "update users set show_media = not coalesce(show_media, false), updated_at = now() where user_id = ? returning coalesce(show_media, false)",
-            bind = { stmt -> stmt.setLong(1, userId) },
-            map = { rs -> rs.getBoolean(1) }
-        ) ?: false
+                "update users set show_media = not coalesce(show_media, false), updated_at = now() where user_id = ? returning coalesce(show_media, false)",
+                bind = { stmt -> stmt.setLong(1, userId) },
+                map = { rs -> rs.getBoolean(1) }
+        )
+                ?: false
     }
 
     fun toggleHideUsername(userId: Long): Boolean {
         return Db.single(
-            "update users set hide_username = not coalesce(hide_username, false), updated_at = now() where user_id = ? returning coalesce(hide_username, false)",
-            bind = { stmt -> stmt.setLong(1, userId) },
-            map = { rs -> rs.getBoolean(1) }
-        ) ?: false
+                "update users set hide_username = not coalesce(hide_username, false), updated_at = now() where user_id = ? returning coalesce(hide_username, false)",
+                bind = { stmt -> stmt.setLong(1, userId) },
+                map = { rs -> rs.getBoolean(1) }
+        )
+                ?: false
     }
 
     fun updateLastActivity(userId: Long) {
@@ -149,20 +152,23 @@ class UserRepository {
                 stmt.setLong(1, userId)
             }
         } catch (e: Exception) {
-            println("ERROR: Ошибка при обновлении last_activity_at для пользователя $userId: ${e.message}")
+            println(
+                    "ERROR: Ошибка при обновлении last_activity_at для пользователя $userId: ${e.message}"
+            )
         }
     }
 
     fun getActiveUsersCount(minutesThreshold: Int = 3): Int {
         return try {
             Db.single(
-                """
+                    """
                 select count(*) as count from users 
                 where last_activity_at > now() - interval '${minutesThreshold} minutes'
                 """,
-                bind = { },
-                map = { rs -> rs.getInt("count") }
-            ) ?: 0
+                    bind = {},
+                    map = { rs -> rs.getInt("count") }
+            )
+                    ?: 0
         } catch (e: Exception) {
             println("ERROR: Ошибка при получении количества активных пользователей: ${e.message}")
             0
@@ -171,7 +177,9 @@ class UserRepository {
 
     fun setAvatar(userId: Long, avatarFileId: String) {
         try {
-            Db.execute("update users set avatar_file_id = ?, updated_at = now() where user_id = ?") { stmt ->
+            Db.execute(
+                    "update users set avatar_file_id = ?, updated_at = now() where user_id = ?"
+            ) { stmt ->
                 stmt.setString(1, avatarFileId)
                 stmt.setLong(2, userId)
             }
@@ -182,9 +190,9 @@ class UserRepository {
 
     fun deleteAvatar(userId: Long) {
         try {
-            Db.execute("update users set avatar_file_id = null, updated_at = now() where user_id = ?") { stmt ->
-                stmt.setLong(1, userId)
-            }
+            Db.execute(
+                    "update users set avatar_file_id = null, updated_at = now() where user_id = ?"
+            ) { stmt -> stmt.setLong(1, userId) }
         } catch (e: Exception) {
             println("ERROR: Ошибка при удалении аватарки для пользователя $userId: ${e.message}")
         }

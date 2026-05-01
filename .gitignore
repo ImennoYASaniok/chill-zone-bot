@@ -19,6 +19,7 @@ gradle-app.setting
 
 # Logs
 *.log
+**/logs/
 
 # OS files
 Thumbs.db

@@ -2,6 +2,8 @@ package core.routers.routerCollections
 
 import data.*
 import data.models.*
+import data.repositories.FavoriteRepository
+import data.repositories.RecommendationRepository
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode

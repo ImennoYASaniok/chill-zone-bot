@@ -5,7 +5,7 @@ import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import data.models.UserProfile
-import data.FavoriteItem
+import data.repositories.FavoriteItem
 
 // Вспомогательная функция для создания клавиатур
 private fun kb(rows: List<List<String>>): KeyboardReplyMarkup {

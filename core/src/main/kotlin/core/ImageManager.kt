@@ -69,7 +69,10 @@ object ImageManager {
             
             if (fileId != null) {
                 // Отправляем изображение
-                bot.sendPhoto(chat, fileId, caption = message, parseMode = parseMode, replyMarkup = replyMarkup)
+                @Suppress("DEPRECATION")
+                run {
+                    bot.sendPhoto(chat, fileId, caption = message, parseMode = parseMode, replyMarkup = replyMarkup)
+                }
             } else {
                 // Если нет соответствующего изображения, отправляем только текст
                 bot.sendMessage(chat, message, parseMode = parseMode, replyMarkup = replyMarkup)

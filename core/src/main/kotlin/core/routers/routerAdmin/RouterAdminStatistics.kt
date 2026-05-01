@@ -1,6 +1,6 @@
 package core.routers.routerAdmin
 
-import data.AdminService
+import data.services.AdminService
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode

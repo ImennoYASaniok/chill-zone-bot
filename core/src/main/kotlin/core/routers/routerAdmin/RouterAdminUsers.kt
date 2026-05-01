@@ -1,7 +1,8 @@
 package core.routers.routerAdmin
 
-import data.*
 import data.models.*
+import data.repositories.UserRepository
+import data.services.AdminService
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode
@@ -12,8 +13,47 @@ import core.PendingAction
 import core.Session
 import core.FSMContext
 import core.routers.RouterProfile
+import java.io.File
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 object RouterAdminUsers {
+    private val dbDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]")
+
+    private fun parseBanExpiry(value: String): OffsetDateTime {
+        return try {
+            OffsetDateTime.parse(value)
+        } catch (_: Exception) {
+            try {
+                LocalDateTime.parse(value).atOffset(ZoneOffset.UTC)
+            } catch (_: Exception) {
+                try {
+                    LocalDateTime.parse(value.replace(' ', 'T')).atOffset(ZoneOffset.UTC)
+                } catch (_: Exception) {
+                    LocalDateTime.parse(value, dbDateTimeFormatter).atOffset(ZoneOffset.UTC)
+                }
+            }
+        }
+    }
+
+    private fun formatRemainingBanTime(banExpiresAt: String?): String {
+        if (banExpiresAt.isNullOrBlank()) return "0 дней, 0 часов"
+        return try {
+            val expires = parseBanExpiry(banExpiresAt)
+            val now = OffsetDateTime.now(expires.offset)
+            val duration = Duration.between(now, expires)
+            val totalHours = duration.toHours().coerceAtLeast(0)
+            val days = (totalHours / 24)
+            val hours = (totalHours % 24)
+            "${days} дней, ${hours} часов"
+        } catch (_: Exception) {
+            "0 дней, 0 часов"
+        }
+    }
+
     fun showUserList(bot: Bot, chat: ChatId, uid: Long, index: Int = 0) {
         val session = SessionStore.get(uid)
         val filter = session.data["admin_filter"] ?: "Все"
@@ -145,9 +185,16 @@ object RouterAdminUsers {
             .ifBlank { "не указано" }
             .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
         
-        val statusText = """🚫 Забанен
-📅 Дата бана: ${bannedUser.bannedAt ?: "неизвестно"}
-📝 Причина: ${bannedUser.reason ?: "не указана"}${if (!bannedUser.banExpiresAt.isNullOrBlank()) "\n⏰ Окончание бана: ${bannedUser.banExpiresAt}" else ""}"""
+        val statusText = run {
+            val banLine = if (bannedUser.banExpiresAt.isNullOrBlank()) {
+                "Бан: навсегда"
+            } else {
+                "Бан: осталось ${formatRemainingBanTime(bannedUser.banExpiresAt)}"
+            }
+            """🚫 Забанен
+$banLine
+📝 Причина: ${bannedUser.reason ?: "не указана"}"""
+        }
         
         val message = buildString {
             append("👤 <b>Профиль пользователя</b> (${index + 1} из ${bannedUsers.size})\n\n")
@@ -272,7 +319,7 @@ object RouterAdminUsers {
         session.context = FSMContext.PROFILE_VIEW
         session.data["admin_profile_view_user_id"] = targetUser.userId.toString()
         
-        val currentAdmin = data.AdminService.isAdmin(uid)
+        val currentAdmin = AdminService.isAdmin(uid)
         
         // Username видна только если не скрыта, или для админа
         val usernameDisplay = if (currentAdmin) {
@@ -291,16 +338,19 @@ object RouterAdminUsers {
             .ifBlank { "не указано" }
             .replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase() else ch.toString() }
 
+        val banRemainingText = if (targetUser.isBanned && !targetUser.banExpiresAt.isNullOrBlank()) {
+            formatRemainingBanTime(targetUser.banExpiresAt)
+        } else {
+            null
+        }
+
         val statusText = if (targetUser.isBanned) {
-            val banInfo = buildString {
-                append("🚫 Забанен\n")
-                append("📅 Дата бана: ${targetUser.bannedAt ?: "неизвестно"}\n")
-                append("📝 Причина: ${targetUser.reason ?: "не указана"}\n")
-                if (!targetUser.banExpiresAt.isNullOrBlank()) {
-                    append("⏰ Окончание бана: ${targetUser.banExpiresAt}")
-                }
+            val banLine = if (targetUser.banExpiresAt.isNullOrBlank()) {
+                "Время бана: навсегда"
+            } else {
+                "Время бана: осталось $banRemainingText"
             }
-            banInfo
+            "🚫 Забанен\n$banLine\n📝 Причина: ${targetUser.reason ?: "не указана"}"
         } else {
             "✅ Активен"
         }
@@ -325,11 +375,61 @@ object RouterAdminUsers {
         }
 
         val keyboard = if (currentAdmin) {
-            KeyboardAdmin.profileViewAdminBanMenu(targetUser.isBanned, !targetUser.banExpiresAt.isNullOrBlank())
+            KeyboardAdmin.profileViewAdminBanMenu(
+                isBanned = targetUser.isBanned,
+                isTemporaryBan = !targetUser.banExpiresAt.isNullOrBlank()
+            )
         } else {
             KeyboardAdmin.profileViewBackMenu()
         }
 
+        // Если есть аватарка, отправляем фото с подписью
+        targetUser.avatarFileId?.let { fileId ->
+            try {
+                val file = File(fileId)
+                val photoFile: File? = when {
+                    file.exists() -> file
+                    else -> {
+                        val stream = RouterAdminUsers::class.java.classLoader.getResourceAsStream(fileId)
+                        if (stream != null) {
+                            val tmp = File.createTempFile("mock_avatar_", ".jpg")
+                            tmp.deleteOnExit()
+                            stream.use { input ->
+                                tmp.outputStream().use { out -> input.copyTo(out) }
+                            }
+                            tmp
+                        } else {
+                            null
+                        }
+                    }
+                }
+
+                if (photoFile != null && photoFile.exists()) {
+                    bot.sendPhoto(
+                        chatId = chat,
+                        photo = photoFile,
+                        caption = message,
+                        parseMode = ParseMode.HTML,
+                        replyMarkup = keyboard
+                    )
+                    return
+                } else {
+                    // fallback: возможно это Telegram file_id
+                    bot.sendPhoto(
+                        chatId = chat,
+                        photo = fileId,
+                        caption = message,
+                        parseMode = ParseMode.HTML,
+                        replyMarkup = keyboard
+                    )
+                    return
+                }
+            } catch (e: Exception) {
+                println("❌ Ошибка при отправке аватарки: ${e.message}")
+            }
+        }
+
+        // Если нет аватарки или произошла ошибка, отправляем только текст
         bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML, replyMarkup = keyboard)
     }
 
@@ -377,8 +477,55 @@ object RouterAdminUsers {
             )
         )
 
-        bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML,
-            replyMarkup = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(inlineButtons))
+        val keyboard = com.github.kotlintelegrambot.entities.InlineKeyboardMarkup.create(inlineButtons)
+
+        // Если есть аватарка, отправляем фото с подписью
+        targetUser.avatarFileId?.let { fileId ->
+            try {
+                val file = File(fileId)
+                val photoFile: File? = when {
+                    file.exists() -> file
+                    else -> {
+                        val stream = RouterAdminUsers::class.java.classLoader.getResourceAsStream(fileId)
+                        if (stream != null) {
+                            val tmp = File.createTempFile("mock_avatar_", ".jpg")
+                            tmp.deleteOnExit()
+                            stream.use { input ->
+                                tmp.outputStream().use { out -> input.copyTo(out) }
+                            }
+                            tmp
+                        } else {
+                            null
+                        }
+                    }
+                }
+
+                if (photoFile != null && photoFile.exists()) {
+                    bot.sendPhoto(
+                        chatId = chat,
+                        photo = photoFile,
+                        caption = message,
+                        parseMode = ParseMode.HTML,
+                        replyMarkup = keyboard
+                    )
+                    return
+                } else {
+                    bot.sendPhoto(
+                        chatId = chat,
+                        photo = fileId,
+                        caption = message,
+                        parseMode = ParseMode.HTML,
+                        replyMarkup = keyboard
+                    )
+                    return
+                }
+            } catch (e: Exception) {
+                println("❌ Ошибка при отправке аватарки: ${e.message}")
+            }
+        }
+
+        // Если нет аватарки или произошла ошибка, отправляем только текст
+        bot.sendMessage(chatId = chat, text = message, parseMode = ParseMode.HTML, replyMarkup = keyboard)
     }
 
     fun showUserProfile(bot: Bot, chat: ChatId, targetUser: UserProfile) {

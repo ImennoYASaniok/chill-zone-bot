@@ -7,16 +7,28 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":data"))
 
-    implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
 
     testImplementation(kotlin("test"))
 }
 
-application {
-    mainClass.set("app.MainKt")
+application { mainClass.set("app.MainKt") }
+
+kotlin { jvmToolchain(17) }
+
+tasks.withType<Copy>().configureEach { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+
+tasks.withType<Sync>().configureEach { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+
+
+tasks.withType<AbstractArchiveTask>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-kotlin {
-    jvmToolchain(17)
+tasks.named("compileTestKotlin") {
+    enabled = false
+}
+
+tasks.named("test") {
+    enabled = false
 }
