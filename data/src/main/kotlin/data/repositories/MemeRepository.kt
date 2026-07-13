@@ -31,26 +31,34 @@ class MemeRepository {
     }
 
     fun randomUnseen(userId: Long): MemeItem? {
-        return Db.single(
-            """
-            select m.id, m.file_id, m.uploader_id, m.caption
-            from memes m
-            left join meme_history h
-              on h.meme_id = m.id and h.user_id = ?
-            where h.meme_id is null
-            order by random()
-            limit 1
-            """,
-            bind = { stmt -> stmt.setLong(1, userId) },
-            map = { rs ->
-                MemeItem(
-                    rs.getLong("id"),
-                    rs.getString("file_id"),
-                    rs.getObject("uploader_id") as? Long,
-                    rs.getString("caption") ?: ""
-                )
-            }
-        )
+        fun pickUnseen(): MemeItem? {
+            return Db.single(
+                """
+                select m.id, m.file_id, m.uploader_id, m.caption
+                from memes m
+                left join meme_history h
+                  on h.meme_id = m.id and h.user_id = ?
+                where h.meme_id is null
+                order by random()
+                limit 1
+                """,
+                bind = { stmt -> stmt.setLong(1, userId) },
+                map = { rs ->
+                    MemeItem(
+                        rs.getLong("id"),
+                        rs.getString("file_id"),
+                        rs.getObject("uploader_id") as? Long,
+                        rs.getString("caption") ?: ""
+                    )
+                }
+            )
+        }
+
+        val unseen = pickUnseen()
+        if (unseen != null) return unseen
+
+        Db.execute("delete from meme_history where user_id = ?") { stmt -> stmt.setLong(1, userId) }
+        return pickUnseen()
     }
 
     fun markSeen(userId: Long, memeId: Long) {

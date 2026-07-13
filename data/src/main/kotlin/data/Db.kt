@@ -9,9 +9,13 @@ import java.sql.Statement
 
 object Db {
     private val env = dotenv()
-    private val url = env["DATABASE_URL"] ?: error("DATABASE_URL is not set")
-    private val user = env["DATABASE_USER"] ?: ""
-    private val pass = env["DATABASE_PASSWORD"] ?: ""
+    private fun required(name: String): String {
+        return (env[name] ?: System.getenv(name) ?: error("$name is not set")).trim()
+    }
+
+    private val url = required("DATABASE_URL")
+    private val user = required("DATABASE_USER")
+    private val pass = required("DATABASE_PASSWORD")
 
     val connection: Connection by lazy {
         val conn = DriverManager.getConnection(url, user, pass)

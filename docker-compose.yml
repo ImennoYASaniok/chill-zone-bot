@@ -42,7 +42,33 @@ services:
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-chill_zone}
     volumes:
-      - ./.env:/app/app/build/install/app/.env:ro
+      - ./.env:/app/.env:ro
+
+  bot-dev:
+    image: gradle:8.5-jdk17-alpine
+    container_name: chill-zone-bot-dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-chill_zone}
+    working_dir: /workspace
+    command:
+      [
+        "sh",
+        "-lc",
+        "set -e; hash() { find /workspace/app/src /workspace/core/src /workspace/data/src -type f -print0 | sort -z | xargs -0 cksum | cksum | awk '{print $$1}' ; }; run() { gradle :app:run --no-daemon & pid=$$!; }; last=$$(hash); run; while true; do sleep 1; cur=$$(hash); if [ \"$$cur\" != \"$$last\" ]; then last=$$cur; kill $$pid 2>/dev/null || true; wait $$pid 2>/dev/null || true; run; fi; done"
+      ]
+    volumes:
+      - ./:/workspace
+      - ./.env:/workspace/.env:ro
+      - gradle_cache:/home/gradle/.gradle
+    profiles:
+      - dev
 
 volumes:
   chill_zone_pgdata:
+  gradle_cache:

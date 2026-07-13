@@ -8,9 +8,9 @@ import java.time.ZoneOffset
 
 object AdminService {
     private val env = dotenv()
-    private val url = env["DATABASE_URL"] ?: error("DATABASE_URL is not set")
-    private val user = env["DATABASE_USER"] ?: ""
-    private val pass = env["DATABASE_PASSWORD"] ?: ""
+    private val url = (env["DATABASE_URL"] ?: System.getenv("DATABASE_URL") ?: error("DATABASE_URL is not set")).trim()
+    private val user = (env["DATABASE_USER"] ?: System.getenv("DATABASE_USER") ?: "").trim()
+    private val pass = (env["DATABASE_PASSWORD"] ?: System.getenv("DATABASE_PASSWORD") ?: "").trim()
 
     val adminIds: List<Long> =
             env["ADMINS_ID"]?.removeSurrounding("[", "]")?.split(",")?.mapNotNull {

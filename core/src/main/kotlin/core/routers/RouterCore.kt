@@ -549,6 +549,9 @@ class RouterCore(
             data.startsWith("save_item_") || data.startsWith("delete_favorite_") || data.startsWith("nav_favorite_") || data.startsWith("nav_search_") || data.startsWith("save_single_") || data.startsWith("remove_item_") -> {
                 RouterCollections.handleCallback(bot, callback, users)
             }
+            data.startsWith("meme_") -> {
+                RouterMemes.handleCallback(bot, callback, memes)
+            }
             // Другие callback запросы можно добавить здесь по мере необходимости
             else -> {
                 bot.answerCallbackQuery(callback.id, "Неизвестная команда.")

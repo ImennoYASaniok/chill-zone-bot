@@ -41,6 +41,22 @@ object KeyboardFactory {
         return KeyboardMemes.memesMenu()
     }
 
+    fun memesViewerMenu(): KeyboardReplyMarkup {
+        return KeyboardMemes.memesViewerMenu()
+    }
+
+    fun memesAddMenu(): KeyboardReplyMarkup {
+        return KeyboardMemes.memesAddMenu()
+    }
+
+    fun memesFavoritesMenu(): KeyboardReplyMarkup {
+        return KeyboardMemes.memesFavoritesMenu()
+    }
+
+    fun memeActionsInline(memeId: Long): InlineKeyboardMarkup {
+        return KeyboardMemes.memeActionsInline(memeId)
+    }
+
     fun predictionsMenu(): KeyboardReplyMarkup {
         return KeyboardPredictions.predictionsMenu()
     }
