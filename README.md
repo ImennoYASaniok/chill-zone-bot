@@ -17,6 +17,7 @@
 - [Архитектура](#архитектура)
 - [Roadmap](#roadmap)
 - [Структура Проекта](#структура-проекта)
+- [Коммиты](#коммиты)
 - [Вклад](#вклад)
 - [Контакты](#контакты)
 
@@ -213,6 +214,106 @@ implementation("com.zaxxer:HikariCP:5.0.1")
 
 // Serialization
 implementation("com.google.code.gson:gson:2.10.1")
+```
+
+## 🧾 Коммиты
+
+В проекте используется формат:
+
+```text
+type(subtype): description
+```
+
+или, если подтип не нужен:
+
+```text
+type: description
+```
+
+Если сообщение коммита не соответствует правилу, hook прерывает `git commit`.
+
+### Как включить проверку
+
+В репозитории уже лежит hook в [`.githooks/commit-msg`](.githooks/commit-msg). Один раз выполните:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+После этого Git будет использовать локальные hooks из папки `.githooks` и не позволит закоммитить неверное сообщение.
+
+### Типы коммитов
+
+| Тип | Когда использовать |
+|-----|--------------------|
+| `feat` | Новая функциональность |
+| `fix` | Исправление бага |
+| `docs` | Изменения в документации |
+| `style` | Форматирование без изменения логики |
+| `refactor` | Рефакторинг без изменения поведения |
+| `test` | Тесты |
+| `chore` | Рутинные задачи, зависимости, сервисные правки |
+| `perf` | Оптимизация производительности |
+| `arch` | Изменения в архитектуре |
+| `dev` | Разработка, отладка, технические правки |
+| `sys` | Системные изменения: Docker, CI, конфигурации |
+| `all` | Затронуто несколько областей сразу |
+
+### Подтипы коммитов
+
+Подтип указывает область изменений. Используйте его, если коммит относится к конкретной части проекта.
+
+| Подтип | Область |
+|--------|---------|
+| `adm` | Админ-логика и админские экраны |
+| `prof` | Профиль пользователя |
+| `collec` | Подборки и коллекции |
+| `pred` | Предсказания |
+| `db` | База данных |
+| `api` | API и интеграции |
+| `auth` | Авторизация и доступ |
+| `ui` | Пользовательский интерфейс |
+| `bot` | Базовая логика бота |
+| `router` | Роутинг |
+| `service` | Сервисный слой |
+| `repo` | Репозитории |
+| `model` | Модели данных |
+| `keyboard` | Клавиатуры |
+| `config` | Конфигурация |
+| `events` | События |
+| `feedback` | Отзывы и обратная связь |
+| `games` | Игровая логика |
+| `memes` | Мемы |
+| `pixelart` | Pixel art |
+| `tests` | Тестовые сценарии и тестовая инфраструктура |
+| `settings` | Настройки |
+
+### Правильные примеры
+
+```text
+feat(adm): add user ban functionality
+fix: resolve null pointer exception
+docs: update README with new features
+arch(router): split routers by feature
+sys: update docker-compose configuration
+refactor(service): simplify admin service logic
+test: add unit tests for user repository
+perf(db): optimize database queries
+style: format code according to project standards
+chore: update Gradle dependencies
+```
+
+### Неправильные примеры
+
+```text
+added new feature
+Feat(adm): add feature
+feat(Adm): add feature
+feat adm: add feature
+feat(adm):
+feat(adm)add feature
+random(adm): add feature
+feat(unknown): add feature
 ```
 
 ## 📄 Лицензия
