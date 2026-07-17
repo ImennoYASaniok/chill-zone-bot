@@ -1,0 +1,70 @@
+#!/usr/bin/env sh
+
+set -eu
+
+commit_msg_file=$1
+summary_line=$(sed -n '1{s/\r$//;p;}' "$commit_msg_file")
+
+case "$summary_line" in
+  "Merge branch "*|"Merge pull request "*|"Revert "*)
+    exit 0
+    ;;
+esac
+
+if ! printf '%s\n' "$summary_line" | grep -Eq '^[a-z]+(\([a-z0-9-]+\))?: .{3,}$'; then
+  echo "❌ Invalid commit message format!"
+  echo
+  echo "Expected format: type(subtype): description or type: description"
+  echo "Example: feat(adm): add user ban functionality"
+  echo "Example: fix: resolve null pointer exception"
+  echo
+  echo "See COMMIT_CONVENTION.md or README.md for details."
+  exit 1
+fi
+
+type=${summary_line%%:*}
+type=${type%%(*}
+
+case "$type" in
+  feat|fix|docs|style|refactor|test|chore|perf|arch|dev|sys|all)
+    ;;
+  *)
+    echo "❌ Invalid commit type: '$type'"
+    echo
+    echo "Valid types: feat, fix, docs, style, refactor, test, chore, perf, arch, dev, sys, all"
+    echo
+    echo "See COMMIT_CONVENTION.md or README.md for details."
+    exit 1
+    ;;
+esac
+
+subtype=""
+case "$summary_line" in
+  *"("*"):"*)
+    subtype=$(printf '%s\n' "$summary_line" | sed -n 's/^[a-z]\+(\([^)]\+\)): .*/\1/p')
+    ;;
+esac
+
+if [ -n "$subtype" ]; then
+  case "$subtype" in
+    adm|prof|collec|pred|db|api|auth|ui|bot|router|service|repo|model|keyboard|config|events|feedback|games|memes|pixelart|tests|settings)
+      ;;
+    *)
+      echo "❌ Invalid commit subtype: '$subtype'"
+      echo
+      echo "Valid subtypes: adm, prof, collec, pred, db, api, auth, ui, bot, router, service, repo, model, keyboard, config, events, feedback, games, memes, pixelart, tests, settings"
+      echo
+      echo "See COMMIT_CONVENTION.md or README.md for details."
+      exit 1
+      ;;
+  esac
+fi
+
+description=${summary_line#*: }
+
+if [ ${#description} -lt 3 ]; then
+  echo "❌ Commit description too short (minimum 3 characters)"
+  exit 1
+fi
+
+exit 0
