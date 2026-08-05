@@ -26,17 +26,43 @@ object KeyboardAdmin {
                     )
             )
 
+    fun moderatorMenu(): KeyboardReplyMarkup =
+            kb(
+                    listOf(
+                            listOf("👥 Список пользователей", "🔍 Поиск пользователей"),
+                            listOf("🚫 Забаненные пользователи"),
+                            listOf("⬅️ Обратно")
+                    )
+            )
+
     fun adminUserListMenu(filter: String = "Все"): KeyboardReplyMarkup =
             kb(listOf(listOf("🔄 Фильтр: $filter"), listOf("⬅️ Обратно")))
 
     fun adminSearchMenu(filter: String = "Все"): KeyboardReplyMarkup =
+            kb(listOf(listOf("🔄 Фильтр: $filter"), listOf("🚪 Выйти из поиска")))
+
+    fun adminSearchInputMenu(): KeyboardReplyMarkup =
+            kb(listOf(listOf("🚪 Выйти из поиска")))
+
+    fun moderatorUserListMenu(filter: String = "Все"): KeyboardReplyMarkup =
             kb(listOf(listOf("🔄 Фильтр: $filter"), listOf("⬅️ Обратно")))
+
+    fun moderatorSearchInputMenu(): KeyboardReplyMarkup =
+            kb(listOf(listOf("🚪 Выйти из поиска")))
 
     fun adminBackOnlyMenu(): KeyboardReplyMarkup = kb(listOf(listOf("⬅️ Обратно")))
 
     fun banReasonInputMenu(): KeyboardReplyMarkup = kb(listOf(listOf("⬅️ Отмена")))
 
     fun profileViewBackMenu(): KeyboardReplyMarkup = kb(listOf(listOf("⬅️ Обратно")))
+
+    fun profileViewModeratorMenu(isBanned: Boolean): KeyboardReplyMarkup =
+            kb(
+                    listOf(
+                            listOf(if (isBanned) "✅ Разбанить" else "🚫 Забанить"),
+                            listOf("⬅️ Обратно")
+                    )
+            )
 
     fun profileViewAdminMenu(isBanned: Boolean): KeyboardReplyMarkup =
             kb(

@@ -26,6 +26,9 @@ object RouterAdmin {
             return
         }
 
+        val session = SessionStore.get(uid)
+        session.data["admin_panel_mode"] = "admin"
+
         val statsMessage = """🛡️ <b>Админ панель</b>
 
 Выберите действие:"""
@@ -38,6 +41,39 @@ object RouterAdmin {
         )
     }
 
+    fun showModeratorPanel(bot: Bot, chat: ChatId, uid: Long) {
+        if (!AdminService.isModerator(uid)) {
+            bot.sendMessage(chat, "🚫 Доступ запрещен. У вас нет прав модератора.")
+            return
+        }
+
+        val session = SessionStore.get(uid)
+        session.data["admin_panel_mode"] = "moderator"
+
+        val statsMessage = """🛡️ <b>Панель модератора</b>
+
+Выберите действие:"""
+
+        bot.sendMessage(
+                chat,
+                statsMessage,
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardAdmin.moderatorMenu()
+        )
+    }
+
+    fun handleModeratorAction(
+            bot: Bot,
+            chat: ChatId,
+            uid: Long,
+            text: String,
+            users: UserRepository,
+            session: Session
+    ) {
+        session.data["admin_panel_mode"] = "moderator"
+        handleAdminAction(bot, chat, uid, text, users, session)
+    }
+
     @Suppress("UNUSED_PARAMETER")
     fun handleAdminAction(
             bot: Bot,
@@ -47,7 +83,9 @@ object RouterAdmin {
             users: UserRepository,
             session: Session
     ) {
-        if (!AdminService.isAdmin(uid)) {
+        val panelMode = session.data["admin_panel_mode"] ?: "admin"
+        val hasAccess = AdminService.isAdmin(uid) || (panelMode == "moderator" && AdminService.isModerator(uid))
+        if (!hasAccess) {
             bot.sendMessage(chat, "🚫 Доступ запрещен. У вас нет админских прав.")
             return
         }
@@ -157,12 +195,12 @@ object RouterAdmin {
                     if (resultsString != null) {
                         val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
                         val searchUsers = userIds.mapNotNull { users.profile(it) }
-                        RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, 0)
+                        RouterAdminUsers.showSearchResults(bot, chat, uid, searchUsers, 0, allowRoleActions = panelMode == "admin")
                     }
                 }
                 PendingAction.ADMIN_USER_LIST -> {
                     session.data["admin_filter"] = next
-                    RouterAdminUsers.showUserList(bot, chat, uid, 0)
+                    RouterAdminUsers.showUserList(bot, chat, uid, 0, allowRoleActions = panelMode == "admin")
                 }
                 else -> {
                     bot.sendMessage(
@@ -184,11 +222,15 @@ object RouterAdmin {
                 if (session.data["admin_filter"].isNullOrBlank()) {
                     session.data["admin_filter"] = "Все"
                 }
-                RouterAdminUsers.showUserList(bot, chat, uid)
+                RouterAdminUsers.showUserList(bot, chat, uid, allowRoleActions = panelMode == "admin")
             }
             "🔍 Поиск пользователей" -> {
                 session.action = PendingAction.ADMIN_SEARCH
+                val panelModeMarker = session.data["admin_panel_mode"]
                 session.data.clear()
+                if (panelModeMarker != null) {
+                    session.data["admin_panel_mode"] = panelModeMarker
+                }
                 session.data["admin_search_filter"] = "Все"
                 bot.sendMessage(
                         chat,
@@ -201,18 +243,22 @@ object RouterAdmin {
 • @username (частичный поиск по username)
 • Иван (частичный поиск по имени)""",
                         parseMode = ParseMode.HTML,
-                        replyMarkup = KeyboardAdmin.adminBackOnlyMenu()
+                        replyMarkup = KeyboardAdmin.adminSearchInputMenu()
                 )
             }
             "🚫 Забаненные пользователи" -> {
                 session.action = PendingAction.ADMIN_BANNED_LIST
+                val panelModeMarker = session.data["admin_panel_mode"]
                 session.data.clear()
+                if (panelModeMarker != null) {
+                    session.data["admin_panel_mode"] = panelModeMarker
+                }
                 RouterAdminUsers.showBannedUsers(bot, chat, uid, users)
             }
             "📊 Статистика" -> {
                 RouterAdminStatistics.showAdminStats(bot, chat)
             }
-            "⬅️ Обратно" -> {
+            "⬅️ Обратно", "🚪 Выйти из поиска" -> {
                 // Проверяем, находимся ли мы в режиме редактирования профиля
                 if (session.action in
                                 listOf(
@@ -234,17 +280,32 @@ object RouterAdmin {
                     } else {
                         showAdminPanel(bot, chat, uid)
                     }
+                } else if (session.action == PendingAction.ADMIN_SEARCH ||
+                    session.action == PendingAction.ADMIN_SEARCH_RESULTS
+                ) {
+                    session.action = PendingAction.NONE
+                    session.context = FSMContext.MEMES
+                    session.data.clear()
+                    if (panelMode == "moderator") {
+                        showModeratorPanel(bot, chat, uid)
+                    } else {
+                        showAdminPanel(bot, chat, uid)
+                    }
                 } else {
-                    // Возвращаемся в админскую панель
-                    showAdminPanel(bot, chat, uid)
+                    // Во всех случаях из админской панели - возвращаемся в профиль пользователя
+                    session.action = PendingAction.NONE
+                    session.context = FSMContext.MEMES
+                    session.data.clear()
+                    RouterProfile.showProfile(bot, chat, uid, users)
                 }
             }
             "⬅️ В список" -> {
                 val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
+                val currentAction = session.action // Сохраняем текущий action
                 session.context = FSMContext.MEMES // Сброс контекста ПРОФИЛЯ
-                when (session.action) {
+                when (currentAction) {
                     PendingAction.ADMIN_USER_LIST ->
-                            RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                            RouterAdminUsers.showUserList(bot, chat, uid, currentIndex, allowRoleActions = panelMode == "admin")
                     PendingAction.ADMIN_SEARCH_RESULTS -> {
                         val resultsString = session.data["admin_search_results"]
                         if (resultsString != null) {
@@ -255,13 +316,14 @@ object RouterAdmin {
                                     chat,
                                     uid,
                                     searchUsers,
-                                    currentIndex
+                                    currentIndex,
+                                    allowRoleActions = panelMode == "admin"
                             )
                         } else {
-                            showAdminPanel(bot, chat, uid)
+                            if (panelMode == "moderator") showModeratorPanel(bot, chat, uid) else showAdminPanel(bot, chat, uid)
                         }
                     }
-                    else -> showAdminPanel(bot, chat, uid)
+                    else -> if (panelMode == "moderator") showModeratorPanel(bot, chat, uid) else showAdminPanel(bot, chat, uid)
                 }
             }
             "🚫 Забанить" -> {
@@ -324,7 +386,8 @@ object RouterAdmin {
                 }
             }
             "⬅️ Отмена" -> {
-                // Отмена ввода причины бана - возвращаемся в профиль пользователя
+                // Отмена ввода причины бана или изменения времени бана - возвращаемся в профиль
+                // пользователя
                 if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
                     val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
                     if (targetUserId != null) {
@@ -337,6 +400,17 @@ object RouterAdmin {
                         }
                     } else {
                         showAdminPanel(bot, chat, uid)
+                    }
+                } else if (session.action == PendingAction.ADMIN_EDIT_BAN_EXPIRY &&
+                                session.context == FSMContext.PROFILE_VIEW
+                ) {
+                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
+                    if (targetUserId != null) {
+                        val targetUser = users.profile(targetUserId)
+                        if (targetUser != null) {
+                            session.action = PendingAction.NONE
+                            RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                        }
                     }
                 } else {
                     // Для других контекстов - обычная отмена
@@ -533,35 +607,6 @@ object RouterAdmin {
                     return
                 }
             }
-            "⬅️ Отмена" -> {
-                if (session.action == PendingAction.ADMIN_EDIT_BAN_EXPIRY &&
-                                session.context == FSMContext.PROFILE_VIEW
-                ) {
-                    val targetUserId = session.data["admin_profile_view_user_id"]?.toLongOrNull()
-                    if (targetUserId != null) {
-                        val targetUser = users.profile(targetUserId)
-                        if (targetUser != null) {
-                            session.action = PendingAction.NONE
-                            RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
-                        }
-                    }
-                    return
-                }
-
-                // Отмена ввода причины бана - возвращаемся в профиль пользователя
-                if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
-                    val targetUserId = session.data["admin_edit_target_user"]?.toLongOrNull()
-                    if (targetUserId != null) {
-                        val targetUser = users.profile(targetUserId)
-                        if (targetUser != null) {
-                            session.action = PendingAction.NONE
-                            RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
-                        } else {
-                            showAdminPanel(bot, chat, uid)
-                        }
-                    }
-                }
-            }
             else -> {
                 // Обработка текстового поиска
                 if (session.action == PendingAction.ADMIN_SEARCH) {
@@ -570,12 +615,12 @@ object RouterAdmin {
                         bot.sendMessage(
                                 chat,
                                 "❌ Пользователи не найдены по запросу: \"$text\"",
-                                replyMarkup = KeyboardAdmin.adminMenu()
+                                replyMarkup = if (panelMode == "moderator") KeyboardAdmin.moderatorMenu() else KeyboardAdmin.adminMenu()
                         )
                     } else {
                         session.action = PendingAction.ADMIN_SEARCH_RESULTS
                         session.data["admin_search_query"] = text
-                        RouterAdminUsers.showSearchResults(bot, chat, uid, searchResults, 0)
+                        RouterAdminUsers.showSearchResults(bot, chat, uid, searchResults, 0, allowRoleActions = panelMode == "admin")
                     }
                 } else if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
                     // Эта обработка больше не нужна - должна быть в RouterCore.handlePending()
@@ -625,13 +670,79 @@ object RouterAdmin {
         val uid = callback.from.id
         val data = callback.data
 
-        if (!AdminService.isAdmin(uid)) {
+        val session = SessionStore.get(uid)
+        val panelMode = session.data["admin_panel_mode"] ?: "admin"
+        if (!AdminService.isAdmin(uid) && !(panelMode == "moderator" && AdminService.isModerator(uid))) {
             bot.answerCallbackQuery(callback.id, "🚫 Доступ запрещен")
             return
         }
-        val session = SessionStore.get(uid)
+        val allowRoleActions = panelMode == "admin"
+
+        fun refreshAfterRoleChange(targetUserId: Long) {
+            val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
+            if (session.context == FSMContext.PROFILE_VIEW) {
+                val targetUser = users.profile(targetUserId)
+                if (targetUser != null) {
+                    RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                }
+                return
+            }
+
+            when (session.action) {
+                PendingAction.ADMIN_USER_LIST ->
+                    RouterAdminUsers.showUserList(bot, chat, uid, currentIndex, allowRoleActions = allowRoleActions)
+                PendingAction.ADMIN_SEARCH_RESULTS -> {
+                    val resultsString = session.data["admin_search_results"]
+                    if (resultsString != null) {
+                        val userIds = resultsString.split("|").mapNotNull { it.toLongOrNull() }
+                        val searchUsers = userIds.mapNotNull { users.profile(it) }
+                        RouterAdminUsers.showSearchResults(
+                                bot,
+                                chat,
+                                uid,
+                                searchUsers,
+                        currentIndex,
+                        allowRoleActions = allowRoleActions
+                        )
+                    }
+                }
+                PendingAction.ADMIN_BANNED_LIST ->
+                        RouterAdminUsers.showBannedUsers(bot, chat, uid, users, currentIndex)
+                else -> {
+                    val targetUser = users.profile(targetUserId)
+                    if (targetUser != null) {
+                        RouterAdminUsers.showUserProfileView(bot, chat, uid, targetUser, users)
+                    }
+                }
+            }
+        }
 
         when {
+            data.startsWith("admin_role_locked_") -> {
+                bot.answerCallbackQuery(
+                        callback.id,
+                        "❌ Эту роль нельзя менять из списка пользователей"
+                )
+            }
+            data.startsWith("admin_role_toggle_") -> {
+                val targetUserId = data.substringAfter("admin_role_toggle_").toLongOrNull()
+                if (targetUserId != null) {
+                    if (!AdminService.isAdmin(uid)) {
+                        bot.answerCallbackQuery(callback.id, "❌ Недостаточно прав")
+                    } else if (targetUserId == uid) {
+                        bot.answerCallbackQuery(callback.id, "❌ Нельзя менять роль своему аккаунту")
+                    } else {
+                        val nextType = AdminService.toggleModeratorUserType(targetUserId)
+                        bot.answerCallbackQuery(
+                                callback.id,
+                                "✅ Тип аккаунта изменён на ${nextType.label}"
+                        )
+                        refreshAfterRoleChange(targetUserId)
+                    }
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
+                }
+            }
             data.startsWith("admin_ban_") -> {
                 val targetUserId = data.substringAfter("admin_ban_").toLongOrNull()
                 if (targetUserId != null) {
@@ -645,7 +756,7 @@ object RouterAdmin {
                         val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
                         when (session.action) {
                             PendingAction.ADMIN_USER_LIST ->
-                                    RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                                    RouterAdminUsers.showUserList(bot, chat, uid, currentIndex, allowRoleActions = allowRoleActions)
                             PendingAction.ADMIN_SEARCH_RESULTS -> {
                                 val resultsString = session.data["admin_search_results"]
                                 if (resultsString != null) {
@@ -659,7 +770,8 @@ object RouterAdmin {
                                             chat,
                                             uid,
                                             searchUsers,
-                                            currentIndex
+                                            currentIndex,
+                                            allowRoleActions = allowRoleActions
                                     )
                                 }
                             }
@@ -687,7 +799,7 @@ object RouterAdmin {
                         val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
                         when (session.action) {
                             PendingAction.ADMIN_USER_LIST ->
-                                    RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                                    RouterAdminUsers.showUserList(bot, chat, uid, currentIndex, allowRoleActions = allowRoleActions)
                             PendingAction.ADMIN_SEARCH_RESULTS -> {
                                 val resultsString = session.data["admin_search_results"]
                                 if (resultsString != null) {
@@ -701,7 +813,8 @@ object RouterAdmin {
                                             chat,
                                             uid,
                                             searchUsers,
-                                            currentIndex
+                                            currentIndex,
+                                            allowRoleActions = allowRoleActions
                                     )
                                 }
                             }
@@ -710,6 +823,18 @@ object RouterAdmin {
                     } else {
                         bot.answerCallbackQuery(callback.id, "❌ Ошибка при разбане")
                     }
+                }
+            }
+            data.startsWith("admin_impersonate_") -> {
+                val targetUserId = data.substringAfter("admin_impersonate_").toLongOrNull()
+                if (targetUserId != null) {
+                    session.data["profile_impersonated_user_id"] = targetUserId.toString()
+                    session.action = PendingAction.NONE
+                    session.context = FSMContext.MEMES
+                    RouterProfile.showProfile(bot, chat, uid, users)
+                    bot.answerCallbackQuery(callback.id, "✅ Вы вошли в аккаунт пользователя")
+                } else {
+                    bot.answerCallbackQuery(callback.id, "❌ Неверный ID пользователя")
                 }
             }
             data.startsWith("admin_profile_view_") -> {
@@ -785,30 +910,38 @@ object RouterAdmin {
             data.startsWith("admin_users_page_") -> {
                 val newIndex = data.substringAfter("admin_users_page_").toIntOrNull()
                 if (newIndex != null) {
-                    RouterAdminUsers.showUserList(bot, chat, uid, newIndex)
+                    RouterAdminUsers.showUserList(bot, chat, uid, newIndex, allowRoleActions = allowRoleActions)
                     bot.answerCallbackQuery(callback.id)
                 }
             }
             data.startsWith("admin_filter_") -> {
                 val filterType = data.substringAfter("admin_filter_")
                 session.data["admin_filter"] = filterType
-                RouterAdminUsers.showUserList(bot, chat, uid, 0)
+                RouterAdminUsers.showUserList(bot, chat, uid, 0, allowRoleActions = allowRoleActions)
                 bot.answerCallbackQuery(callback.id, "🔄 Фильтр изменен на " + filterType)
             }
             data == "admin_back_to_user_list" -> {
                 val currentIndex = session.data["admin_current_index"]?.toIntOrNull() ?: 0
                 session.context = FSMContext.MEMES // Сброс контекста при выходе из профиля
-                RouterAdminUsers.showUserList(bot, chat, uid, currentIndex)
+                RouterAdminUsers.showUserList(bot, chat, uid, currentIndex, allowRoleActions = allowRoleActions)
                 bot.answerCallbackQuery(callback.id)
             }
             data.startsWith("admin_back_to_search") -> {
                 session.action = PendingAction.ADMIN_SEARCH
+                val panelModeMarker = session.data["admin_panel_mode"]
                 session.data.clear()
+                if (panelModeMarker != null) {
+                    session.data["admin_panel_mode"] = panelModeMarker
+                }
                 bot.sendMessage(
                         chat,
                         "🔍 <b>Поиск пользователей</b>\n\nВведите ID, username или имя пользователя для поиска.\n\nПримеры:\n• 7266569446 (точный поиск по ID)\n• @username (частичный поиск по username)\n• Иван (частичный поиск по имени)",
                         parseMode = ParseMode.HTML,
-                        replyMarkup = KeyboardFactory.mainMenu(isAdmin = true)
+                        replyMarkup = if (session.data["admin_panel_mode"] == "moderator") {
+                            KeyboardAdmin.moderatorSearchInputMenu()
+                        } else {
+                            KeyboardAdmin.adminSearchInputMenu()
+                        }
                 )
                 bot.answerCallbackQuery(callback.id)
             }

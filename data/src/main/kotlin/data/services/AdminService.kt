@@ -1,6 +1,7 @@
 package data.services
 
 import data.Db
+import data.models.AccountType
 import data.models.*
 import io.github.cdimascio.dotenv.dotenv
 import java.time.Duration
@@ -19,7 +20,68 @@ object AdminService {
                     ?: emptyList()
 
     fun isAdmin(userId: Long): Boolean {
+        return getAccountType(userId) == AccountType.ADMIN
+    }
+
+    fun isModerator(userId: Long): Boolean {
+        return when (getAccountType(userId)) {
+            AccountType.MODERATOR, AccountType.ADMIN -> true
+            else -> false
+        }
+    }
+
+    fun isBootstrapAdmin(userId: Long): Boolean {
         return userId in adminIds
+    }
+
+    fun resolveAccountType(_userId: Long, storedType: AccountType): AccountType {
+        return storedType
+    }
+
+    fun getAccountType(userId: Long): AccountType {
+        return try {
+            Db.single(
+                    "select coalesce(account_type, 'user') as account_type from users where user_id = ?",
+                    bind = { stmt -> stmt.setLong(1, userId) },
+                    map = { rs -> AccountType.fromDb(rs.getString("account_type")) }
+            ) ?: AccountType.USER
+        } catch (e: Exception) {
+            println("Error getting account type for user $userId: ${e.message}")
+            AccountType.USER
+        }
+    }
+
+    fun setAccountType(userId: Long, accountType: AccountType): Boolean {
+        return try {
+            Db.execute(
+                    "update users set account_type = ?, updated_at = now() where user_id = ?"
+            ) { stmt ->
+                stmt.setString(1, accountType.dbValue)
+                stmt.setLong(2, userId)
+            }
+            true
+        } catch (e: Exception) {
+            println("Error setting account type for user $userId: ${e.message}")
+            false
+        }
+    }
+
+    fun toggleModeratorUserType(userId: Long): AccountType {
+        val currentType = getAccountType(userId)
+        val nextType = when (currentType) {
+            AccountType.MODERATOR -> AccountType.USER
+            AccountType.USER -> AccountType.MODERATOR
+            AccountType.ADMIN -> AccountType.ADMIN
+        }
+        setAccountType(userId, nextType)
+        return nextType
+    }
+
+    fun toggleAdminType(userId: Long): AccountType {
+        val currentType = getAccountType(userId)
+        val nextType = if (currentType == AccountType.ADMIN) AccountType.USER else AccountType.ADMIN
+        setAccountType(userId, nextType)
+        return nextType
     }
 
     fun reloadAdmins(): List<Long> {
@@ -103,23 +165,26 @@ object AdminService {
 
     fun searchUsers(query: String, limit: Int = 10): List<UserProfile> {
         return try {
-            val searchPattern = "%${query.lowercase()}%"
+            val normalizedQuery = query.trim()
+            val usernameQuery = normalizedQuery.removePrefix("@")
+            val usernameSearchPattern = "%${usernameQuery.lowercase()}%"
+            val displayNameSearchPattern = "%${normalizedQuery.lowercase()}%"
             Db.query(
                     """
-                select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating, u.hide_username,
+                select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating, u.hide_username, u.account_type,
                        case when bu.user_id is not null then true else false end as is_banned
                 from users u
                 left join banned_users bu on u.user_id = bu.user_id
                 where cast(u.user_id as text) = ? 
                    or lower(u.username) like ? 
                    or lower(u.display_name) like ?
-                order by u.updated_at desc
+                order by u.user_id asc
                 limit ?
                 """,
                     bind = { stmt ->
-                        stmt.setString(1, query) // Для точного совпадения ID
-                        stmt.setString(2, searchPattern) // Для частичного совпадения username
-                        stmt.setString(3, searchPattern) // Для частичного совпадения display_name
+                        stmt.setString(1, normalizedQuery) // Для точного совпадения ID
+                        stmt.setString(2, usernameSearchPattern) // Для частичного совпадения username
+                        stmt.setString(3, displayNameSearchPattern) // Для частичного совпадения display_name
                         stmt.setInt(4, limit)
                     },
                     map = { rs ->
@@ -132,7 +197,11 @@ object AdminService {
                                 showMedia = rs.getBoolean("show_media"),
                                 rating = rs.getInt("rating"),
                                 hideUsername = rs.getBoolean("hide_username"),
-                                isBanned = rs.getBoolean("is_banned")
+                                isBanned = rs.getBoolean("is_banned"),
+                                accountType = resolveAccountType(
+                                    rs.getLong("user_id"),
+                                    AccountType.fromDb(rs.getString("account_type"))
+                                )
                         )
                     }
             )
@@ -175,11 +244,11 @@ object AdminService {
         return try {
             Db.query(
                     """
-                select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating, u.hide_username,
+                select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating, u.hide_username, u.account_type,
                        case when bu.user_id is not null then true else false end as is_banned
                 from users u
                 left join banned_users bu on u.user_id = bu.user_id
-                order by u.updated_at desc
+                  order by u.user_id asc
                 limit ? offset ?
                 """,
                     bind = { stmt ->
@@ -196,7 +265,11 @@ object AdminService {
                                 showMedia = rs.getBoolean("show_media"),
                                 rating = rs.getInt("rating"),
                                 hideUsername = rs.getBoolean("hide_username"),
-                                isBanned = rs.getBoolean("is_banned")
+                                isBanned = rs.getBoolean("is_banned"),
+                                accountType = resolveAccountType(
+                                    rs.getLong("user_id"),
+                                    AccountType.fromDb(rs.getString("account_type"))
+                                )
                         )
                     }
             )
