@@ -147,9 +147,8 @@ object SeedData {
                             hideUsername = false,
                             isBanned = false,
                             createdAt = LocalDateTime.now().minusDays(30),
-                            isAdmin = false
+                            accountType = AccountType.USER
                     ),
-                    // Админ
                     UserProfile(
                             userId = 1002L,
                             username = "admin_test",
@@ -161,7 +160,7 @@ object SeedData {
                             hideUsername = false,
                             isBanned = false,
                             createdAt = LocalDateTime.now().minusDays(60),
-                            isAdmin = true
+                            accountType = AccountType.USER
                     ),
                     // Забаненный пользователь
                     UserProfile(
@@ -177,7 +176,7 @@ object SeedData {
                             createdAt = LocalDateTime.now().minusDays(90),
                             bannedAt = "2024-01-15 10:30:00",
                             reason = "Спам",
-                            isAdmin = false
+                            accountType = AccountType.USER
                     ),
                     // Пользователь со скрытым профилем
                     UserProfile(
@@ -191,7 +190,7 @@ object SeedData {
                             hideUsername = true,
                             isBanned = false,
                             createdAt = LocalDateTime.now().minusDays(45),
-                            isAdmin = false
+                            accountType = AccountType.USER
                     ),
                     // Пользователь с высоким рейтингом
                     UserProfile(
@@ -205,7 +204,7 @@ object SeedData {
                             hideUsername = false,
                             isBanned = false,
                             createdAt = LocalDateTime.now().minusDays(120),
-                            isAdmin = false
+                            accountType = AccountType.USER
                     ),
                     // Пользователь без username
                     UserProfile(
@@ -219,7 +218,7 @@ object SeedData {
                             hideUsername = false,
                             isBanned = false,
                             createdAt = LocalDateTime.now().minusDays(20),
-                            isAdmin = false
+                            accountType = AccountType.USER
                     ),
                     // Новый пользователь
                     UserProfile(
@@ -233,7 +232,7 @@ object SeedData {
                             hideUsername = false,
                             isBanned = false,
                             createdAt = LocalDateTime.now().minusDays(1),
-                            isAdmin = false
+                            accountType = AccountType.USER
                     )
             )
 
@@ -346,8 +345,8 @@ object SeedData {
 
                 // Вставляем пользователя
                 Db.execute(
-                        """insert into users(user_id, username, display_name, bio, hidden, show_media, rating, hide_username, created_at, avatar_file_id)
-                       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+                                                """insert into users(user_id, username, display_name, bio, hidden, show_media, rating, hide_username, account_type, created_at, avatar_file_id)
+                                           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
                 ) { stmt ->
                     stmt.setLong(1, user.userId)
                     stmt.setString(2, user.username)
@@ -357,8 +356,9 @@ object SeedData {
                     stmt.setBoolean(6, user.showMedia)
                     stmt.setInt(7, user.rating)
                     stmt.setBoolean(8, user.hideUsername)
-                    stmt.setTimestamp(9, user.createdAt?.let { Timestamp.valueOf(it) })
-                    stmt.setString(10, avatarFileId)
+                                        stmt.setString(9, user.accountType.dbValue)
+                                        stmt.setTimestamp(10, user.createdAt?.let { Timestamp.valueOf(it) })
+                                        stmt.setString(11, avatarFileId)
                 }
             } else {
                 // Пользователь существует - обновляем avatarFileId если есть путь к аватарке

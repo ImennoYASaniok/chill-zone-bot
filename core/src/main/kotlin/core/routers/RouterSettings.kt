@@ -30,6 +30,11 @@ object RouterSettings {
                 }
                 return true
             }
+            "⬅️ Обратно" -> {
+                // Возврат в профиль пользователя
+                RouterProfile.showProfile(bot, chat, uid, users)
+                return true
+            }
             else -> return false
         }
     }

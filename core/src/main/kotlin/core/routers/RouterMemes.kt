@@ -1,19 +1,17 @@
 package core.routers
 
-import data.models.*
-import data.repositories.MemeRepository
-import data.repositories.UserRepository
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.CallbackQuery
 import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
-import core.keyboards.KeyboardFactory
 import core.ImageManager
-import core.SessionStore
-import core.Session
 import core.PendingAction
-import core.FSMContext
+import core.Session
+import core.SessionStore
+import core.keyboards.KeyboardFactory
+import data.models.*
+import data.repositories.MemeRepository
+import data.repositories.UserRepository
 
 object RouterMemes {
     fun showMeme(bot: Bot, chat: ChatId, uid: Long, memes: MemeRepository) {
@@ -27,39 +25,59 @@ object RouterMemes {
         SessionStore.get(uid).data["last_meme"] = meme.id.toString()
         bot.sendPhoto(chat, meme.fileId, replyMarkup = KeyboardFactory.memesViewerMenu())
         bot.sendMessage(
-            chat,
-            "👍 ${counts.likes} | 👎 ${counts.dislikes}\n${meme.caption}",
-            parseMode = ParseMode.HTML,
-            replyMarkup = KeyboardFactory.memeActionsInline(meme.id)
+                chat,
+                "👍 ${counts.likes} | 👎 ${counts.dislikes}\n${meme.caption}",
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardFactory.memeActionsInline(meme.id)
         )
     }
 
     fun rateLastMeme(bot: Bot, chat: ChatId, uid: Long, vote: Int, memes: MemeRepository) {
-        val meme = lastMeme(uid, memes) ?: run {
-            bot.sendMessage(chat, "Сначала открой мем через «Следующий мем».", replyMarkup = KeyboardFactory.memesMenu())
-            return
-        }
+        val meme =
+                lastMeme(uid, memes)
+                        ?: run {
+                            bot.sendMessage(
+                                    chat,
+                                    "Сначала открой мем через «Следующий мем».",
+                                    replyMarkup = KeyboardFactory.memesMenu()
+                            )
+                            return
+                        }
         val counts = memes.vote(uid, meme.id, vote)
-        bot.sendMessage(chat, "👍 ${counts.likes} | 👎 ${counts.dislikes}", replyMarkup = KeyboardFactory.memeActionsInline(meme.id))
+        bot.sendMessage(
+                chat,
+                "👍 ${counts.likes} | 👎 ${counts.dislikes}",
+                replyMarkup = KeyboardFactory.memeActionsInline(meme.id)
+        )
     }
 
     fun favoriteLastMeme(bot: Bot, chat: ChatId, uid: Long, memes: MemeRepository) {
-        val meme = lastMeme(uid, memes) ?: run {
-            bot.sendMessage(chat, "Сначала открой мем.", replyMarkup = KeyboardFactory.memesMenu())
-            return
-        }
+        val meme =
+                lastMeme(uid, memes)
+                        ?: run {
+                            bot.sendMessage(
+                                    chat,
+                                    "Сначала открой мем.",
+                                    replyMarkup = KeyboardFactory.memesMenu()
+                            )
+                            return
+                        }
         val added = memes.toggleFavorite(uid, meme.id)
         bot.sendMessage(
-            chat,
-            if (added) "Добавлено в избранное." else "Убрано из избранного.",
-            replyMarkup = KeyboardFactory.memeActionsInline(meme.id)
+                chat,
+                if (added) "Добавлено в избранное." else "Убрано из избранного.",
+                replyMarkup = KeyboardFactory.memeActionsInline(meme.id)
         )
     }
 
     fun showFavorites(bot: Bot, chat: ChatId, uid: Long, memes: MemeRepository) {
         val favs = memes.favorites(uid)
         if (favs.isEmpty()) {
-            bot.sendMessage(chat, "Пока избранное пусто.", replyMarkup = KeyboardFactory.memesFavoritesMenu())
+            bot.sendMessage(
+                    chat,
+                    "Пока избранное пусто.",
+                    replyMarkup = KeyboardFactory.memesFavoritesMenu()
+            )
             return
         }
         favs.forEach {
@@ -83,14 +101,25 @@ object RouterMemes {
                 SessionStore.get(uid).data["last_meme"] = memeId.toString()
                 val counts = memes.vote(uid, memeId, vote)
                 bot.answerCallbackQuery(callback.id, "Голос учтён")
-                bot.sendMessage(chat, "👍 ${counts.likes} | 👎 ${counts.dislikes}", replyMarkup = KeyboardFactory.memeActionsInline(memeId))
+                bot.sendMessage(
+                        chat,
+                        "👍 ${counts.likes} | 👎 ${counts.dislikes}",
+                        replyMarkup = KeyboardFactory.memeActionsInline(memeId)
+                )
             }
             data.startsWith("meme_fav_") -> {
                 val memeId = data.removePrefix("meme_fav_").toLongOrNull() ?: return
                 SessionStore.get(uid).data["last_meme"] = memeId.toString()
                 val added = memes.toggleFavorite(uid, memeId)
-                bot.answerCallbackQuery(callback.id, if (added) "Добавлено в избранное" else "Убрано из избранного")
-                bot.sendMessage(chat, if (added) "Добавлено в избранное." else "Убрано из избранного.", replyMarkup = KeyboardFactory.memeActionsInline(memeId))
+                bot.answerCallbackQuery(
+                        callback.id,
+                        if (added) "Добавлено в избранное" else "Убрано из избранного"
+                )
+                bot.sendMessage(
+                        chat,
+                        if (added) "Добавлено в избранное." else "Убрано из избранного.",
+                        replyMarkup = KeyboardFactory.memeActionsInline(memeId)
+                )
             }
             data == "meme_next" -> {
                 bot.answerCallbackQuery(callback.id)
@@ -100,7 +129,15 @@ object RouterMemes {
         }
     }
 
-    fun handleMemeAction(bot: Bot, chat: ChatId, uid: Long, text: String, memes: MemeRepository, users: UserRepository, session: Session): Boolean {
+    fun handleMemeAction(
+            bot: Bot,
+            chat: ChatId,
+            uid: Long,
+            text: String,
+            memes: MemeRepository,
+            users: UserRepository,
+            session: Session
+    ): Boolean {
         when (text) {
             "😂 Мемы" -> {
                 showMeme(bot, chat, uid, memes)
@@ -122,8 +159,11 @@ object RouterMemes {
                 session.action = PendingAction.ADD_MEME
                 val profile = users.profile(uid)
                 ImageManager.sendMessageWithImage(
-                    bot, chat, "Отправь фото мема одним сообщением.", profile,
-                    replyMarkup = KeyboardFactory.memesAddMenu()
+                        bot,
+                        chat,
+                        "Отправь фото мема одним сообщением.",
+                        profile,
+                        replyMarkup = KeyboardFactory.memesAddMenu()
                 )
                 return true
             }
@@ -133,6 +173,19 @@ object RouterMemes {
             }
             "Мои избр. мемы" -> {
                 showFavorites(bot, chat, uid, memes)
+                return true
+            }
+            "⬅️ Обратно" -> {
+                // Возврат в меню мемов или главное меню
+                if (session.action == PendingAction.ADD_MEME) {
+                    session.action = PendingAction.NONE
+                    session.data.clear()
+                    showMeme(bot, chat, uid, memes)
+                } else {
+                    // Возврат в главное меню
+                    SessionStore.clear(uid)
+                    bot.sendMessage(chat, "Главное меню.", replyMarkup = KeyboardFactory.mainMenu())
+                }
                 return true
             }
             else -> return false

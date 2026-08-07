@@ -20,6 +20,7 @@ object ProfileSchema {
                 show_media boolean not null default true,
                 rating integer not null default 0,
                 hide_username boolean not null default false,
+                account_type text not null default 'user',
                 created_at timestamptz not null default now(),
                 updated_at timestamptz not null default now()
             )
@@ -40,6 +41,7 @@ object ProfileSchema {
     fun getMigrations(): List<String> {
         return listOf(
             "alter table users add column if not exists hide_username boolean not null default false",
+            "alter table users add column if not exists account_type text not null default 'user'",
             "alter table banned_users add column if not exists ban_expires_at timestamptz"
         )
     }

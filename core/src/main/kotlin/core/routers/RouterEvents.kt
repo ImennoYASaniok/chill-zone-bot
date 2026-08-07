@@ -1,18 +1,17 @@
 package core.routers
 
-import data.models.*
-import data.services.ModerationService
-import data.repositories.EventRepository
-import data.repositories.UserRepository
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
-import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
-import core.keyboards.KeyboardFactory
 import core.ImageManager
-import core.SessionStore
-import core.Session
 import core.PendingAction
+import core.Session
+import core.SessionStore
+import core.keyboards.KeyboardFactory
+import data.models.*
+import data.repositories.EventRepository
+import data.repositories.UserRepository
+import data.services.ModerationService
 
 object RouterEvents {
     fun showEvents(bot: Bot, chat: ChatId, events: EventRepository) {
@@ -21,19 +20,45 @@ object RouterEvents {
             bot.sendMessage(chat, "Пока событий нет.", replyMarkup = KeyboardFactory.eventsMenu())
             return
         }
-        bot.sendMessage(chat, list.joinToString("\n\n") { "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}\n${it.kind}" }, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.eventsMenu())
+        bot.sendMessage(
+                chat,
+                list.joinToString("\n\n") {
+                    "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}\n${it.kind}"
+                },
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardFactory.eventsMenu()
+        )
     }
 
     fun showMineEvents(bot: Bot, chat: ChatId, uid: Long, events: EventRepository) {
         val list = events.mine(uid)
         if (list.isEmpty()) {
-            bot.sendMessage(chat, "У тебя пока нет своих событий.", replyMarkup = KeyboardFactory.eventsMenu())
+            bot.sendMessage(
+                    chat,
+                    "У тебя пока нет своих событий.",
+                    replyMarkup = KeyboardFactory.eventsMenu()
+            )
             return
         }
-        bot.sendMessage(chat, list.joinToString("\n\n") { "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}" }, parseMode = ParseMode.HTML, replyMarkup = KeyboardFactory.eventsMenu())
+        bot.sendMessage(
+                chat,
+                list.joinToString("\n\n") {
+                    "• #${it.id} ${it.title}\n${it.place}\n${it.startsAt}"
+                },
+                parseMode = ParseMode.HTML,
+                replyMarkup = KeyboardFactory.eventsMenu()
+        )
     }
 
-    fun handleEventAction(bot: Bot, chat: ChatId, uid: Long, text: String, events: EventRepository, users: UserRepository, session: Session): Boolean {
+    fun handleEventAction(
+            bot: Bot,
+            chat: ChatId,
+            uid: Long,
+            text: String,
+            events: EventRepository,
+            users: UserRepository,
+            session: Session
+    ): Boolean {
         when (text) {
             "📅 События" -> {
                 showEvents(bot, chat, events)
@@ -52,26 +77,65 @@ object RouterEvents {
                 session.data.clear()
                 val profile = users.profile(uid)
                 ImageManager.sendMessageWithImage(bot, chat, "Напиши название события.", profile) {
-                    bot.sendMessage(chat, "Ожидаю название:", replyMarkup = KeyboardFactory.eventsMenu())
+                    bot.sendMessage(
+                            chat,
+                            "Ожидаю название:",
+                            replyMarkup = KeyboardFactory.eventsMenu()
+                    )
+                }
+                return true
+            }
+            "⬅️ Обратно" -> {
+                // Возврат в главное меню или в меню событий
+                if (session.action in
+                                listOf(
+                                        PendingAction.CREATE_EVENT_TITLE,
+                                        PendingAction.CREATE_EVENT_DESC,
+                                        PendingAction.CREATE_EVENT_PLACE,
+                                        PendingAction.CREATE_EVENT_TIME,
+                                        PendingAction.CREATE_EVENT_MAX,
+                                        PendingAction.CREATE_EVENT_KIND
+                                )
+                ) {
+                    session.action = PendingAction.NONE
+                    session.data.clear()
+                    showEvents(bot, chat, events)
+                } else {
+                    // Возврат в главное меню
+                    SessionStore.clear(uid)
+                    bot.sendMessage(chat, "Главное меню.", replyMarkup = KeyboardFactory.mainMenu())
                 }
                 return true
             }
             else -> {
                 when (session.action) {
-                    PendingAction.CREATE_EVENT_TITLE, PendingAction.CREATE_EVENT_DESC, 
-                    PendingAction.CREATE_EVENT_PLACE, PendingAction.CREATE_EVENT_TIME,
-                    PendingAction.CREATE_EVENT_MAX, PendingAction.CREATE_EVENT_KIND -> {
+                    PendingAction.CREATE_EVENT_TITLE,
+                    PendingAction.CREATE_EVENT_DESC,
+                    PendingAction.CREATE_EVENT_PLACE,
+                    PendingAction.CREATE_EVENT_TIME,
+                    PendingAction.CREATE_EVENT_MAX,
+                    PendingAction.CREATE_EVENT_KIND -> {
                         val moderationResult = ModerationService.checkText(uid, text)
                         if (!moderationResult.isAllowed) {
                             if (moderationResult.shouldBan) {
-                                ModerationService.banForViolation(uid, "Использование ненормативной лексики")
+                                ModerationService.banForViolation(
+                                        uid,
+                                        "Использование ненормативной лексики"
+                                )
                                 ModerationService.clearWarnings(uid)
-                                bot.sendMessage(chat, "🚫 Вы были заблокированы за использование ненормативной лексики.")
+                                bot.sendMessage(
+                                        chat,
+                                        "🚫 Вы были заблокированы за использование ненормативной лексики."
+                                )
                                 session.action = PendingAction.NONE
                                 session.data.clear()
                             } else {
                                 ModerationService.addWarning(uid)
-                                bot.sendMessage(chat, "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.", parseMode = ParseMode.HTML)
+                                bot.sendMessage(
+                                        chat,
+                                        "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
+                                        parseMode = ParseMode.HTML
+                                )
                             }
                             return true
                         }
@@ -108,7 +172,10 @@ object RouterEvents {
                         val max = text.toIntOrNull() ?: 0
                         session.data["event_max"] = max.toString()
                         session.action = PendingAction.CREATE_EVENT_KIND
-                        bot.sendMessage(chat, "Какой тип события? (Концерт, Митап, Вечеринка, Другое)")
+                        bot.sendMessage(
+                                chat,
+                                "Какой тип события? (Концерт, Митап, Вечеринка, Другое)"
+                        )
                         return true
                     }
                     PendingAction.CREATE_EVENT_KIND -> {
@@ -122,7 +189,11 @@ object RouterEvents {
                         events.add(uid, title, desc, place, time, max, kind)
                         session.action = PendingAction.NONE
                         session.data.clear()
-                        bot.sendMessage(chat, "✅ Событие создано!\n\n📌 $title\n📍 $place\n🕒 $time\n👥 до $max участников\n🏷️ $kind", replyMarkup = KeyboardFactory.eventsMenu())
+                        bot.sendMessage(
+                                chat,
+                                "✅ Событие создано!\n\n📌 $title\n📍 $place\n🕒 $time\n👥 до $max участников\n🏷️ $kind",
+                                replyMarkup = KeyboardFactory.eventsMenu()
+                        )
                         return true
                     }
                     else -> return false

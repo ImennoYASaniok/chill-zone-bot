@@ -67,15 +67,16 @@ class RouterCore(
     }
 
     fun handle(bot: Bot, message: Message) {
-        val user = sender(message) ?: return
+        val sender = sender(message) ?: return
         val chat = ChatId.fromId(chatId(message))
-        val uid = user.id
-        val uname = user.username ?: ""
-        val dname = displayName(user)
+        val uid = sender.id
+        val uname = sender.username ?: ""
+        val dname = displayName(sender)
 
         users.ensure(uid, uname, dname)
         users.updateLastActivity(uid)  // Обновляем время последней активности
         val session = SessionStore.get(uid)
+        val activeUid = session.data["profile_impersonated_user_id"]?.toLongOrNull() ?: uid
         val text = message.text?.trim()
 
         // Обработка фото для аватарки профиля
@@ -96,10 +97,10 @@ class RouterCore(
             // Проверяем, квадратное ли изображение
             if (FileValidator.isSquareImage(width, height)) {
                 // Изображение квадратное - сразу сохраняем
-                users.setAvatar(uid, photo.fileId)
+                users.setAvatar(activeUid, photo.fileId)
                 session.action = PendingAction.NONE
                 session.data.clear()
-                bot.sendMessage(chat, "✅ Аватарка сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(uid)))
+                bot.sendMessage(chat, "✅ Аватарка сохранена!", replyMarkup = KeyboardFactory.profileMenu(users.profile(activeUid)))
             } else {
                 // Изображение не квадратное - предлагаем варианты обработки
                 val (minSize, dimension) = FileValidator.getImageProcessingInfo(width, height)
@@ -140,7 +141,7 @@ class RouterCore(
             
             val photo = message.photo!!.lastOrNull() ?: return
             val caption = message.caption ?: session.data["caption"].orEmpty()
-            memes.addMeme(photo.fileId, uid, caption)
+            memes.addMeme(photo.fileId, activeUid, caption)
             session.action = PendingAction.NONE
             session.data.clear()
             bot.sendMessage(chat, "Мем сохранён.", replyMarkup = KeyboardFactory.memesMenu())
@@ -205,7 +206,8 @@ class RouterCore(
                             session.data.remove("admin_profile_view_prev_action")
                             RouterAdminUsers.showBannedUsers(bot, chat, uid, users, session.data["admin_current_index"]?.toIntOrNull() ?: 0)
                         }
-                        PendingAction.ADMIN_SEARCH_RESULTS -> {
+                        PendingAction.ADMIN_SEARCH_RESULTS,
+                        PendingAction.ADMIN_EDIT_BAN_EXPIRY -> {
                             session.action = PendingAction.ADMIN_SEARCH_RESULTS
                             session.data.remove("admin_profile_view_prev_action")
                             val resultsString = session.data["admin_search_results"]
@@ -240,7 +242,8 @@ class RouterCore(
                     PendingAction.ADMIN_USER_LIST,
                     PendingAction.ADMIN_BANNED_LIST,
                     PendingAction.ADMIN_SEARCH,
-                    PendingAction.ADMIN_SEARCH_RESULTS
+                    PendingAction.ADMIN_SEARCH_RESULTS,
+                    PendingAction.ADMIN_EDIT_BAN_EXPIRY
                 )) {
                     // Если в админском контексте - передаем в RouterAdmin
                     RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
@@ -254,7 +257,7 @@ class RouterCore(
                 if (session.action != PendingAction.NONE && handlePending(bot, chat, uid, text, session)) {
                     return
                 }
-                handleModuleRoutes(bot, chat, uid, text, session)
+                handleModuleRoutes(bot, chat, uid, activeUid, text, session)
             }
         }
     }
@@ -282,43 +285,26 @@ class RouterCore(
     }
 
     // Перенаправление в модули
-    private fun handleModuleRoutes(bot: Bot, chat: ChatId, uid: Long, text: String, session: Session) {
+    private fun handleModuleRoutes(
+        bot: Bot,
+        chat: ChatId,
+        uid: Long,
+        activeUid: Long,
+        text: String,
+        session: Session
+    ) {
         when (text) {
             "👤 Профиль" -> RouterProfile.showProfile(bot, chat, uid, users)
             // Кнопки профиля
-            "✏️ Изменить профиль", "📊 Статистика аккаунта", "🛡️ Админ панель", "Изменить имя", "Показать username [👁️]", "Скрыть username [🙈]", "Изменить био", "Показать профиль [👁️]", "Скрыть профиль [🙈]", "⬅️ Назад" -> {
+            "✏️ Изменить профиль", "📊 Статистика аккаунта", "🛡️ Админ панель", "🛡️ Панель модератора", "Изменить имя", "Показать username [👁️]", "Скрыть username [🙈]", "Изменить био", "Показать профиль [👁️]", "Скрыть профиль [🙈]", "🖼️ Добавить аватарку", "🖼️ Изменить аватарку", "⬅️ Назад", "Сменить аккаунт на пользователя", "Сменить аккаунт на админа" -> {
                 RouterProfile.handleProfileAction(bot, chat, uid, text, users, session)
             }
             // Админские кнопки
             "👥 Список пользователей", "🔍 Поиск пользователей", "🚫 Забаненные пользователи", "📊 Статистика",
             " Показать всех", "✅ Показать разбаненных", "🚫 Показать забаненных",
-            "⬅️ Предыдущий", "➡️ Следующий" -> {
-                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
-            }
-            "⬅️ В список" -> {
-                if (session.context == FSMContext.PROFILE_VIEW) {
-                    when (session.action) {
-                        PendingAction.ADMIN_USER_LIST -> RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
-                        PendingAction.ADMIN_SEARCH_RESULTS -> RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
-                        else -> handleBack(bot, chat, uid)
-                    }
-                } else {
-                    handleBack(bot, chat, uid)
-                }
-            }
-            "⬅️ Отмена" -> {
-                if (session.action == PendingAction.ADMIN_EDIT_BAN_REASON) {
-                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
-                } else {
-                    handleBack(bot, chat, uid)
-                }
-            }
+            "⬅️ Предыдущий", "➡️ Следующий", "⬅️ В список", "⬅️ Отмена", "🚪 Выйти из поиска",
             "🚫 Забанить", "✅ Разбанить", "📝 Написать причину бана" -> {
-                if (session.context == FSMContext.PROFILE_VIEW && AdminService.isAdmin(uid)) {
-                    RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
-                } else {
-                    handleBack(bot, chat, uid)
-                }
+                RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
             }
             "⚙️ Настройки" -> RouterSettings.handleSettingsAction(bot, chat, uid, text, users)
             // Кнопки настроек
@@ -326,64 +312,64 @@ class RouterCore(
                 RouterSettings.handleSettingsAction(bot, chat, uid, text, users)
             }
             "🗂 Подборки" -> {
-                if (checkUserBan(bot, chat, uid, "🗂 Подборки")) return
-                RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+                if (checkUserBan(bot, chat, activeUid, "🗂 Подборки")) return
+                RouterCollections.handleCollectionAction(bot, chat, activeUid, text, users, session)
             }
             "🔍 Поиск" -> {
-                if (checkUserBan(bot, chat, uid, "🔍 Поиск")) return
-                RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+                if (checkUserBan(bot, chat, activeUid, "🔍 Поиск")) return
+                RouterCollections.handleCollectionAction(bot, chat, activeUid, text, users, session)
             }
             "⭐ Избранное" -> {
-                if (checkUserBan(bot, chat, uid, "⭐ Избранное")) return
-                RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
+                if (checkUserBan(bot, chat, activeUid, "⭐ Избранное")) return
+                RouterCollections.handleCollectionAction(bot, chat, activeUid, text, users, session)
             }
             "😂 Мемы" -> {
-                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
-                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+                if (checkUserBan(bot, chat, activeUid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, activeUid, text, memes, users, session)
             }
             "Следующий мем", "Добавить мем", "💾 Избр. мем", "Мои избр. мемы" -> {
-                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
-                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+                if (checkUserBan(bot, chat, activeUid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, activeUid, text, memes, users, session)
             }
             "👍" -> {
-                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
-                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+                if (checkUserBan(bot, chat, activeUid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, activeUid, text, memes, users, session)
             }
             "👎" -> {
-                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
-                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+                if (checkUserBan(bot, chat, activeUid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, activeUid, text, memes, users, session)
             }
             "Мои избранные" -> {
-                if (checkUserBan(bot, chat, uid, "😂 Мемы")) return
-                RouterMemes.handleMemeAction(bot, chat, uid, text, memes, users, session)
+                if (checkUserBan(bot, chat, activeUid, "😂 Мемы")) return
+                RouterMemes.handleMemeAction(bot, chat, activeUid, text, memes, users, session)
             }
             "🔮 Предсказания" -> {
-                if (checkUserBan(bot, chat, uid, "🔮 Предсказания")) return
-                RouterPredictions.handlePredictionAction(bot, chat, uid, text, predictions, users, session)
+                if (checkUserBan(bot, chat, activeUid, "🔮 Предсказания")) return
+                RouterPredictions.handlePredictionAction(bot, chat, activeUid, text, predictions, users, session)
             }
             "Получить предсказание", "Мои предсказания", "Поиск предсказаний", "Получить ещё", "Добавить в избранные" -> {
-                if (checkUserBan(bot, chat, uid, "🔮 Предсказания")) return
-                RouterPredictions.handlePredictionAction(bot, chat, uid, text, predictions, users, session)
+                if (checkUserBan(bot, chat, activeUid, "🔮 Предсказания")) return
+                RouterPredictions.handlePredictionAction(bot, chat, activeUid, text, predictions, users, session)
             }
             "📝 Тесты" -> {
-                if (checkUserBan(bot, chat, uid, "📝 Тесты")) return
-                RouterTests.handleTestAction(bot, chat, uid, text, tests, users, session)
+                if (checkUserBan(bot, chat, activeUid, "📝 Тесты")) return
+                RouterTests.handleTestAction(bot, chat, activeUid, text, tests, users, session)
             }
             "📅 События" -> {
-                if (checkUserBan(bot, chat, uid, "📅 События")) return
-                RouterEvents.handleEventAction(bot, chat, uid, text, events, users, session)
+                if (checkUserBan(bot, chat, activeUid, "📅 События")) return
+                RouterEvents.handleEventAction(bot, chat, activeUid, text, events, users, session)
             }
             "🎮 Мини-игры" -> {
-                if (checkUserBan(bot, chat, uid, "🎮 Мини-игры")) return
-                RouterGames.handleGameAction(bot, chat, uid, text, games, users, session)
+                if (checkUserBan(bot, chat, activeUid, "🎮 Мини-игры")) return
+                RouterGames.handleGameAction(bot, chat, activeUid, text, games, users, session)
             }
             "🖼 Пиксель-арт" -> {
-                if (checkUserBan(bot, chat, uid, "🖼 Пиксель-арт")) return
-                RouterPixelArt.handlePixelAction(bot, chat, uid, text, users)
+                if (checkUserBan(bot, chat, activeUid, "🖼 Пиксель-арт")) return
+                RouterPixelArt.handlePixelAction(bot, chat, activeUid, text, users)
             }
-            "💬 Обратная связь" -> RouterFeedBack.handleFeedbackAction(bot, chat, uid, text, feedback, users, session)
-            "💾 Сохранить" -> handleSaveAction(bot, chat, uid, session)
-            "➡️ Ещё" -> handleMoreAction(bot, chat, uid, session)
+            "💬 Обратная связь" -> RouterFeedBack.handleFeedbackAction(bot, chat, activeUid, text, feedback, users, session)
+            "💾 Сохранить" -> handleSaveAction(bot, chat, activeUid, session)
+            "➡️ Ещё" -> handleMoreAction(bot, chat, activeUid, session)
             "🔍 Новый запрос" -> {
                 // Передаем обработку в RouterCollections
                 if (RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)) {
@@ -483,8 +469,17 @@ class RouterCore(
                 RouterCollections.handleCollectionAction(bot, chat, uid, text, users, session)
             }
             // Админские действия
-            PendingAction.ADMIN_USER_MANAGEMENT, PendingAction.ADMIN_USER_LIST, PendingAction.ADMIN_BANNED_LIST, 
-            PendingAction.ADMIN_SEARCH, PendingAction.ADMIN_SEARCH_RESULTS, PendingAction.ADMIN_EDIT_BAN_EXPIRY -> {
+            PendingAction.ADMIN_USER_MANAGEMENT,
+            PendingAction.ADMIN_USER_LIST,
+            PendingAction.ADMIN_BANNED_LIST,
+            PendingAction.ADMIN_SEARCH,
+            PendingAction.ADMIN_SEARCH_RESULTS,
+            PendingAction.ADMIN_EDIT_BAN_EXPIRY,
+            PendingAction.ADMIN_EDIT_BAN_REASON,
+            PendingAction.ADMIN_EDIT_PROFILE,
+            PendingAction.ADMIN_EDIT_NAME,
+            PendingAction.ADMIN_EDIT_USERNAME,
+            PendingAction.ADMIN_EDIT_BIO -> {
                 RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 true
             }

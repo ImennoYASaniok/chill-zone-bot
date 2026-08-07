@@ -29,8 +29,11 @@ object KeyboardFactory {
     )
 
     // Перенаправления в модульные клавиатуры
-    fun profileMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
-        return KeyboardProfile.profileMenu(userProfile)
+    fun profileMenu(
+            userProfile: UserProfile? = null,
+            accountSwitchLabel: String? = null
+    ): KeyboardReplyMarkup {
+        return KeyboardProfile.profileMenu(userProfile, accountSwitchLabel)
     }
 
     fun settingsMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {

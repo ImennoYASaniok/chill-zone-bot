@@ -1,6 +1,7 @@
 package data.repositories
 
 import data.Db
+import data.models.AccountType
 import data.models.UserProfile
 import data.services.AdminService
 import java.time.ZoneOffset
@@ -16,7 +17,6 @@ class UserRepository {
             values (?, ?, ?)
             on conflict (user_id)
             do update set username = excluded.username,
-                          display_name = excluded.display_name,
                           updated_at = now()
             """
         ) { stmt ->
@@ -40,6 +40,7 @@ class UserRepository {
                     """
                 select u.user_id, u.username, u.display_name, u.bio, u.hidden, u.show_media, u.rating,
                        coalesce(u.hide_username, false) as hide_username,
+                      coalesce(u.account_type, 'user') as account_type,
                        case when bu.user_id is not null and (bu.ban_expires_at is null or bu.ban_expires_at > now()) then true else false end as is_banned,
                        bu.banned_at,
                        bu.reason,
@@ -76,7 +77,10 @@ class UserRepository {
                                                 ?.toInstant()
                                                 ?.atOffset(ZoneOffset.UTC)
                                                 ?.toString(),
-                                isAdmin = AdminService.isAdmin(rs.getLong("user_id")),
+                                accountType = AdminService.resolveAccountType(
+                                    rs.getLong("user_id"),
+                                    AccountType.fromDb(rs.getString("account_type"))
+                                ),
                                 lastActivityAt =
                                         rs.getTimestamp("last_activity_at")?.toLocalDateTime(),
                                 avatarFileId = rs.getString("avatar_file_id")
@@ -195,6 +199,19 @@ class UserRepository {
             ) { stmt -> stmt.setLong(1, userId) }
         } catch (e: Exception) {
             println("ERROR: Ошибка при удалении аватарки для пользователя $userId: ${e.message}")
+        }
+    }
+
+    fun setAccountType(userId: Long, accountType: AccountType) {
+        try {
+            Db.execute(
+                    "update users set account_type = ?, updated_at = now() where user_id = ?"
+            ) { stmt ->
+                stmt.setString(1, accountType.dbValue)
+                stmt.setLong(2, userId)
+            }
+        } catch (e: Exception) {
+            println("ERROR: Ошибка при обновлении типа аккаунта для пользователя $userId: ${e.message}")
         }
     }
 }

@@ -22,7 +22,20 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 object RouterProfile {
+    private const val IMPERSONATED_USER_ID = "profile_impersonated_user_id"
     private val dbDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]")
+
+    private fun currentProfileUserId(uid: Long, session: Session): Long {
+        return session.data[IMPERSONATED_USER_ID]?.toLongOrNull() ?: uid
+    }
+
+    private fun isImpersonating(uid: Long, session: Session): Boolean {
+        return session.data[IMPERSONATED_USER_ID]?.toLongOrNull() != null && AdminService.isBootstrapAdmin(uid)
+    }
+
+    private fun clearImpersonation(session: Session) {
+        session.data.remove(IMPERSONATED_USER_ID)
+    }
 
     private fun parseBanExpiry(value: String): OffsetDateTime {
         return try {
@@ -56,7 +69,9 @@ object RouterProfile {
     }
 
     fun showProfile(bot: Bot, chat: ChatId, uid: Long, users: UserRepository) {
-        val profile = users.profile(uid)
+        val session = SessionStore.get(uid)
+        val viewingUid = currentProfileUserId(uid, session)
+        val profile = users.profile(viewingUid)
 
         if (profile == null) {
             println("ERROR: Профиль пользователя $uid не найден")
@@ -64,7 +79,7 @@ object RouterProfile {
             return
         }
 
-        val isAdmin = AdminService.isAdmin(uid)
+        val accountSwitchLabel = if (isImpersonating(uid, session)) "Вернуться в свой профиль" else null
 
         val statusText =
                 if (profile.isBanned) {
@@ -139,7 +154,7 @@ object RouterProfile {
                             photo = photoFile,
                             caption = messageText,
                             parseMode = ParseMode.HTML,
-                            replyMarkup = KeyboardFactory.profileMenu(profile)
+                            replyMarkup = KeyboardFactory.profileMenu(profile, accountSwitchLabel)
                     )
                 } else {
                     bot.sendPhoto(
@@ -147,7 +162,7 @@ object RouterProfile {
                             photo = fileId,
                             caption = messageText,
                             parseMode = ParseMode.HTML,
-                            replyMarkup = KeyboardFactory.profileMenu(profile)
+                            replyMarkup = KeyboardFactory.profileMenu(profile, accountSwitchLabel)
                     )
                 }
             } catch (e: Exception) {
@@ -156,7 +171,7 @@ object RouterProfile {
                         chat,
                         messageText,
                         parseMode = ParseMode.HTML,
-                        replyMarkup = KeyboardFactory.profileMenu(profile)
+                        replyMarkup = KeyboardFactory.profileMenu(profile, accountSwitchLabel)
                 )
             }
         }
@@ -165,13 +180,14 @@ object RouterProfile {
                             chat,
                             messageText,
                             parseMode = ParseMode.HTML,
-                            replyMarkup = KeyboardFactory.profileMenu(profile)
+                            replyMarkup = KeyboardFactory.profileMenu(profile, accountSwitchLabel)
                     )
                 }
     }
 
     private fun showEditProfileForm(bot: Bot, chat: ChatId, uid: Long, users: UserRepository) {
-        val profile = users.profile(uid)
+        val session = SessionStore.get(uid)
+        val profile = users.profile(currentProfileUserId(uid, session))
         if (profile == null) {
             bot.sendMessage(chat, "❌ Профиль пользователя не найден")
             return
@@ -353,7 +369,7 @@ object RouterProfile {
                 return true
             }
             "📊 Статистика аккаунта" -> {
-                val profile = users.profile(uid)
+                val profile = users.profile(currentProfileUserId(uid, session))
                 if (profile != null) {
                     showAccountStats(bot, chat, profile)
                 } else {
@@ -361,35 +377,56 @@ object RouterProfile {
                 }
                 return true
             }
+            "⬅️ Обратно" -> {
+                // Возврат в профиль из статистики или настроек
+                showProfile(bot, chat, uid, users)
+                return true
+            }
             "🛡️ Админ панель" -> {
                 RouterAdmin.handleAdminAction(bot, chat, uid, text, users, session)
                 return true
             }
+            "🛡️ Панель модератора" -> {
+                RouterAdmin.handleModeratorAction(bot, chat, uid, text, users, session)
+                return true
+            }
+            "Вернуться в свой профиль" -> {
+                if (isImpersonating(uid, session)) {
+                    clearImpersonation(session)
+                    session.action = PendingAction.NONE
+                    showProfile(bot, chat, uid, users)
+                } else {
+                    bot.sendMessage(chat, "❌ Недоступно")
+                }
+                return true
+            }
             "Изменить имя" -> {
+                val profileUid = currentProfileUserId(uid, session)
                 session.action = PendingAction.EDIT_NAME
                 bot.sendMessage(
                         chat,
                         "Напиши новое имя.",
-                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid))
+                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(profileUid))
                 )
                 return true
             }
             "Показать username [👁️]", "Скрыть username [🙈]" -> {
-                users.toggleHideUsername(uid)
+                users.toggleHideUsername(currentProfileUserId(uid, session))
                 showEditProfileForm(bot, chat, uid, users)
                 return true
             }
             "Изменить био" -> {
+                val profileUid = currentProfileUserId(uid, session)
                 session.action = PendingAction.EDIT_BIO
                 bot.sendMessage(
                         chat,
                         "Напиши новое описание профиля.",
-                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid))
+                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(profileUid))
                 )
                 return true
             }
             "Показать профиль [👁️]", "Скрыть профиль [🙈]" -> {
-                users.toggleHidden(uid)
+                users.toggleHidden(currentProfileUserId(uid, session))
                 showEditProfileForm(bot, chat, uid, users)
                 return true
             }
@@ -398,7 +435,7 @@ object RouterProfile {
                 bot.sendMessage(
                         chat,
                         "Отправь фотографию для аватарки профиля.",
-                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(uid))
+                        replyMarkup = KeyboardProfile.editProfileMenu(users.profile(currentProfileUserId(uid, session)))
                 )
                 return true
             }
@@ -409,20 +446,21 @@ object RouterProfile {
             }
             else -> {
                 if (session.action == PendingAction.EDIT_NAME) {
-                    val moderationResult = ModerationService.checkText(uid, text)
+                    val profileUid = currentProfileUserId(uid, session)
+                    val moderationResult = ModerationService.checkText(profileUid, text)
                     if (!moderationResult.isAllowed) {
                         if (moderationResult.shouldBan) {
                             ModerationService.banForViolation(
-                                    uid,
+                                    profileUid,
                                     "Использование ненормативной лексики"
                             )
-                            ModerationService.clearWarnings(uid)
+                            ModerationService.clearWarnings(profileUid)
                             bot.sendMessage(
                                     chat,
                                     "🚫 Вы были заблокированы за использование ненормативной лексики."
                             )
                         } else {
-                            ModerationService.addWarning(uid)
+                            ModerationService.addWarning(profileUid)
                             bot.sendMessage(
                                     chat,
                                     "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
@@ -431,27 +469,28 @@ object RouterProfile {
                         }
                         return true
                     }
-                    users.updateName(uid, text)
+                    users.updateName(profileUid, text)
                     session.action = PendingAction.NONE
                     showEditProfileForm(bot, chat, uid, users)
                     return true
                 }
 
                 if (session.action == PendingAction.EDIT_BIO) {
-                    val moderationResult = ModerationService.checkText(uid, text)
+                    val profileUid = currentProfileUserId(uid, session)
+                    val moderationResult = ModerationService.checkText(profileUid, text)
                     if (!moderationResult.isAllowed) {
                         if (moderationResult.shouldBan) {
                             ModerationService.banForViolation(
-                                    uid,
+                                    profileUid,
                                     "Использование ненормативной лексики"
                             )
-                            ModerationService.clearWarnings(uid)
+                            ModerationService.clearWarnings(profileUid)
                             bot.sendMessage(
                                     chat,
                                     "🚫 Вы были заблокированы за использование ненормативной лексики."
                             )
                         } else {
-                            ModerationService.addWarning(uid)
+                            ModerationService.addWarning(profileUid)
                             bot.sendMessage(
                                     chat,
                                     "⚠️ <b>Предупреждение!</b>\n\nВаше сообщение содержит недопустимый контент.\n\nПовторное нарушение приведёт к автоматическому бану на 1 сутки.",
@@ -460,7 +499,7 @@ object RouterProfile {
                         }
                         return true
                     }
-                    users.updateBio(uid, text)
+                    users.updateBio(profileUid, text)
                     session.action = PendingAction.NONE
                     showEditProfileForm(bot, chat, uid, users)
                     return true

@@ -6,21 +6,28 @@ import data.models.UserProfile
 import data.services.AdminService
 
 object KeyboardProfile {
-    fun profileMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
-        val isAdmin =
-                userProfile?.let {
-                    val adminStatus = AdminService.isAdmin(it.userId)
-                    adminStatus
+        fun profileMenu(
+                        userProfile: UserProfile? = null,
+                        accountSwitchLabel: String? = null
+        ): KeyboardReplyMarkup {
+                val accountType = userProfile?.accountType
+                val panelLabel = when (accountType) {
+                        data.models.AccountType.ADMIN -> "🛡️ Админ панель"
+                        data.models.AccountType.MODERATOR -> "🛡️ Панель модератора"
+                        else -> null
                 }
-                        ?: false
 
         val rows = mutableListOf<List<String>>()
 
         rows.addAll(listOf(listOf("✏️ Изменить профиль"), listOf("📊 Статистика аккаунта")))
 
-        if (isAdmin) {
-            rows.add(listOf("🛡️ Админ панель"))
+        if (panelLabel != null) {
+            rows.add(listOf(panelLabel))
         }
+
+                if (accountSwitchLabel != null) {
+                        rows.add(listOf(accountSwitchLabel))
+                }
 
         rows.add(listOf("⬅️ Обратно"))
 
@@ -46,6 +53,15 @@ object KeyboardProfile {
                 )
         )
     }
+
+        fun moderatorUserViewMenu(isBanned: Boolean): KeyboardReplyMarkup {
+                return kb(
+                                listOf(
+                                                listOf(if (isBanned) "✅ Разбанить" else "🚫 Забанить"),
+                                                listOf("⬅️ Обратно")
+                                )
+                )
+        }
 
     fun settingsMenu(userProfile: UserProfile? = null): KeyboardReplyMarkup {
         val mediaEnabled = userProfile?.showMedia ?: true

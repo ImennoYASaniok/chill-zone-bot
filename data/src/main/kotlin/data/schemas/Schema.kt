@@ -46,6 +46,14 @@ object Schema {
             // Игнорируем ошибку, если колонка уже существует
             println("Migration for hide_username column in users: ${e.message}")
         }
+
+        // Миграция для добавления account_type в users
+        try {
+            Db.raw("alter table users add column if not exists account_type text not null default 'user'")
+        } catch (e: Exception) {
+            // Игнорируем ошибку, если колонка уже существует
+            println("Migration for account_type column in users: ${e.message}")
+        }
         
         // Миграция для добавления last_activity_at в users
         try {
